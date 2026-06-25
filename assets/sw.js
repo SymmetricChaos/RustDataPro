@@ -1,9 +1,9 @@
-var cacheName = 'crypto-gui-pwa';
+var cacheName = 'datapro-pwa';
 var filesToCache = [
   './',
   './index.html',
-  './crypto_gui.js',
-  './crypto_gui_bg.wasm',
+  './datapro.js',
+  './datapro_bg.wasm',
 ];
 
 /* Start the service worker and cache all of the app's content */

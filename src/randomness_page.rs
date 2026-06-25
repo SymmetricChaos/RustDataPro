@@ -1,6 +1,6 @@
 use crate::prng::Prng;
 use chrono::Local;
-use egui::{CentralPanel, Context, DragValue, TextEdit};
+use egui::{CentralPanel, DragValue, TextEdit, Ui};
 use itertools::Itertools;
 
 pub struct RandomnessPage {
@@ -24,8 +24,8 @@ impl Default for RandomnessPage {
 }
 
 impl RandomnessPage {
-    pub fn view(&mut self, ctx: &Context) {
-        CentralPanel::default().show(ctx, |ui| {
+    pub fn view(&mut self, ui: &mut Ui) {
+        CentralPanel::default().show_inside(ui, |ui| {
             ui.heading("Random Numbers in a Range");
             ui.horizontal(|ui| {
                 ui.add_space(2.0);

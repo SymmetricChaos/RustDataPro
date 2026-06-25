@@ -1,6 +1,6 @@
 first test as a local site using:
 trunk serve
-(view at http://127.0.0.1:8080#dev)
+(view at http://127.0.0.1:8080#dev or http://127.0.0.1:8080/index.html#dev)
 
 if that works then build the full site using: 
 trunk build --release

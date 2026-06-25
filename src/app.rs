@@ -1,73 +1,35 @@
-use crate::{pages::Page, randomness_page::RandomnessPage};
 use chrono::{Datelike, Local, Timelike};
-use eframe::App;
-use egui::{
-    CentralPanel, Context, FontData, FontDefinitions, FontFamily, RichText, SidePanel,
-    TopBottomPanel, warn_if_debug_build, widgets,
-};
-use std::sync::Arc;
+use egui::{RichText, Ui, warn_if_debug_build, widgets};
 
-fn load_font(name: &str, family: &FontFamily, font_data: FontData, font_def: &mut FontDefinitions) {
-    font_def.font_data.insert(name.into(), Arc::new(font_data));
-    font_def.families.get_mut(family).unwrap().push(name.into());
-}
+use crate::{data_tracking_page::DataTrackingPage, pages::Page, randomness_page::RandomnessPage};
 
-pub struct RustDataPro {
+pub struct TemplateApp {
     active_page: Page,
-
     randomness_page: RandomnessPage,
+    data_tracking_page: DataTrackingPage,
 }
 
-impl RustDataPro {
-    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        let mut font_def = FontDefinitions::default();
-        // Noto fonts to get wide coverage, more can be added if needed
-        load_font(
-            "NotoMono",
-            &FontFamily::Monospace,
-            FontData::from_static(include_bytes!("../NotoSansMono-Regular.ttf")),
-            &mut font_def,
-        );
-        load_font(
-            "NotoSans",
-            &FontFamily::Proportional,
-            FontData::from_static(include_bytes!("../NotoSans-Regular.ttf")),
-            &mut font_def,
-        );
-        load_font(
-            "NotoSymbols",
-            &FontFamily::Proportional,
-            FontData::from_static(include_bytes!("../NotoSansSymbols-Regular.ttf")),
-            &mut font_def,
-        );
-        load_font(
-            "NotoSymbols2",
-            &FontFamily::Proportional,
-            FontData::from_static(include_bytes!("../NotoSansSymbols2-Regular.ttf")),
-            &mut font_def,
-        );
-        load_font(
-            "NotoMath",
-            &FontFamily::Proportional,
-            FontData::from_static(include_bytes!("../NotoSansMath-Regular.ttf")),
-            &mut font_def,
-        );
-        cc.egui_ctx.set_fonts(font_def);
+impl Default for TemplateApp {
+    fn default() -> Self {
+        Self {
+            active_page: Page::About,
+            randomness_page: RandomnessPage::default(),
+            data_tracking_page: DataTrackingPage::default(),
+        }
+    }
+}
 
-        cc.egui_ctx.set_visuals(egui::Visuals::dark());
-
-        Self::default()
+impl TemplateApp {
+    /// Called once before the first frame.
+    pub fn new(_cc: &eframe::CreationContext<'_>) -> Self {
+        Default::default()
     }
 
-    fn randomness_page(&mut self, ctx: &Context) {
-        self.randomness_page.view(&ctx)
-    }
-
-    fn about_page(&mut self, ctx: &Context) {
-        SidePanel::left("about_display_panel")
-            .default_width(500.0)
-            .min_width(200.0)
-            .show(ctx, |ui| {
+    fn about_page(&mut self, ui: &mut Ui) {
+        egui::Panel::left("about_display_panel")
+            .default_size(500.0)
+            .min_size(200.0)
+            .show_inside(ui, |ui| {
                 warn_if_debug_build(ui);
                 let hello = RichText::new("Welcome to RustDataPro!").strong();
                 ui.label(hello);
@@ -89,7 +51,7 @@ impl RustDataPro {
                     ui.label(".");
                 });
             });
-        CentralPanel::default().show(ctx, |ui| {
+        egui::CentralPanel::default().show_inside(ui, |ui| {
             ui.label(
                 RichText::new("Data Collection and Management")
                     .heading()
@@ -111,21 +73,11 @@ impl RustDataPro {
     }
 }
 
-impl Default for RustDataPro {
-    fn default() -> Self {
-        Self {
-            active_page: Page::About,
-            randomness_page: RandomnessPage::default(),
-        }
-    }
-}
-
-impl App for RustDataPro {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui_extras::install_image_loaders(ctx);
-
-        TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            ui.horizontal_top(|ui| {
+impl eframe::App for TemplateApp {
+    /// Called each time the UI needs repainting, which may be many times per second.
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        egui::Panel::top("top_panel").show_inside(ui, |ui| {
+            egui::MenuBar::new().ui(ui, |ui| {
                 widgets::global_theme_preference_switch(ui);
                 ui.separator();
 
@@ -136,12 +88,17 @@ impl App for RustDataPro {
                 if ui.button("Randomness").clicked() {
                     self.active_page = Page::Randomness;
                 }
+
+                if ui.button("Data Tracking").clicked() {
+                    self.active_page = Page::DataTracking;
+                }
             });
         });
 
         match self.active_page {
-            Page::About => self.about_page(ctx),
-            Page::Randomness => self.randomness_page(ctx),
+            Page::About => self.about_page(ui),
+            Page::Randomness => self.randomness_page.view(ui),
+            Page::DataTracking => self.data_tracking_page.view(ui),
         }
     }
 }
