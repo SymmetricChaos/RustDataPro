@@ -22,7 +22,7 @@ impl DataTrackingPage {
         egui::CentralPanel::default().show_inside(ui, |ui| {
             ui.heading("Press Space to Stop/Start Time 1");
             ui.ctx().input(|i| {
-                if i.key_pressed(egui::Key::Space) {
+                if i.key_released(egui::Key::Space) {
                     if self.timers_active[0] {
                         self.total_times[0] += Local::now() - self.init_times[0];
                         self.timers_active[0] = false;
