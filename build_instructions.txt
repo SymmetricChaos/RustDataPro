@@ -1,0 +1,8 @@
+first test as a local site using:
+trunk serve
+(view at http://127.0.0.1:8080#dev)
+
+if that works then build the full site using: 
+trunk build --release
+(the files in the resulting dist folder should be uploaded to a Github page branch named gh-pages)
+
