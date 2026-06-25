@@ -16,9 +16,9 @@ fn main() -> eframe::Result {
         ..Default::default()
     };
     eframe::run_native(
-        "Classic Crypto",
+        "RustDataPro",
         native_options,
-        Box::new(|cc| Ok(Box::new(datapro::app::DataProApp::new(cc)))),
+        Box::new(|cc| Ok(Box::new(datapro::app::RustDataPro::new(cc)))),
     )
 }
 
@@ -48,7 +48,7 @@ fn main() {
             .start(
                 canvas,
                 web_options,
-                Box::new(|cc| Ok(Box::new(datapro::app::DataProApp::new(cc)))),
+                Box::new(|cc| Ok(Box::new(datapro::app::RustDataPro::new(cc)))),
             )
             .await;
 

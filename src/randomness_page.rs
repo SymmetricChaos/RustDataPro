@@ -71,8 +71,8 @@ impl RandomnessPage {
                     .desired_width(400.0)
                     .desired_rows(2),
             );
-
             ui.add_space(10.0);
+
             ui.heading("Shuffle a List");
             ui.label("Separate items with commas.");
             if ui.button("Shuffle").clicked() {

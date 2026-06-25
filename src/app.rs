@@ -12,13 +12,13 @@ fn load_font(name: &str, family: &FontFamily, font_data: FontData, font_def: &mu
     font_def.families.get_mut(family).unwrap().push(name.into());
 }
 
-pub struct DataProApp {
+pub struct RustDataPro {
     active_page: Page,
 
     randomness_page: RandomnessPage,
 }
 
-impl DataProApp {
+impl RustDataPro {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let mut font_def = FontDefinitions::default();
         // Noto fonts to get wide coverage, more can be added if needed
@@ -111,7 +111,7 @@ impl DataProApp {
     }
 }
 
-impl Default for DataProApp {
+impl Default for RustDataPro {
     fn default() -> Self {
         Self {
             active_page: Page::About,
@@ -120,8 +120,8 @@ impl Default for DataProApp {
     }
 }
 
-impl App for DataProApp {
-    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+impl App for RustDataPro {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui_extras::install_image_loaders(ctx);
 
         TopBottomPanel::top("top_panel").show(ctx, |ui| {
