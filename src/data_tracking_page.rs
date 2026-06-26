@@ -1,18 +1,20 @@
 use chrono::{DateTime, Duration, Local};
 use egui::Ui;
 
+const NUM_TIMERS: usize = 5;
+
 pub struct DataTrackingPage {
-    init_times: [DateTime<Local>; 5],
-    total_times: [Duration; 5],
-    timers_active: [bool; 5],
+    init_times: [DateTime<Local>; NUM_TIMERS],
+    total_times: [Duration; NUM_TIMERS],
+    timers_active: [bool; NUM_TIMERS],
 }
 
 impl Default for DataTrackingPage {
     fn default() -> Self {
         Self {
-            init_times: [Local::now(); 5],
-            total_times: [Duration::zero(); 5],
-            timers_active: [false; 5],
+            init_times: [Local::now(); NUM_TIMERS],
+            total_times: [Duration::zero(); NUM_TIMERS],
+            timers_active: [false; NUM_TIMERS],
         }
     }
 }
@@ -32,7 +34,7 @@ impl DataTrackingPage {
                     }
                 }
             });
-            for i in 0..5 {
+            for i in 0..NUM_TIMERS {
                 if ui.button(format!("Timer {}", i + 1)).clicked() {
                     if self.timers_active[i] {
                         self.total_times[i] += Local::now() - self.init_times[i];
