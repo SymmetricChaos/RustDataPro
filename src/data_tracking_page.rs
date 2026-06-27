@@ -22,29 +22,32 @@ impl Default for DataTrackingPage {
 impl DataTrackingPage {
     pub fn view(&mut self, ui: &mut Ui) {
         egui::CentralPanel::default().show_inside(ui, |ui| {
-            ui.heading("Press Space to Stop/Start Time 1");
+            ui.heading("Press Number Keys to Start/Stop Timers");
             ui.ctx().input(|i| {
-                if i.key_released(egui::Key::Space) {
-                    if self.timers_active[0] {
-                        self.total_times[0] += Local::now() - self.init_times[0];
-                        self.timers_active[0] = false;
-                    } else {
-                        self.init_times[0] = Local::now();
-                        self.timers_active[0] = true;
+                for (idx, key) in [
+                    egui::Key::Num1,
+                    egui::Key::Num2,
+                    egui::Key::Num3,
+                    egui::Key::Num4,
+                    egui::Key::Num5,
+                ]
+                .into_iter()
+                .enumerate()
+                {
+                    if i.key_released(key) {
+                        if self.timers_active[idx] {
+                            self.total_times[idx] += Local::now() - self.init_times[idx];
+                            self.timers_active[idx] = false;
+                        } else {
+                            self.init_times[idx] = Local::now();
+                            self.timers_active[idx] = true;
+                        }
                     }
                 }
             });
             for i in 0..NUM_TIMERS {
-                if ui.button(format!("Timer {}", i + 1)).clicked() {
-                    if self.timers_active[i] {
-                        self.total_times[i] += Local::now() - self.init_times[i];
-                        self.timers_active[i] = false;
-                    } else {
-                        self.init_times[i] = Local::now();
-                        self.timers_active[i] = true;
-                    }
-                }
                 ui.horizontal(|ui| {
+                    ui.label(format!("Timer {}", i + 1));
                     ui.label(format!(
                         "Total: {:.1}",
                         self.total_times[i].as_seconds_f32()

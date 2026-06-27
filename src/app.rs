@@ -60,14 +60,13 @@ impl TemplateApp {
             let dt = Local::now();
 
             ui.label(format!(
-                "The Current Date/Time is {} {}/{}/{} {:02}:{:02}:{:02}",
+                "The Current Date/Time is {} {}/{}/{} {:02}:{:02}",
                 dt.weekday(),
                 dt.month(),
                 dt.day(),
                 dt.year(),
                 dt.hour(),
                 dt.minute(),
-                dt.second(),
             ));
         });
     }
