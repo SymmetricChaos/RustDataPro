@@ -72,8 +72,9 @@ impl Ksf {
     }
 
     pub fn pretty_print(&self) -> String {
-        let mut out = String::new();
+        let mut out = String::from("Duration Keys\n");
         out.push_str(&self.duration.iter().map(|kb| kb.to_string()).join("\n"));
+        out.push_str("\n\nFrequency Keys\n");
         out.push_str(&self.frequency.iter().map(|kb| kb.to_string()).join("\n"));
         out
     }

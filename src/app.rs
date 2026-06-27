@@ -59,7 +59,7 @@ impl TemplateApp {
                     .strong(),
             );
             let dt = Local::now();
-
+            ui.request_repaint_after_secs(5.0);
             ui.label(format!(
                 "The Current Date/Time is {} {}/{}/{} {:02}:{:02}",
                 dt.weekday(),

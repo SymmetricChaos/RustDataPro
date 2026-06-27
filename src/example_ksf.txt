@@ -1,3 +1,6 @@
 type,key,decription
+f, s , SIB
 d,1,Sr+
 d,2,Sdelta
+f,a,Aggression
+
