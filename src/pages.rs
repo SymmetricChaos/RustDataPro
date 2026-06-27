@@ -1,6 +1,4 @@
-use serde::Serialize;
-
-#[derive(Debug, PartialEq, Eq, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Page {
     About,
     Randomness,

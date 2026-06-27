@@ -16,9 +16,8 @@ eframe = { version = "0.34.1", features = ["persistence"] }
 log = "0.4.27"
 chrono = "0.4.45"
 itertools = "0.15.0"
-
-# You only need serde if you want app persistence:
-serde = { version = "1.0.219", features = ["derive"] }
+csv = "1.4.0"
+anyhow = "1.0.103"
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
