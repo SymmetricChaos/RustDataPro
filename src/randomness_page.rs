@@ -25,7 +25,7 @@ impl Default for RandomServices {
 
 impl RandomServices {
     pub fn view(&mut self, ui: &mut Ui) {
-        CentralPanel::default().show_inside(ui, |ui| {
+        CentralPanel::default().show(ui, |ui| {
             ui.heading("Random Numbers in a Range");
             ui.horizontal(|ui| {
                 ui.add_space(2.0);

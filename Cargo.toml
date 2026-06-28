@@ -11,8 +11,8 @@ all-features = true
 targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
 
 [dependencies]
-egui = "0.34.1"
-eframe = { version = "0.34.1", features = ["persistence"] }
+egui = "0.35"
+eframe = { version = "0.35", features = ["persistence"] }
 log = "0.4.27"
 chrono = "0.4.45"
 itertools = "0.15.0"
