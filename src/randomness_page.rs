@@ -3,7 +3,7 @@ use chrono::Local;
 use egui::{CentralPanel, DragValue, TextEdit, Ui};
 use itertools::Itertools;
 
-pub struct RandomnessPage {
+pub struct RandomServices {
     prng: Prng,
     min_rand: usize,
     max_rand: usize,
@@ -11,7 +11,7 @@ pub struct RandomnessPage {
     shuffle_list: String,
 }
 
-impl Default for RandomnessPage {
+impl Default for RandomServices {
     fn default() -> Self {
         Self {
             prng: Prng::new(Local::now().timestamp_micros() as u64),
@@ -23,7 +23,7 @@ impl Default for RandomnessPage {
     }
 }
 
-impl RandomnessPage {
+impl RandomServices {
     pub fn view(&mut self, ui: &mut Ui) {
         CentralPanel::default().show_inside(ui, |ui| {
             ui.heading("Random Numbers in a Range");

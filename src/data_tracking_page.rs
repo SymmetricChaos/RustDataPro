@@ -1,11 +1,11 @@
-use crate::ksf::{Keybind, Ksf};
+use crate::ksf::Ksf;
 use chrono::{DateTime, Duration, Local};
 use egui::Ui;
 
 const MAX_DUR: usize = 15;
 const MAX_FREQ: usize = 15;
 
-pub struct DataTrackingPage {
+pub struct DataTracking {
     ksf: Ksf,
     init_times: [DateTime<Local>; MAX_DUR],
     total_times: [Duration; MAX_DUR],
@@ -13,20 +13,10 @@ pub struct DataTrackingPage {
     counters: [u32; MAX_FREQ],
 }
 
-impl Default for DataTrackingPage {
+impl Default for DataTracking {
     fn default() -> Self {
-        let temp_ksf = Ksf {
-            duration: vec![
-                Keybind::from_string("1,Sr+"),
-                Keybind::from_string("5,Sdelta"),
-            ],
-            frequency: vec![
-                Keybind::from_string("a,Aggression"),
-                Keybind::from_string("s,SIB"),
-            ],
-        };
         Self {
-            ksf: temp_ksf,
+            ksf: Ksf::new(),
             init_times: [Local::now(); MAX_DUR],
             total_times: [Duration::zero(); MAX_DUR],
             timers_active: [false; MAX_DUR],
@@ -35,7 +25,11 @@ impl Default for DataTrackingPage {
     }
 }
 
-impl DataTrackingPage {
+impl DataTracking {
+    pub fn load_ksf(&mut self, ksf: &Ksf) {
+        self.ksf = ksf.clone()
+    }
+
     pub fn view(&mut self, ui: &mut Ui) {
         egui::Window::new("Timers")
             .default_height(300.0)
@@ -47,7 +41,7 @@ impl DataTrackingPage {
                 ui.separator();
                 for (idx, keybind) in self.ksf.duration.iter().enumerate() {
                     ui.ctx().input(|i| {
-                        if i.key_released(keybind.key) {
+                        if i.num_presses(keybind.key) > 0 {
                             if self.timers_active[idx] {
                                 self.total_times[idx] += Local::now() - self.init_times[idx];
                                 self.timers_active[idx] = false;
@@ -86,7 +80,7 @@ impl DataTrackingPage {
                 ui.separator();
                 for (idx, keybind) in self.ksf.frequency.iter().enumerate() {
                     ui.ctx().input(|i| {
-                        if i.key_released(keybind.key) {
+                        if i.num_presses(keybind.key) > 0 {
                             self.counters[idx] += 1;
                         }
                     });

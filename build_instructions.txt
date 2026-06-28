@@ -6,3 +6,7 @@ if that works then build the full site using:
 trunk build --release
 (the files in the resulting dist folder should be uploaded to a Github page branch named gh-pages)
 
+to build natively use:
+cargo run
+or
+cargo run --release
