@@ -1,4 +1,4 @@
-use crate::ksf::Ksf;
+use crate::{ksf::Ksf, utils::date_time_string};
 use chrono::{DateTime, Duration, Local};
 use egui::Ui;
 use egui_file_dialog::FileDialog;
@@ -47,10 +47,11 @@ impl Session {
                 }
 
                 if ui.button("End Session").clicked() {
-
-
                     self.output_file_contents.clear();
 
+                    self.output_file_contents.push_str( 
+                        &format!("Start {}\nEnd {}\nDuration {}\n", date_time_string(self.session_start_time), date_time_string(Local::now()), (Local::now()-self.session_start_time).as_seconds_f32())
+                    );
 
                     // Save duration data
                     for (idx, keybind) in self.ksf.duration.iter().enumerate() {
@@ -65,11 +66,6 @@ impl Session {
                     for (idx, keybind) in self.ksf.frequency.iter().enumerate() {
                         self.output_file_contents.push_str(&format!("{} {}\n",keybind.description, self.counters[idx]));
                     };
-
-                    self.init_times = [Local::now(); MAX_DUR];
-                    self.total_times = [Duration::zero(); MAX_DUR];
-                    self.timers_active = [false; MAX_DUR];
-                    self.counters = [0; MAX_FREQ];
 
                     // Open save dialog
                     self.file_dialog.save_file();

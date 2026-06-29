@@ -1,5 +1,5 @@
-use crate::{data_tracking_page::Session, ksf::Ksf, pages::Page, randomness_page::RandomServices};
-use chrono::{Datelike, Local, Timelike};
+use crate::{data_tracking_page::Session, ksf::Ksf, pages::Page, randomness_page::RandomServices, utils::date_time_string};
+use chrono::Local;
 use egui::{RichText, warn_if_debug_build, widgets};
 use egui_file_dialog::FileDialog;
 
@@ -101,16 +101,10 @@ impl eframe::App for TemplateApp {
                     .heading()
                     .strong(),
             );
-            let dt = Local::now();
+
             ui.request_repaint_after_secs(5.0);
             ui.label(format!(
-                "The Current Date/Time is {} {}/{}/{} {:02}:{:02}",
-                dt.weekday(),
-                dt.month(),
-                dt.day(),
-                dt.year(),
-                dt.hour(),
-                dt.minute(),
+                "The Current Date/Time is {}", date_time_string(Local::now()),
             ));
 
             ui.add_space(5.0);
