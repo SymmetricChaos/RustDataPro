@@ -14,7 +14,8 @@ pub struct Session {
     counters: [u32; MAX_FREQ],
     session_start_time: DateTime<Local>,
     file_dialog: FileDialog,
-    output_file_contents: String
+    output_file_contents: String,
+    session_active: bool,
 }
 
 impl Default for Session {
@@ -28,6 +29,7 @@ impl Default for Session {
             counters: [0; MAX_FREQ],
             file_dialog: FileDialog::new().default_file_name("SaveData.txt"),
             output_file_contents: String::new(),
+            session_active: false
         }
     }
 }
@@ -44,9 +46,11 @@ impl Session {
 
                 if ui.button("Start Session").clicked() {
                     self.session_start_time = Local::now();
+                    self.session_active = true;
                 }
 
                 if ui.button("End Session").clicked() {
+                    self.session_active = false;
                     self.output_file_contents.clear();
 
                     self.output_file_contents.push_str( 
@@ -94,19 +98,21 @@ impl Session {
                 ui.end_row();
 
                 for (idx, keybind) in self.ksf.duration.iter().enumerate() {
-                    ui.ctx().input(|i| {
-                        if i.num_presses(keybind.key) > 0 {
-                            if self.timers_active[idx] {
-                                self.total_times[idx] += Local::now() - self.init_times[idx];
-                                self.timers_active[idx] = false;
-                            } else {
-                                self.init_times[idx] = Local::now();
-                                self.timers_active[idx] = true;
+                    if self.session_active {
+                        ui.ctx().input(|i| {
+                            if i.num_presses(keybind.key) > 0 {
+                                if self.timers_active[idx] {
+                                    self.total_times[idx] += Local::now() - self.init_times[idx];
+                                    self.timers_active[idx] = false;
+                                } else {
+                                    self.init_times[idx] = Local::now();
+                                    self.timers_active[idx] = true;
+                                }
                             }
-                        }
-                    });
+                        });
+                    }
 
-                    if self.timers_active[idx] {
+                    if self.timers_active[idx] && self.session_active {
                         ui.request_repaint();
                         ui.label(&keybind.description);
                         ui.label(keybind.key.name());
@@ -136,12 +142,13 @@ impl Session {
                     ui.end_row();
 
                     for (idx, keybind) in self.ksf.frequency.iter().enumerate() {
-                        ui.ctx().input(|i| {
-                            if i.num_presses(keybind.key) > 0 {
-                                self.counters[idx] += 1;
-                            }
-                        });
-
+                        if self.session_active {
+                            ui.ctx().input(|i| {
+                                if i.num_presses(keybind.key) > 0 {
+                                    self.counters[idx] += 1;
+                                }
+                            });
+                        }
                         ui.label(&keybind.description);
                         ui.label(keybind.key.name());
                         ui.label(self.counters[idx].to_string());
