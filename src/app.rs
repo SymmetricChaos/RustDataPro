@@ -1,4 +1,4 @@
-use crate::{data_tracking_page::Session, ksf::Ksf, pages::Page, randomness_page::RandomServices, utils::date_time_string};
+use crate::{data_tracking_page::Session, ksf::Ksf, pages::Page, randomness_page::RandomServices, timers_page::Timers, utils::date_time_string};
 use chrono::Local;
 use egui::{RichText, warn_if_debug_build, widgets};
 use egui_file_dialog::FileDialog;
@@ -13,6 +13,7 @@ pub struct TemplateApp {
 
     randomness_page: RandomServices,
     data_tracking_page: Session,
+    timer_page: Timers,
 }
 
 impl Default for TemplateApp {
@@ -27,6 +28,7 @@ impl Default for TemplateApp {
 
             randomness_page: RandomServices::default(),
             data_tracking_page: Session::default(),
+            timer_page: Timers::default(),
         }
     }
 }
@@ -55,6 +57,10 @@ impl eframe::App for TemplateApp {
                     self.active_page = Page::Randomness;
                 }
 
+                if ui.button("Timers").clicked() {
+                    self.active_page = Page::Timers;
+                }
+
                 if ui.button("Data Tracking").clicked() {
                     self.data_tracking_page.load_ksf(&self.ksf);
                     self.active_page = Page::DataTracking;
@@ -66,6 +72,7 @@ impl eframe::App for TemplateApp {
             Page::About => (),
             Page::Randomness => self.randomness_page.view(ui),
             Page::DataTracking => self.data_tracking_page.view(ui),
+            Page::Timers => self.timer_page.view(ui),
         }
 
         egui::Panel::left("welcome_panel")
