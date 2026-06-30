@@ -1,6 +1,6 @@
-use crate::{ksf::Ksf, utils::date_time_string};
-use chrono::{DateTime, Duration, Local};
-use egui::{Key, Ui};
+use crate::{ksf::Ksf, timer::Timer, utils::date_time_string};
+use chrono::{DateTime, Local};
+use egui::Ui;
 use egui_file_dialog::FileDialog;
 
 const MAX_DUR: usize = 20;
@@ -8,9 +8,7 @@ const MAX_FREQ: usize = 20;
 
 pub struct Session {
     ksf: Ksf,
-    init_times: [DateTime<Local>; MAX_DUR],
-    total_times: [Duration; MAX_DUR],
-    timers_active: [bool; MAX_DUR],
+    timers: [Timer; MAX_DUR],
     counters: [u32; MAX_FREQ],
     session_start_time: DateTime<Local>,
     file_dialog: FileDialog,
@@ -23,9 +21,28 @@ impl Default for Session {
         Self {
             ksf: Ksf::new(),
             session_start_time: Local::now(),
-            init_times: [Local::now(); MAX_DUR],
-            total_times: [Duration::zero(); MAX_DUR],
-            timers_active: [false; MAX_DUR],
+            timers: [
+                Timer::new().split(),
+                Timer::new().split(),
+                Timer::new().split(),
+                Timer::new().split(),
+                Timer::new().split(),
+                Timer::new().split(),
+                Timer::new().split(),
+                Timer::new().split(),
+                Timer::new().split(),
+                Timer::new().split(),
+                Timer::new().split(),
+                Timer::new().split(),
+                Timer::new().split(),
+                Timer::new().split(),
+                Timer::new().split(),
+                Timer::new().split(),
+                Timer::new().split(),
+                Timer::new().split(),
+                Timer::new().split(),
+                Timer::new().split(),
+            ],
             counters: [0; MAX_FREQ],
             file_dialog: FileDialog::new().default_file_name("SaveData.txt"),
             output_file_contents: String::new(),
@@ -36,7 +53,10 @@ impl Default for Session {
 
 impl Session {
     pub fn load_ksf(&mut self, ksf: &Ksf) {
-        self.ksf = ksf.clone()
+        self.ksf = ksf.clone();
+        for (keybind, timer) in self.ksf.duration.iter().zip(self.timers.iter_mut()) {
+            timer.keybind = Some(keybind.clone())
+        }
     }
 
     pub fn save_session(&mut self) {
@@ -51,17 +71,16 @@ impl Session {
         ));
         self.output_file_contents.push('\n');
         // Save duration data
-        for (idx, keybind) in self.ksf.duration.iter().enumerate() {
+        for timer in self.timers.iter_mut() {
             // Stop timers if they are running and update the total
-            if self.timers_active[idx] {
-                self.total_times[idx] += Local::now() - self.init_times[idx];
-                self.timers_active[idx] = false;
+            if let Some(keybind) = timer.keybind.clone() {
+                timer.stop();
+                self.output_file_contents.push_str(&format!(
+                    "{} {}\n",
+                    keybind.description,
+                    timer.total_time.as_seconds_f32()
+                ));
             }
-            self.output_file_contents.push_str(&format!(
-                "{} {}\n",
-                keybind.description,
-                self.total_times[idx].as_seconds_f32()
-            ));
         }
         self.output_file_contents.push('\n');
         // Save frequency data
@@ -74,12 +93,6 @@ impl Session {
     }
 
     pub fn view(&mut self, ui: &mut Ui) {
-        ui.ctx().input(|i| {
-            if i.num_presses(Key::Tab) > 0 {
-                self.session_active = true;
-            }
-        });
-
         egui::CentralPanel::default().show(ui, |ui| {
             ui.heading("Session Controls");
             if ui.button("Start").clicked() {
@@ -89,28 +102,18 @@ impl Session {
                 self.save_session();
             }
             ui.add_space(10.0);
-            ui.ctx().input(|i| {
-                if i.num_presses(Key::Tab) > 0 {
-                    self.session_active = true;
-                }
-            });
+
             self.file_dialog.update(ui.ctx());
 
             if let Some(path) = self.file_dialog.take_picked() {
                 if std::fs::write(&path, &self.output_file_contents).is_ok() {
                     println!("Successfully saved to: {:?}", path);
                 }
-                *self = Self {
-                    ksf: self.ksf.clone(),
-                    session_start_time: Local::now(),
-                    init_times: [Local::now(); MAX_DUR],
-                    total_times: [Duration::zero(); MAX_DUR],
-                    timers_active: [false; MAX_DUR],
-                    counters: [0; MAX_FREQ],
-                    file_dialog: FileDialog::new().default_file_name("SaveData.txt"),
-                    output_file_contents: String::new(),
-                    session_active: false,
-                };
+                for timer in self.timers.iter_mut() {
+                    timer.reset();
+                }
+                self.counters = [0; MAX_FREQ];
+                self.session_active = false;
             }
 
             ui.heading("Timers");
@@ -122,38 +125,19 @@ impl Session {
                     ui.label("Total");
                     ui.end_row();
 
-                    for (idx, keybind) in self.ksf.duration.iter().enumerate() {
-                        if self.session_active {
-                            ui.ctx().input(|i| {
-                                if i.num_presses(keybind.key) > 0 {
-                                    if self.timers_active[idx] {
-                                        self.total_times[idx] +=
-                                            Local::now() - self.init_times[idx];
-                                        self.timers_active[idx] = false;
-                                    } else {
-                                        self.init_times[idx] = Local::now();
-                                        self.timers_active[idx] = true;
+                    for timer in self.timers.iter_mut() {
+                        if let Some(keybind) = timer.keybind.clone() {
+                            if self.session_active {
+                                ui.ctx().input(|i| {
+                                    if i.num_presses(keybind.key) > 0 {
+                                        timer.toggle();
                                     }
-                                }
-                            });
-                        }
+                                });
+                            }
 
-                        if self.timers_active[idx] && self.session_active {
-                            ui.request_repaint();
-                            ui.label(&keybind.description);
-                            ui.label(keybind.key.name());
-                            ui.label(format!("{:.1}", self.total_times[idx].as_seconds_f32()));
-                            ui.label(format!(
-                                "{:.1}",
-                                (Local::now() - self.init_times[idx]).as_seconds_f32()
-                            ));
-                        } else {
-                            ui.label(&keybind.description);
-                            ui.label(keybind.key.name());
-                            ui.label(format!("{:.1}", self.total_times[idx].as_seconds_f32()));
-                            ui.label("0.0");
+                            timer.view(ui);
+                            ui.end_row();
                         }
-                        ui.end_row();
                     }
                 });
             });

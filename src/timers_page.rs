@@ -15,8 +15,8 @@ impl Default for Timers {
                 Timer::new(),
                 Timer::new(),
                 Timer::new(),
-                Timer::new(),
-                Timer::new(),
+                Timer::new().split(),
+                Timer::new().split(),
             ],
             linked_timers: [false; NUM_TIMERS],
         }
@@ -89,7 +89,6 @@ impl Timers {
                 ui.horizontal(|ui| {
                     ui.add_space(5.0);
                     ui.label(format!("{})", n + 1));
-                    ui.add_space(1.0);
                     timer.view(ui);
                     if ui.button("⏱️").clicked() {
                         timer.toggle();
