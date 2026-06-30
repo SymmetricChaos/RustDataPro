@@ -1,14 +1,14 @@
+use crate::ksf::Keybind;
 use chrono::{DateTime, Duration, Local};
 use egui::Ui;
-use crate::ksf::Keybind;
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct Timer {
-    keybind: Option<Keybind>,
-    description: Option<String>,
+    pub keybind: Option<Keybind>,
+    pub description: Option<String>,
     start_time: DateTime<Local>,
-    total_time: Option<Duration>,
-    active: bool
+    pub total_time: Duration,
+    pub active: bool,
 }
 
 impl Timer {
@@ -17,7 +17,7 @@ impl Timer {
             keybind: None,
             description: None,
             start_time: Local::now(),
-            total_time: None,
+            total_time: Duration::zero(),
             active: false,
         }
     }
@@ -34,18 +34,13 @@ impl Timer {
         if !self.active {
             self.active = true;
             self.start_time = Local::now();
-            if let Some(tt) = &mut self.total_time {
-                *tt = Duration::zero();
-            }
         }
     }
 
     pub fn stop(&mut self) {
         if self.active {
             self.active = false;
-            if let Some(tt) = &mut self.total_time {
-                *tt += Local::now() - self.start_time;
-            }
+            self.total_time += Local::now() - self.start_time;
         }
     }
 
@@ -56,22 +51,17 @@ impl Timer {
                 ui.label(&kb.description);
                 ui.label(kb.key.name());
             }
-            if let Some(tt) = self.total_time {
-                ui.label(format!("{:.1}", tt.as_seconds_f32()));
-            }
-            ui.label(format!(
-                "{:.1}",
-                (Local::now() - self.start_time).as_seconds_f32()
+
+            ui.monospace(format!(
+                "{:6.2}",
+                (Local::now() - self.start_time + self.total_time).as_seconds_f32()
             ));
         } else {
             if let Some(kb) = &self.keybind {
                 ui.label(&kb.description);
                 ui.label(kb.key.name());
             }
-            if let Some(tt) = self.total_time {
-                ui.label(format!("{:.1}", tt.as_seconds_f32()));
-            }
-            ui.label("0.0");
+            ui.monospace(format!("{:6.2}", (self.total_time).as_seconds_f32()));
         }
     }
 }

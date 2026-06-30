@@ -3,7 +3,7 @@ use csv::StringRecord;
 use itertools::Itertools;
 use std::{fmt::Display, fs::File};
 
-/// A keybind consists of a Key, whether the binding is for Frequency or Duration, and a description string
+/// A keybind consists of a Key and a description string.
 #[derive(Debug, Clone)]
 pub struct Keybind {
     pub key: egui::Key,
@@ -19,9 +19,12 @@ impl Display for Keybind {
 impl Keybind {
     pub fn from_string_record(record: StringRecord) -> Result<Self> {
         Ok(Keybind {
-            key: egui::Key::from_name(record.get(1).unwrap())
-                .context("invalid key specification")?,
-            description: record.get(2).unwrap().to_string(),
+            key: egui::Key::from_name(record.get(1).context("missing key for keybind")?)
+                .context("invalid key specification for keybind")?,
+            description: record
+                .get(2)
+                .context("missing description for keybind")?
+                .to_string(),
         })
     }
 
@@ -34,11 +37,20 @@ impl Keybind {
     }
 }
 
-/// A list of keybinds.
+/// A list of keybinds divided into Duration and Frequency
 #[derive(Debug, Clone)]
 pub struct Ksf {
     pub duration: Vec<Keybind>,
     pub frequency: Vec<Keybind>,
+}
+
+impl Default for Ksf {
+    fn default() -> Self {
+        Self {
+            duration: Default::default(),
+            frequency: Default::default(),
+        }
+    }
 }
 
 impl Ksf {
@@ -54,7 +66,7 @@ impl Ksf {
         let mut rdr = csv::Reader::from_reader(file);
         let mut ksf = Ksf::new();
         for result in rdr.records() {
-            let mut record: StringRecord = result.unwrap();
+            let mut record: StringRecord = result.context("StringRecord invalid")?;
             record.trim();
             if record.len() != 3 {
                 return Err(anyhow::anyhow!(
@@ -78,14 +90,4 @@ impl Ksf {
         out.push_str(&self.frequency.iter().map(|kb| kb.to_string()).join("\n"));
         out
     }
-}
-
-#[test]
-fn test() {
-    println!(
-        "{}",
-        Ksf::from_file("src/example_ksf.txt")
-            .unwrap()
-            .pretty_print()
-    );
 }
