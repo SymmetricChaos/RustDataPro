@@ -7,7 +7,6 @@ const MAX_DUR: usize = 20;
 const MAX_FREQ: usize = 20;
 
 pub struct Session {
-    ksf: Ksf,
     timers: [Timer; MAX_DUR],
     counters: [Counter; MAX_FREQ],
     session_start_time: DateTime<Local>,
@@ -19,7 +18,6 @@ pub struct Session {
 impl Default for Session {
     fn default() -> Self {
         Self {
-            ksf: Ksf::new(),
             session_start_time: Local::now(),
             timers: [
                 Timer::new().split(),
@@ -74,11 +72,10 @@ impl Default for Session {
 
 impl Session {
     pub fn load_ksf(&mut self, ksf: &Ksf) {
-        self.ksf = ksf.clone();
-        for (keybind, timer) in self.ksf.duration.iter().zip(self.timers.iter_mut()) {
+        for (keybind, timer) in ksf.duration.iter().zip(self.timers.iter_mut()) {
             timer.keybind = Some(keybind.clone())
         }
-        for (keybind, counter) in self.ksf.frequency.iter().zip(self.timers.iter_mut()) {
+        for (keybind, counter) in ksf.frequency.iter().zip(self.counters.iter_mut()) {
             counter.keybind = Some(keybind.clone())
         }
     }
