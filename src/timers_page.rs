@@ -1,5 +1,5 @@
-use egui::{Key, Ui};
 use crate::data_tracking::timer::Timer;
+use egui::{Key, Ui};
 
 const NUM_TIMERS: usize = 5;
 
@@ -15,10 +15,10 @@ impl Default for Timers {
                 Timer::new(),
                 Timer::new(),
                 Timer::new(),
-                Timer::new().with_split(),
-                Timer::new().with_split(),
+                Timer::new(),
+                Timer::new(),
             ],
-            linked_timers: [false; NUM_TIMERS],
+            linked_timers: [true, true, false, false, false],
         }
     }
 }
@@ -46,37 +46,35 @@ impl Timers {
                 }
             });
 
-            ui.group(|ui| {
-                ui.label("Linked");
-                ui.horizontal(|ui| {
-                    if ui.button("Start").clicked() {
-                        for (timer, linked) in
-                            self.timers.iter_mut().zip(self.linked_timers.iter_mut())
-                        {
-                            if *linked {
-                                timer.start();
+            ui.horizontal(|ui| {
+                ui.group(|ui| {
+                    ui.label("Linked");
+                    ui.horizontal(|ui| {
+                        if ui.button("Start/Stop").clicked() {
+                            for (timer, linked) in
+                                self.timers.iter_mut().zip(self.linked_timers.iter_mut())
+                            {
+                                if *linked {
+                                    timer.toggle();
+                                }
                             }
-                        }
-                    };
-                    if ui.button("Stop").clicked() {
-                        for (timer, linked) in
-                            self.timers.iter_mut().zip(self.linked_timers.iter_mut())
-                        {
-                            if *linked {
-                                timer.stop();
+                        };
+                        if ui.button("Reset").clicked() {
+                            for (timer, linked) in
+                                self.timers.iter_mut().zip(self.linked_timers.iter_mut())
+                            {
+                                if *linked {
+                                    timer.reset();
+                                }
                             }
-                        }
-                    };
-                    if ui.button("Toggle").clicked() {
-                        for (timer, linked) in
-                            self.timers.iter_mut().zip(self.linked_timers.iter_mut())
-                        {
-                            if *linked {
-                                timer.toggle();
-                            }
-                        }
-                    };
+                        };
+                    });
                 });
+                if ui.button("Split Timers").clicked() {
+                    for timer in self.timers.iter_mut() {
+                        timer.split = !timer.split;
+                    }
+                }
             });
 
             for (n, (timer, linked)) in self
@@ -90,8 +88,11 @@ impl Timers {
                     ui.add_space(5.0);
                     ui.label(format!("{})", n + 1));
                     timer.view(ui);
-                    if ui.button("⏱️").clicked() {
+                    if ui.button("⏱").clicked() {
                         timer.toggle();
+                    }
+                    if ui.button("r").clicked() {
+                        timer.reset();
                     }
                     ui.checkbox(linked, "");
                 });

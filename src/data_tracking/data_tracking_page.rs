@@ -4,7 +4,7 @@ use crate::{
     utils::date_time_string,
 };
 use chrono::Local;
-use egui::Ui;
+use egui::{Color32, RichText, Ui};
 use egui_file_dialog::FileDialog;
 
 const MAX_DUR: usize = 20;
@@ -101,7 +101,7 @@ impl Session {
                 self.output_file_contents.push_str(&format!(
                     "{} {}\n",
                     keybind.description,
-                    timer.total_time.as_seconds_f32()
+                    timer.saved_time.as_seconds_f32()
                 ));
             }
         }
@@ -125,12 +125,21 @@ impl Session {
     pub fn view(&mut self, ui: &mut Ui) {
         egui::CentralPanel::default().show(ui, |ui| {
             ui.heading("Session Controls");
-            if ui.button("Start").clicked() {
-                self.session_timer.start();
-            }
-            if ui.button("End").clicked() {
-                self.save_session();
-            }
+            ui.horizontal(|ui| {
+                if ui
+                    .button(RichText::new("START").color(Color32::GREEN))
+                    .clicked()
+                {
+                    self.session_timer.start();
+                }
+                if ui
+                    .button(RichText::new("END").color(Color32::RED))
+                    .clicked()
+                {
+                    self.save_session();
+                }
+            });
+
             ui.add_space(10.0);
             self.session_timer.view(ui);
 

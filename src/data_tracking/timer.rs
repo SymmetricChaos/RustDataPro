@@ -6,7 +6,7 @@ use egui::Ui;
 pub struct Timer {
     pub keybind: Option<Keybind>,
     pub start_time: DateTime<Local>,
-    pub total_time: Duration,
+    pub saved_time: Duration,
     pub active: bool,
     pub split: bool,
 }
@@ -16,7 +16,7 @@ impl Timer {
         Self {
             keybind: None,
             start_time: Local::now(),
-            total_time: Duration::zero(),
+            saved_time: Duration::zero(),
             active: false,
             split: false,
         }
@@ -55,49 +55,54 @@ impl Timer {
     pub fn stop(&mut self) {
         if self.active {
             self.active = false;
-            self.total_time += Local::now() - self.start_time;
+            self.saved_time += Local::now() - self.start_time;
         }
     }
 
     /// Stop if active and set total time to zero.
     pub fn reset(&mut self) {
         self.active = false;
-        self.total_time = Duration::zero();
+        self.saved_time = Duration::zero();
+    }
+
+    /// The amount of time currently saved in seconds.
+    pub fn saved_time(&self) -> f32 {
+        self.saved_time.as_seconds_f32()
+    }
+
+    /// How long the timer has been running since it was last started.
+    pub fn current_time(&self) -> f32 {
+        (Local::now() - self.start_time).as_seconds_f32()
+    }
+
+    /// The total time recorded. Sum of .saved_time() and .current_time().
+    pub fn total_time(&self) -> f32 {
+        (Local::now() - self.start_time + self.saved_time).as_seconds_f32()
     }
 
     pub fn view(&mut self, ui: &mut Ui) {
+        if let Some(kb) = &self.keybind {
+            ui.label(&kb.description);
+            ui.label(kb.key.name());
+        }
         if self.active {
             ui.request_repaint();
-            if let Some(kb) = &self.keybind {
-                ui.label(&kb.description);
-                ui.label(kb.key.name());
-            }
             if self.split {
                 ui.horizontal(|ui| {
-                    ui.monospace(format!("{:6.2}", (self.total_time).as_seconds_f32()));
-                    ui.monospace(format!(
-                        "{:6.2}",
-                        (Local::now() - self.start_time).as_seconds_f32()
-                    ));
+                    ui.monospace(format!("{:6.2}", self.saved_time()));
+                    ui.monospace(format!("{:6.2}", self.current_time()));
                 });
             } else {
-                ui.monospace(format!(
-                    "{:6.2}",
-                    (Local::now() - self.start_time + self.total_time).as_seconds_f32()
-                ));
+                ui.monospace(format!("{:6.2}", self.total_time()));
             }
         } else {
-            if let Some(kb) = &self.keybind {
-                ui.label(&kb.description);
-                ui.label(kb.key.name());
-            }
             if self.split {
                 ui.horizontal(|ui| {
-                    ui.monospace(format!("{:6.2}", (self.total_time).as_seconds_f32()));
-                    ui.monospace(format!("{:6.2}", Duration::zero().as_seconds_f32()));
+                    ui.monospace(format!("{:6.2}", self.saved_time()));
+                    ui.monospace(format!("{:6.2}", 0.0));
                 });
             } else {
-                ui.monospace(format!("{:6.2}", (self.total_time).as_seconds_f32()));
+                ui.monospace(format!("{:6.2}", self.saved_time()));
             }
         }
     }
