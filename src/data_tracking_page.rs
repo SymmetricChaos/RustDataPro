@@ -1,4 +1,4 @@
-use crate::{ksf::Ksf, timer::Timer, utils::date_time_string};
+use crate::{counter::Counter, ksf::Ksf, timer::Timer, utils::date_time_string};
 use chrono::{DateTime, Local};
 use egui::Ui;
 use egui_file_dialog::FileDialog;
@@ -9,7 +9,7 @@ const MAX_FREQ: usize = 20;
 pub struct Session {
     ksf: Ksf,
     timers: [Timer; MAX_DUR],
-    counters: [u32; MAX_FREQ],
+    counters: [Counter; MAX_FREQ],
     session_start_time: DateTime<Local>,
     file_dialog: FileDialog,
     output_file_contents: String,
@@ -43,7 +43,28 @@ impl Default for Session {
                 Timer::new().split(),
                 Timer::new().split(),
             ],
-            counters: [0; MAX_FREQ],
+            counters: [
+                Counter::new(),
+                Counter::new(),
+                Counter::new(),
+                Counter::new(),
+                Counter::new(),
+                Counter::new(),
+                Counter::new(),
+                Counter::new(),
+                Counter::new(),
+                Counter::new(),
+                Counter::new(),
+                Counter::new(),
+                Counter::new(),
+                Counter::new(),
+                Counter::new(),
+                Counter::new(),
+                Counter::new(),
+                Counter::new(),
+                Counter::new(),
+                Counter::new(),
+            ],
             file_dialog: FileDialog::new().default_file_name("SaveData.txt"),
             output_file_contents: String::new(),
             session_active: false,
@@ -56,6 +77,9 @@ impl Session {
         self.ksf = ksf.clone();
         for (keybind, timer) in self.ksf.duration.iter().zip(self.timers.iter_mut()) {
             timer.keybind = Some(keybind.clone())
+        }
+        for (keybind, counter) in self.ksf.frequency.iter().zip(self.timers.iter_mut()) {
+            counter.keybind = Some(keybind.clone())
         }
     }
 
@@ -84,10 +108,13 @@ impl Session {
         }
         self.output_file_contents.push('\n');
         // Save frequency data
-        for (idx, keybind) in self.ksf.frequency.iter().enumerate() {
-            self.output_file_contents
-                .push_str(&format!("{} {}\n", keybind.description, self.counters[idx]));
+        for counter in self.counters.iter() {
+            if let Some(keybind) = counter.keybind.clone() {
+                self.output_file_contents
+                    .push_str(&format!("{} {}\n", keybind.description, counter.counter));
+            }
         }
+
         // Open save dialog
         self.file_dialog.save_file();
     }
@@ -109,10 +136,8 @@ impl Session {
                 if std::fs::write(&path, &self.output_file_contents).is_ok() {
                     println!("Successfully saved to: {:?}", path);
                 }
-                for timer in self.timers.iter_mut() {
-                    timer.reset();
-                }
-                self.counters = [0; MAX_FREQ];
+                self.timers.iter_mut().for_each(|t| t.reset());
+                self.counters.iter_mut().for_each(|c| c.reset());
                 self.session_active = false;
             }
 
@@ -153,19 +178,18 @@ impl Session {
                         ui.label("Total");
                         ui.end_row();
 
-                        for (idx, keybind) in self.ksf.frequency.iter().enumerate() {
-                            if self.session_active {
-                                ui.ctx().input(|i| {
-                                    if i.num_presses(keybind.key) > 0 {
-                                        self.counters[idx] += 1;
-                                    }
-                                });
+                        for counter in self.counters.iter_mut() {
+                            if let Some(keybind) = counter.keybind.clone() {
+                                if self.session_active {
+                                    ui.ctx().input(|i| {
+                                        if i.num_presses(keybind.key) > 0 {
+                                            counter.inc();
+                                        }
+                                    });
+                                }
+                                counter.view(ui);
+                                ui.end_row();
                             }
-                            ui.label(&keybind.description);
-                            ui.label(keybind.key.name());
-                            ui.label(self.counters[idx].to_string());
-
-                            ui.end_row();
                         }
                     });
             });

@@ -1,9 +1,10 @@
 pub mod app;
+pub mod counter;
 pub mod data_tracking_page;
 pub mod ksf;
 pub mod pages;
 pub mod prng;
 pub mod randomness_page;
-pub mod utils;
-pub mod timers_page;
 pub mod timer;
+pub mod timers_page;
+pub mod utils;
