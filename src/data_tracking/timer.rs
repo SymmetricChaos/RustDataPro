@@ -5,7 +5,7 @@ use egui::Ui;
 #[derive(Debug, Clone)]
 pub struct Timer {
     pub keybind: Option<Keybind>,
-    start_time: DateTime<Local>,
+    pub start_time: DateTime<Local>,
     pub total_time: Duration,
     pub active: bool,
     pub split: bool,
@@ -26,7 +26,6 @@ impl Timer {
     pub fn with_keybind(mut self, keybind: Keybind) -> Self {
         self.keybind = Some(keybind);
         self
-
     }
 
     /// Buold a timer with the total and current time on split displays.

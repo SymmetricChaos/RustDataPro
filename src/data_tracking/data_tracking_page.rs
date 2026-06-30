@@ -1,5 +1,9 @@
-use crate::{ data_tracking::{counter::Counter, timer::Timer}, ksf::Ksf, utils::date_time_string};
-use chrono::{DateTime, Local};
+use crate::{
+    data_tracking::{counter::Counter, timer::Timer},
+    ksf::Ksf,
+    utils::date_time_string,
+};
+use chrono::Local;
 use egui::Ui;
 use egui_file_dialog::FileDialog;
 
@@ -9,16 +13,15 @@ const MAX_FREQ: usize = 20;
 pub struct Session {
     timers: [Timer; MAX_DUR],
     counters: [Counter; MAX_FREQ],
-    session_start_time: DateTime<Local>,
+    session_timer: Timer,
     file_dialog: FileDialog,
     output_file_contents: String,
-    session_active: bool,
 }
 
 impl Default for Session {
     fn default() -> Self {
         Self {
-            session_start_time: Local::now(),
+            session_timer: Timer::new(),
             timers: [
                 Timer::new().with_split(),
                 Timer::new().with_split(),
@@ -65,7 +68,6 @@ impl Default for Session {
             ],
             file_dialog: FileDialog::new().default_file_name("SaveData.txt"),
             output_file_contents: String::new(),
-            session_active: false,
         }
     }
 }
@@ -81,14 +83,14 @@ impl Session {
     }
 
     pub fn save_session(&mut self) {
-        self.session_active = false;
+        self.session_timer.stop();
         self.output_file_contents.clear();
 
         self.output_file_contents.push_str(&format!(
             "Start {}\nEnd {}\nDuration {}\n",
-            date_time_string(self.session_start_time),
+            date_time_string(self.session_timer.start_time),
             date_time_string(Local::now()),
-            (Local::now() - self.session_start_time).as_seconds_f32()
+            (Local::now() - self.session_timer.start_time).as_seconds_f32()
         ));
         self.output_file_contents.push('\n');
         // Save duration data
@@ -112,6 +114,10 @@ impl Session {
             }
         }
 
+        self.timers.iter_mut().for_each(|t| t.reset());
+        self.counters.iter_mut().for_each(|c| c.reset());
+        self.session_timer.reset();
+
         // Open save dialog
         self.file_dialog.save_file();
     }
@@ -120,26 +126,25 @@ impl Session {
         egui::CentralPanel::default().show(ui, |ui| {
             ui.heading("Session Controls");
             if ui.button("Start").clicked() {
-                self.session_active = true;
+                self.session_timer.start();
             }
             if ui.button("End").clicked() {
                 self.save_session();
             }
             ui.add_space(10.0);
+            self.session_timer.view(ui);
 
+            ui.add_space(10.0);
             self.file_dialog.update(ui.ctx());
 
             if let Some(path) = self.file_dialog.take_picked() {
                 if std::fs::write(&path, &self.output_file_contents).is_ok() {
                     println!("Successfully saved to: {:?}", path);
                 }
-                self.timers.iter_mut().for_each(|t| t.reset());
-                self.counters.iter_mut().for_each(|c| c.reset());
-                self.session_active = false;
             }
 
             ui.heading("Timers");
-            ui.add_enabled_ui(self.session_active, |ui| {
+            ui.add_enabled_ui(self.session_timer.active, |ui| {
                 egui::Grid::new("timer_grid").striped(true).show(ui, |ui| {
                     ui.label("Description");
                     ui.label("Key");
@@ -149,7 +154,7 @@ impl Session {
 
                     for timer in self.timers.iter_mut() {
                         if let Some(keybind) = timer.keybind.clone() {
-                            if self.session_active {
+                            if self.session_timer.active {
                                 ui.ctx().input(|i| {
                                     if i.num_presses(keybind.key) > 0 {
                                         timer.toggle();
@@ -166,7 +171,7 @@ impl Session {
             ui.add_space(10.0);
 
             ui.heading("Counters");
-            ui.add_enabled_ui(self.session_active, |ui| {
+            ui.add_enabled_ui(self.session_timer.active, |ui| {
                 egui::Grid::new("counter_grid")
                     .striped(true)
                     .show(ui, |ui| {
@@ -177,7 +182,7 @@ impl Session {
 
                         for counter in self.counters.iter_mut() {
                             if let Some(keybind) = counter.keybind.clone() {
-                                if self.session_active {
+                                if self.session_timer.active {
                                     ui.ctx().input(|i| {
                                         if i.num_presses(keybind.key) > 0 {
                                             counter.inc();
