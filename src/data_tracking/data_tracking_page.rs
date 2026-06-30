@@ -1,4 +1,4 @@
-use crate::{counter::Counter, ksf::Ksf, timer::Timer, utils::date_time_string};
+use crate::{ data_tracking::{counter::Counter, timer::Timer}, ksf::Ksf, utils::date_time_string};
 use chrono::{DateTime, Local};
 use egui::Ui;
 use egui_file_dialog::FileDialog;
@@ -20,26 +20,26 @@ impl Default for Session {
         Self {
             session_start_time: Local::now(),
             timers: [
-                Timer::new().split(),
-                Timer::new().split(),
-                Timer::new().split(),
-                Timer::new().split(),
-                Timer::new().split(),
-                Timer::new().split(),
-                Timer::new().split(),
-                Timer::new().split(),
-                Timer::new().split(),
-                Timer::new().split(),
-                Timer::new().split(),
-                Timer::new().split(),
-                Timer::new().split(),
-                Timer::new().split(),
-                Timer::new().split(),
-                Timer::new().split(),
-                Timer::new().split(),
-                Timer::new().split(),
-                Timer::new().split(),
-                Timer::new().split(),
+                Timer::new().with_split(),
+                Timer::new().with_split(),
+                Timer::new().with_split(),
+                Timer::new().with_split(),
+                Timer::new().with_split(),
+                Timer::new().with_split(),
+                Timer::new().with_split(),
+                Timer::new().with_split(),
+                Timer::new().with_split(),
+                Timer::new().with_split(),
+                Timer::new().with_split(),
+                Timer::new().with_split(),
+                Timer::new().with_split(),
+                Timer::new().with_split(),
+                Timer::new().with_split(),
+                Timer::new().with_split(),
+                Timer::new().with_split(),
+                Timer::new().with_split(),
+                Timer::new().with_split(),
+                Timer::new().with_split(),
             ],
             counters: [
                 Counter::new(),

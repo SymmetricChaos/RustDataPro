@@ -1,5 +1,5 @@
-use crate::timer::Timer;
 use egui::{Key, Ui};
+use crate::data_tracking::timer::Timer;
 
 const NUM_TIMERS: usize = 5;
 
@@ -15,8 +15,8 @@ impl Default for Timers {
                 Timer::new(),
                 Timer::new(),
                 Timer::new(),
-                Timer::new().split(),
-                Timer::new().split(),
+                Timer::new().with_split(),
+                Timer::new().with_split(),
             ],
             linked_timers: [false; NUM_TIMERS],
         }

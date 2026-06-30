@@ -15,11 +15,9 @@ impl Counter {
         }
     }
 
-    pub fn with_keybind(keybind: Keybind) -> Self {
-        Self {
-            keybind: Some(keybind),
-            counter: 0,
-        }
+    pub fn with_keybind(mut self, keybind: Keybind) -> Self {
+        self.keybind = Some(keybind);
+        self
     }
 
     pub fn inc(&mut self) {

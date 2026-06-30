@@ -22,21 +22,20 @@ impl Timer {
         }
     }
 
-    pub fn with_keybind(keybind: Keybind) -> Self {
-        Self {
-            keybind: Some(keybind),
-            start_time: Local::now(),
-            total_time: Duration::zero(),
-            active: false,
-            split: false,
-        }
+    /// Build a timer with a keybind.
+    pub fn with_keybind(mut self, keybind: Keybind) -> Self {
+        self.keybind = Some(keybind);
+        self
+
     }
 
-    pub fn split(mut self) -> Self {
+    /// Buold a timer with the total and current time on split displays.
+    pub fn with_split(mut self) -> Self {
         self.split = true;
         self
     }
 
+    /// Switch between active and inactive.
     pub fn toggle(&mut self) {
         if self.active {
             self.stop();
@@ -45,6 +44,7 @@ impl Timer {
         }
     }
 
+    /// Start if inactive. Otherwise do nothing.
     pub fn start(&mut self) {
         if !self.active {
             self.active = true;
@@ -52,6 +52,7 @@ impl Timer {
         }
     }
 
+    /// Stop if active. Otherwise do nothing.
     pub fn stop(&mut self) {
         if self.active {
             self.active = false;
@@ -59,6 +60,7 @@ impl Timer {
         }
     }
 
+    /// Stop if active and set total time to zero.
     pub fn reset(&mut self) {
         self.active = false;
         self.total_time = Duration::zero();
