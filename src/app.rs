@@ -8,7 +8,7 @@ pub struct TemplateApp {
 
     file_dialog: FileDialog,
     ksf_name: Option<String>,
-    ksf: Ksf,
+    ksf: Option<Ksf>,
     file_err_string: Option<String>,
 
     randomness_page: RandomServices,
@@ -23,7 +23,7 @@ impl Default for TemplateApp {
 
             file_dialog: FileDialog::new(),
             ksf_name: None,
-            ksf: Ksf::new(),
+            ksf: None,
             file_err_string: None,
 
             randomness_page: RandomServices::default(),
@@ -62,7 +62,11 @@ impl eframe::App for TemplateApp {
                 }
 
                 if ui.button("Data Tracking").clicked() {
-                    self.data_tracking_page.load_ksf(&self.ksf);
+                    if let Some(ksf) = &self.ksf {
+                        self.data_tracking_page.load_ksf(ksf);
+                    } else {
+                        self.data_tracking_page.load_ksf(&Ksf::default());
+                    }
                     self.active_page = Page::DataTracking;
                 }
             });
@@ -138,7 +142,7 @@ impl eframe::App for TemplateApp {
                         Ok(ksf) => {
                             self.ksf_name =
                                 Some(path.file_name().unwrap().to_str().unwrap().to_string());
-                            self.ksf = ksf;
+                            self.ksf = Some(ksf);
                             self.file_err_string = None
                         }
                         Err(e) => self.file_err_string = Some(e.to_string()),

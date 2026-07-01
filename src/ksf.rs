@@ -40,6 +40,7 @@ impl Keybind {
 /// A list of keybinds divided into Duration and Frequency
 #[derive(Debug, Clone)]
 pub struct Ksf {
+    pub name: String,
     pub duration: Vec<Keybind>,
     pub frequency: Vec<Keybind>,
 }
@@ -47,8 +48,9 @@ pub struct Ksf {
 impl Default for Ksf {
     fn default() -> Self {
         Self {
-            duration: Default::default(),
-            frequency: Default::default(),
+            name: String::from("Default KSF Loaded"),
+            duration: vec![Keybind::from_string("4,Toy Engage"),],
+            frequency: vec![Keybind::from_string("M,Mand"),Keybind::from_string("A,Agression"),Keybind::from_string("S,SIB"),],
         }
     }
 }
@@ -56,6 +58,7 @@ impl Default for Ksf {
 impl Ksf {
     pub fn new() -> Self {
         Ksf {
+            name: String::new(),
             duration: Vec::new(),
             frequency: Vec::new(),
         }

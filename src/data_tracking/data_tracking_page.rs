@@ -20,6 +20,7 @@ macro_rules! record_keypress {
 }
 
 pub struct Session {
+    ksf_name: String,
     timers: [Timer; MAX_DUR],
     counters: [Counter; MAX_FREQ],
     session_timer: Timer,
@@ -32,6 +33,7 @@ pub struct Session {
 impl Default for Session {
     fn default() -> Self {
         Self {
+            ksf_name: String::new(),
             session_timer: Timer::new(),
             timers: [
                 Timer::new_split(),
@@ -92,9 +94,11 @@ impl Session {
         self.session_timer.reset();
         self.keypresses.clear();
         self.keypresses_display = VecDeque::from(["_"; 10]);
+        self.ksf_name.clear();
     }
 
     pub fn load_ksf(&mut self, ksf: &Ksf) {
+        self.ksf_name = ksf.name.clone();
         for (keybind, timer) in ksf.duration.iter().zip(self.timers.iter_mut()) {
             timer.key = Some(keybind.key);
             timer.description = Some(keybind.description.clone());
@@ -148,6 +152,10 @@ impl Session {
 
     pub fn view(&mut self, ui: &mut Ui) {
         egui::CentralPanel::default().show(ui, |ui| {
+            ui.group(|ui| {
+                ui.label(format!("KSF: {}",self.ksf_name))
+            });
+
             ui.heading("Session Controls");
             ui.horizontal(|ui| {
                 if ui
