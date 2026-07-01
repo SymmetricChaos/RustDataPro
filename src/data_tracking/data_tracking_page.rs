@@ -4,11 +4,20 @@ use crate::{
     utils::date_time_string,
 };
 use chrono::Local;
-use egui::{Color32, RichText, Ui};
+use egui::{Color32, Key, RichText, Ui};
 use egui_file_dialog::FileDialog;
+use std::collections::VecDeque;
 
 const MAX_DUR: usize = 20;
 const MAX_FREQ: usize = 20;
+
+macro_rules! record_keypress {
+    ($self:ident, $key:expr) => {
+        $self.keypresses.push($key);
+        $self.keypresses_display.pop_front();
+        $self.keypresses_display.push_back($key.name());
+    };
+}
 
 pub struct Session {
     timers: [Timer; MAX_DUR],
@@ -16,6 +25,8 @@ pub struct Session {
     session_timer: Timer,
     file_dialog: FileDialog,
     output_file_contents: String,
+    keypresses: Vec<Key>,
+    keypresses_display: VecDeque<&'static str>,
 }
 
 impl Default for Session {
@@ -23,26 +34,26 @@ impl Default for Session {
         Self {
             session_timer: Timer::new(),
             timers: [
-                Timer::new().with_split(),
-                Timer::new().with_split(),
-                Timer::new().with_split(),
-                Timer::new().with_split(),
-                Timer::new().with_split(),
-                Timer::new().with_split(),
-                Timer::new().with_split(),
-                Timer::new().with_split(),
-                Timer::new().with_split(),
-                Timer::new().with_split(),
-                Timer::new().with_split(),
-                Timer::new().with_split(),
-                Timer::new().with_split(),
-                Timer::new().with_split(),
-                Timer::new().with_split(),
-                Timer::new().with_split(),
-                Timer::new().with_split(),
-                Timer::new().with_split(),
-                Timer::new().with_split(),
-                Timer::new().with_split(),
+                Timer::new_split(),
+                Timer::new_split(),
+                Timer::new_split(),
+                Timer::new_split(),
+                Timer::new_split(),
+                Timer::new_split(),
+                Timer::new_split(),
+                Timer::new_split(),
+                Timer::new_split(),
+                Timer::new_split(),
+                Timer::new_split(),
+                Timer::new_split(),
+                Timer::new_split(),
+                Timer::new_split(),
+                Timer::new_split(),
+                Timer::new_split(),
+                Timer::new_split(),
+                Timer::new_split(),
+                Timer::new_split(),
+                Timer::new_split(),
             ],
             counters: [
                 Counter::new(),
@@ -68,24 +79,37 @@ impl Default for Session {
             ],
             file_dialog: FileDialog::new().default_file_name("SaveData.txt"),
             output_file_contents: String::new(),
+            keypresses: Vec::new(),
+            keypresses_display: VecDeque::from(["_"; 10]),
         }
     }
 }
 
 impl Session {
+    fn reset_trackers(&mut self) {
+        self.timers.iter_mut().for_each(|t| t.reset());
+        self.counters.iter_mut().for_each(|c| c.reset());
+        self.session_timer.reset();
+        self.keypresses.clear();
+        self.keypresses_display = VecDeque::from(["_"; 10]);
+    }
+
     pub fn load_ksf(&mut self, ksf: &Ksf) {
         for (keybind, timer) in ksf.duration.iter().zip(self.timers.iter_mut()) {
-            timer.keybind = Some(keybind.clone())
+            timer.key = Some(keybind.key);
+            timer.description = Some(keybind.description.clone());
         }
         for (keybind, counter) in ksf.frequency.iter().zip(self.counters.iter_mut()) {
-            counter.keybind = Some(keybind.clone())
+            counter.key = Some(keybind.key);
+            counter.description = Some(keybind.description.clone());
         }
     }
 
-    pub fn save_session(&mut self) {
+    fn save_session(&mut self) {
         self.session_timer.stop();
         self.output_file_contents.clear();
 
+        // Save session time information
         self.output_file_contents.push_str(&format!(
             "Start {}\nEnd {}\nDuration {}\n",
             date_time_string(self.session_timer.start_time),
@@ -95,12 +119,14 @@ impl Session {
         self.output_file_contents.push('\n');
         // Save duration data
         for timer in self.timers.iter_mut() {
+            timer.stop();
+        }
+        for timer in self.timers.iter_mut() {
             // Stop timers if they are running and update the total
-            if let Some(keybind) = timer.keybind.clone() {
-                timer.stop();
+            if let Some(description) = &timer.description {
                 self.output_file_contents.push_str(&format!(
                     "{} {}\n",
-                    keybind.description,
+                    description,
                     timer.saved_time.as_seconds_f32()
                 ));
             }
@@ -108,15 +134,13 @@ impl Session {
         self.output_file_contents.push('\n');
         // Save frequency data
         for counter in self.counters.iter() {
-            if let Some(keybind) = counter.keybind.clone() {
+            if let Some(description) = &counter.description {
                 self.output_file_contents
-                    .push_str(&format!("{} {}\n", keybind.description, counter.counter));
+                    .push_str(&format!("{} {}\n", description, counter.counter));
             }
         }
 
-        self.timers.iter_mut().for_each(|t| t.reset());
-        self.counters.iter_mut().for_each(|c| c.reset());
-        self.session_timer.reset();
+        self.reset_trackers();
 
         // Open save dialog
         self.file_dialog.save_file();
@@ -162,11 +186,12 @@ impl Session {
                     ui.end_row();
 
                     for timer in self.timers.iter_mut() {
-                        if let Some(keybind) = timer.keybind.clone() {
+                        if let Some(key) = timer.key {
                             if self.session_timer.active {
                                 ui.ctx().input(|i| {
-                                    if i.num_presses(keybind.key) > 0 {
+                                    if i.num_presses(key) > 0 {
                                         timer.toggle();
+                                        record_keypress!(self, key);
                                     }
                                 });
                             }
@@ -190,11 +215,12 @@ impl Session {
                         ui.end_row();
 
                         for counter in self.counters.iter_mut() {
-                            if let Some(keybind) = counter.keybind.clone() {
+                            if let Some(key) = counter.key {
                                 if self.session_timer.active {
                                     ui.ctx().input(|i| {
-                                        if i.num_presses(keybind.key) > 0 {
+                                        if i.num_presses(key) > 0 {
                                             counter.inc();
+                                            record_keypress!(self, key);
                                         }
                                     });
                                 }
@@ -203,6 +229,14 @@ impl Session {
                             }
                         }
                     });
+            });
+
+            ui.group(|ui| {
+                ui.horizontal(|ui| {
+                    for k in self.keypresses_display.iter() {
+                        ui.monospace(*k);
+                    }
+                });
             });
         });
     }

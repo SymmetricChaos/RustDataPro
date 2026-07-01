@@ -29,6 +29,14 @@ impl Timers {
             ui.heading("Timers");
 
             ui.ctx().input(|i| {
+                if i.num_presses(Key::Num0) > 0 {
+                    for (timer, linked) in self.timers.iter_mut().zip(self.linked_timers.iter_mut())
+                    {
+                        if *linked {
+                            timer.toggle();
+                        }
+                    }
+                }
                 if i.num_presses(Key::Num1) > 0 {
                     self.timers[0].toggle()
                 }
@@ -47,35 +55,21 @@ impl Timers {
             });
 
             ui.horizontal(|ui| {
-                ui.group(|ui| {
-                    ui.label("Linked");
-                    ui.horizontal(|ui| {
-                        if ui.button("Start/Stop").clicked() {
-                            for (timer, linked) in
-                                self.timers.iter_mut().zip(self.linked_timers.iter_mut())
-                            {
-                                if *linked {
-                                    timer.toggle();
-                                }
-                            }
-                        };
-                        if ui.button("Reset").clicked() {
-                            for (timer, linked) in
-                                self.timers.iter_mut().zip(self.linked_timers.iter_mut())
-                            {
-                                if *linked {
-                                    timer.reset();
-                                }
-                            }
-                        };
-                    });
-                });
+                if ui.button("Reset All").clicked() {
+                    for timer in self.timers.iter_mut() {
+                        timer.reset();
+                    }
+                }
                 if ui.button("Split Timers").clicked() {
                     for timer in self.timers.iter_mut() {
                         timer.split = !timer.split;
                     }
                 }
             });
+
+            ui.label(
+                "Press 0 to toggle linked timers. Press number keyes to toggle numbered timers.",
+            );
 
             for (n, (timer, linked)) in self
                 .timers
@@ -91,7 +85,7 @@ impl Timers {
                     if ui.button("⏱").clicked() {
                         timer.toggle();
                     }
-                    if ui.button("r").clicked() {
+                    if ui.button("x").on_hover_text("reset").clicked() {
                         timer.reset();
                     }
                     ui.checkbox(linked, "");

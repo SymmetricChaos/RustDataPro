@@ -1,22 +1,29 @@
-use egui::Ui;
-
-use crate::ksf::Keybind;
+use egui::{Key, Ui};
 
 pub struct Counter {
-    pub keybind: Option<Keybind>,
+    pub key: Option<Key>,
+    pub description: Option<String>,
     pub counter: u32,
 }
 
 impl Counter {
     pub fn new() -> Self {
         Self {
-            keybind: None,
+            key: None,
+            description: None,
             counter: 0,
         }
     }
 
-    pub fn with_keybind(mut self, keybind: Keybind) -> Self {
-        self.keybind = Some(keybind);
+    /// Build a counter with a keybind.
+    pub fn with_key(mut self, key: Key) -> Self {
+        self.key = Some(key);
+        self
+    }
+
+    /// Build a counter with a description.
+    pub fn with_description(mut self, description: String) -> Self {
+        self.description = Some(description);
         self
     }
 
@@ -33,10 +40,12 @@ impl Counter {
     }
 
     pub fn view(&mut self, ui: &mut Ui) {
-        if let Some(kb) = &self.keybind {
-            ui.label(&kb.description);
-            ui.label(kb.key.name());
-            ui.monospace(format!("{:>3}", self.counter));
+        if let Some(des) = &self.description {
+            ui.label(des);
         }
+        if let Some(k) = &self.key {
+            ui.label(k.name());
+        }
+        ui.monospace(format!("{:>3}", self.counter));
     }
 }

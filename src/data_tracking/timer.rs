@@ -1,10 +1,28 @@
-use crate::ksf::Keybind;
 use chrono::{DateTime, Duration, Local};
-use egui::Ui;
+use egui::{Color32, Key, RichText, Ui};
+
+macro_rules! timer_format {
+    () => {
+        "{:6.2}"
+    };
+}
+
+macro_rules! timer_display_on {
+    ($timer:expr) => {
+        RichText::new(format!(timer_format!(), $timer)).color(Color32::YELLOW)
+    };
+}
+
+macro_rules! timer_display_off {
+    ($timer:expr) => {
+        RichText::new(format!(timer_format!(), $timer))
+    };
+}
 
 #[derive(Debug, Clone)]
 pub struct Timer {
-    pub keybind: Option<Keybind>,
+    pub key: Option<Key>,
+    pub description: Option<String>,
     pub start_time: DateTime<Local>,
     pub saved_time: Duration,
     pub active: bool,
@@ -14,7 +32,8 @@ pub struct Timer {
 impl Timer {
     pub fn new() -> Self {
         Self {
-            keybind: None,
+            key: None,
+            description: None,
             start_time: Local::now(),
             saved_time: Duration::zero(),
             active: false,
@@ -22,15 +41,26 @@ impl Timer {
         }
     }
 
+    pub fn new_split() -> Self {
+        Self {
+            key: None,
+            description: None,
+            start_time: Local::now(),
+            saved_time: Duration::zero(),
+            active: false,
+            split: true,
+        }
+    }
+
     /// Build a timer with a keybind.
-    pub fn with_keybind(mut self, keybind: Keybind) -> Self {
-        self.keybind = Some(keybind);
+    pub fn with_key(mut self, key: Key) -> Self {
+        self.key = Some(key);
         self
     }
 
-    /// Buold a timer with the total and current time on split displays.
-    pub fn with_split(mut self) -> Self {
-        self.split = true;
+    /// Build a timer with a description.
+    pub fn with_description(mut self, description: String) -> Self {
+        self.description = Some(description);
         self
     }
 
@@ -80,30 +110,42 @@ impl Timer {
         (Local::now() - self.start_time + self.saved_time).as_seconds_f32()
     }
 
-    pub fn view(&mut self, ui: &mut Ui) {
-        if let Some(kb) = &self.keybind {
-            ui.label(&kb.description);
-            ui.label(kb.key.name());
-        }
+    fn view_split(&mut self, ui: &mut Ui) {
         if self.active {
             ui.request_repaint();
-            if self.split {
-                ui.horizontal(|ui| {
-                    ui.monospace(format!("{:6.2}", self.saved_time()));
-                    ui.monospace(format!("{:6.2}", self.current_time()));
-                });
-            } else {
-                ui.monospace(format!("{:6.2}", self.total_time()));
-            }
+            ui.horizontal(|ui| {
+                ui.monospace(timer_display_on!(self.saved_time()));
+                ui.monospace(timer_display_on!(self.current_time()));
+            });
         } else {
-            if self.split {
-                ui.horizontal(|ui| {
-                    ui.monospace(format!("{:6.2}", self.saved_time()));
-                    ui.monospace(format!("{:6.2}", 0.0));
-                });
-            } else {
-                ui.monospace(format!("{:6.2}", self.saved_time()));
-            }
+            ui.horizontal(|ui| {
+                ui.monospace(timer_display_off!(self.saved_time()));
+                ui.monospace(timer_display_off!(0.0));
+            });
+        }
+    }
+
+    fn view_unsplit(&mut self, ui: &mut Ui) {
+        if self.active {
+            ui.request_repaint();
+            ui.monospace(timer_display_on!(self.total_time()));
+        } else {
+            ui.monospace(timer_display_off!(self.saved_time()));
+        }
+    }
+
+    /// A timer will reserve six monospace characters of space to display.
+    pub fn view(&mut self, ui: &mut Ui) {
+        if let Some(des) = &self.description {
+            ui.label(des);
+        }
+        if let Some(k) = &self.key {
+            ui.label(k.name());
+        }
+        if self.split {
+            self.view_split(ui);
+        } else {
+            self.view_unsplit(ui);
         }
     }
 }
