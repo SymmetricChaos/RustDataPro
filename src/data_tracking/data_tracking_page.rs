@@ -88,7 +88,7 @@ impl Default for Session {
 }
 
 impl Session {
-    fn reset_trackers(&mut self) {
+    fn reset(&mut self) {
         self.timers.iter_mut().for_each(|t| t.reset());
         self.counters.iter_mut().for_each(|c| c.reset());
         self.session_timer.reset();
@@ -107,6 +107,10 @@ impl Session {
             counter.key = Some(keybind.key);
             counter.description = Some(keybind.description.clone());
         }
+    }
+
+    pub fn load_client_data(&mut self) {
+        
     }
 
     fn save_session(&mut self) {
@@ -144,7 +148,7 @@ impl Session {
             }
         }
 
-        self.reset_trackers();
+        self.reset();
 
         // Open save dialog
         self.file_dialog.save_file();
