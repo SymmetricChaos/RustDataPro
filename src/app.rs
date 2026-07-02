@@ -149,9 +149,13 @@ impl eframe::App for DataPro {
             }
             if let Some(ksf) = &self.ksf {
                 ui.label(format!("KSF file: {}", ksf.name));
+            } else {
+                ui.label("KSF file: DEFAULT");
             }
             if let Some(e) = &self.ksf_err_string {
                 ui.strong(e);
+            } else {
+                ui.strong("");
             }
             self.ksf_file_dialog.update(ui.ctx());
             if let Some(path) = self.ksf_file_dialog.take_picked() {
@@ -172,14 +176,18 @@ impl eframe::App for DataPro {
             if ui.button("Select Client File").clicked() {
                 self.session_data_file_dialog.pick_file();
             }
-            if let Some(sd) = &mut self.session_data {
-                ui.text_edit_singleline(&mut sd.first_name);
-                ui.text_edit_singleline(&mut sd.last_name);
-                ui.text_edit_singleline(&mut sd.client_id);
+            if let Some(sd) = &self.session_data {
+                ui.label(format!("{} {}", &sd.first_name, &sd.last_name));
+                ui.label(format!("ID: {}", &sd.client_id));
+            } else {
+                ui.label("Session Data");
+                ui.label("Not Loaded");
             }
 
             if let Some(e) = &self.session_data_err_string {
                 ui.strong(e);
+            } else {
+                ui.strong("");
             }
             self.session_data_file_dialog.update(ui.ctx());
             if let Some(path) = self.session_data_file_dialog.take_picked() {

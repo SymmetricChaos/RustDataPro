@@ -31,7 +31,7 @@ pub struct SessionPage {
     timers: [Timer; MAX_DUR],
     counters: [Counter; MAX_FREQ],
     session_timer: Timer,
-    file_dialog: FileDialog,
+    output_file_dialog: FileDialog,
     output_file_contents: String,
     keypresses: Vec<Key>,
     keypresses_display: VecDeque<&'static str>,
@@ -88,7 +88,7 @@ impl SessionPage {
                 Counter::new(),
                 Counter::new(),
             ],
-            file_dialog: FileDialog::new().default_file_name("SaveData.txt"),
+            output_file_dialog: FileDialog::new().default_file_name("SaveData.txt"),
             output_file_contents: String::new(),
             keypresses: Vec::new(),
             keypresses_display: VecDeque::from(["_"; 10]),
@@ -170,7 +170,7 @@ impl SessionPage {
             .push_str(&self.keypresses.iter().map(|k| k.name()).join(" "));
 
         // Open save dialog
-        self.file_dialog.save_file();
+        self.output_file_dialog.save_file();
     }
 
     pub fn view(&mut self, ui: &mut Ui, active_page: &mut Page) {
@@ -244,8 +244,8 @@ impl SessionPage {
                     self.session_timer.start();
                 }
             }
-            self.file_dialog.update(ui.ctx());
-            if let Some(path) = self.file_dialog.take_picked() {
+            self.output_file_dialog.update(ui.ctx());
+            if let Some(path) = self.output_file_dialog.take_picked() {
                 if std::fs::write(&path, &self.output_file_contents).is_ok() {
                     self.reset();
                     *active_page = Page::About;
@@ -318,6 +318,7 @@ impl SessionPage {
                     })
                 });
             });
+            ui.add_space(10.0);
 
             ui.group(|ui| {
                 ui.horizontal(|ui| {
