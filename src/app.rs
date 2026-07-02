@@ -1,6 +1,10 @@
 use crate::{
-    data::ksf::Ksf, pages::Page, randomness_page::RandomServices, session_page::SessionPage,
-    timers::Timers, utils::date_time_string,
+    data::{SessionData, ksf::Ksf},
+    pages::Page,
+    randomness_page::RandomServices,
+    session_page::SessionPage,
+    timers::Timers,
+    utils::date_time_string,
 };
 use chrono::Local;
 use egui::{RichText, warn_if_debug_build, widgets};
@@ -10,9 +14,13 @@ pub struct DataPro {
     active_page: Page,
     timers_active: bool,
 
-    file_dialog: FileDialog,
+    ksf_file_dialog: FileDialog,
     ksf: Option<Ksf>,
-    file_err_string: Option<String>,
+    ksf_err_string: Option<String>,
+
+    session_data_file_dialog: FileDialog,
+    session_data: Option<SessionData>,
+    session_data_err_string: Option<String>,
 
     randomness_page: RandomServices,
     data_tracking_page: SessionPage,
@@ -25,9 +33,12 @@ impl Default for DataPro {
             active_page: Page::About,
             timers_active: false,
 
-            file_dialog: FileDialog::new(),
+            ksf_file_dialog: FileDialog::new(),
             ksf: None,
-            file_err_string: None,
+            ksf_err_string: None,
+            session_data_file_dialog: FileDialog::new(),
+            session_data: None,
+            session_data_err_string: None,
 
             randomness_page: RandomServices::default(),
             data_tracking_page: SessionPage::new(),
@@ -71,9 +82,16 @@ impl eframe::App for DataPro {
                 if ui.button("Data Tracking").clicked() {
                     self.set_page(Page::DataTracking);
                     if let Some(ksf) = &self.ksf {
-                        self.data_tracking_page.load(ksf);
+                        self.data_tracking_page.load_ksf(ksf);
                     } else {
-                        self.data_tracking_page.load(&Ksf::default());
+                        self.data_tracking_page.load_ksf(&Ksf::default());
+                    }
+                    if let Some(session_data) = &self.session_data {
+                        self.data_tracking_page
+                            .load_session_data(session_data.clone());
+                    } else {
+                        self.data_tracking_page
+                            .load_session_data(SessionData::default());
                     }
                 }
             });
@@ -127,27 +145,54 @@ impl eframe::App for DataPro {
             ui.add_space(5.0);
 
             if ui.button("Select KSF File").clicked() {
-                self.file_dialog.pick_file();
+                self.ksf_file_dialog.pick_file();
             }
-
             if let Some(ksf) = &self.ksf {
                 ui.label(format!("KSF file: {}", ksf.name));
             }
-            if let Some(e) = &self.file_err_string {
+            if let Some(e) = &self.ksf_err_string {
                 ui.strong(e);
             }
-
-            self.file_dialog.update(ui.ctx());
-            if let Some(path) = self.file_dialog.take_picked() {
+            self.ksf_file_dialog.update(ui.ctx());
+            if let Some(path) = self.ksf_file_dialog.take_picked() {
                 if path.extension().unwrap().to_str().unwrap() != "txt" {
-                    self.file_err_string = Some(String::from("KSF files must have extension .txt"));
+                    self.ksf_err_string = Some(String::from("KSF files must have extension .txt"));
                 } else {
                     match Ksf::from_file(path) {
                         Ok(ksf) => {
                             self.ksf = Some(ksf);
-                            self.file_err_string = None
+                            self.ksf_err_string = None
                         }
-                        Err(e) => self.file_err_string = Some(e.to_string()),
+                        Err(e) => self.ksf_err_string = Some(e.to_string()),
+                    };
+                }
+            }
+            ui.add_space(5.0);
+
+            if ui.button("Select Client File").clicked() {
+                self.session_data_file_dialog.pick_file();
+            }
+            if let Some(sd) = &mut self.session_data {
+                ui.text_edit_singleline(&mut sd.first_name);
+                ui.text_edit_singleline(&mut sd.last_name);
+                ui.text_edit_singleline(&mut sd.client_id);
+            }
+
+            if let Some(e) = &self.session_data_err_string {
+                ui.strong(e);
+            }
+            self.session_data_file_dialog.update(ui.ctx());
+            if let Some(path) = self.session_data_file_dialog.take_picked() {
+                if path.extension().unwrap().to_str().unwrap() != "json" {
+                    self.session_data_err_string =
+                        Some(String::from("Client files must have extension .json"));
+                } else {
+                    match SessionData::from_file(path) {
+                        Ok(sess_data) => {
+                            self.session_data = Some(sess_data);
+                            self.session_data_err_string = None
+                        }
+                        Err(e) => self.session_data_err_string = Some(e.to_string()),
                     };
                 }
             }

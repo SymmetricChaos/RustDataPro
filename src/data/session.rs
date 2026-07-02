@@ -1,5 +1,8 @@
-use std::fmt::Display;
+use anyhow::Result;
+use serde::{Deserialize, Serialize};
+use std::{fmt::Display, fs::File, io::Read, path::PathBuf};
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SessionData {
     pub first_name: String,
     pub last_name: String,
@@ -41,29 +44,16 @@ impl Display for SessionData {
 }
 
 impl SessionData {
-    pub fn blank() -> Self {
+    pub fn new() -> Self {
         Self {
             ..Default::default()
         }
     }
 
-    pub fn new(
-        first_name: &str,
-        last_name: &str,
-        client_id: &str,
-        assessment: &str,
-        condition: &str,
-        data_type: &str,
-        session_number: u32,
-    ) -> Self {
-        Self {
-            first_name: first_name.into(),
-            last_name: last_name.into(),
-            client_id: client_id.into(),
-            assessment: assessment.into(),
-            condition: condition.into(),
-            data_type: data_type.into(),
-            session_number,
-        }
+    pub fn from_file(file_path: PathBuf) -> Result<SessionData> {
+        let mut file = File::open(&file_path)?;
+        let mut s = String::new();
+        file.read_to_string(&mut s)?;
+        Ok(serde_json::from_str(&s)?)
     }
 }

@@ -41,7 +41,7 @@ pub struct SessionPage {
 impl SessionPage {
     pub fn new() -> Self {
         Self {
-            session_data: SessionData::default(),
+            session_data: SessionData::new(),
             ksf_name: String::new(),
             session_timer: Timer::new(),
             timers: [
@@ -103,11 +103,11 @@ impl SessionPage {
         self.keypresses.clear();
         self.keypresses_display = VecDeque::from(["_"; 10]);
         self.ksf_name.clear();
-        self.session_data = SessionData::blank();
+        self.session_data = SessionData::new();
         self.clicked_keys.clear();
     }
 
-    pub fn load(&mut self, ksf: &Ksf) {
+    pub fn load_ksf(&mut self, ksf: &Ksf) {
         self.ksf_name = ksf.name.clone();
         for (keybind, timer) in ksf.duration.iter().zip(self.timers.iter_mut()) {
             timer.key = Some(keybind.key);
@@ -117,6 +117,10 @@ impl SessionPage {
             counter.key = Some(keybind.key);
             counter.description = Some(keybind.description.clone());
         }
+    }
+
+    pub fn load_session_data(&mut self, session_data: SessionData) {
+        self.session_data = session_data;
     }
 
     fn save_session(&mut self) {

@@ -69,10 +69,15 @@ impl Ksf {
     }
 
     pub fn from_file(file_path: PathBuf) -> Result<Ksf> {
-        let file = File::open(file_path.to_str().unwrap()).context("file name not found")?;
+        let file = File::open(&file_path)?;
         let mut rdr = csv::Reader::from_reader(file);
         let mut ksf = Ksf::new();
-        ksf.name = file_path.file_name().unwrap().to_str().unwrap().to_string();
+        ksf.name = file_path
+            .file_name()
+            .context("file has no name")?
+            .to_str()
+            .context("failed to convert file name to string")?
+            .to_string();
         for result in rdr.records() {
             let mut record: StringRecord = result.context("StringRecord invalid")?;
             record.trim();
