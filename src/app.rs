@@ -1,4 +1,7 @@
-use crate::{data_tracking::Session, ksf::Ksf, pages::Page, randomness_page::RandomServices, timers_page::Timers, utils::date_time_string};
+use crate::{
+    data::ksf::Ksf, pages::Page, randomness_page::RandomServices, session_page::SessionPage,
+    timers_page::Timers, utils::date_time_string,
+};
 use chrono::Local;
 use egui::{RichText, warn_if_debug_build, widgets};
 use egui_file_dialog::FileDialog;
@@ -12,7 +15,7 @@ pub struct TemplateApp {
     file_err_string: Option<String>,
 
     randomness_page: RandomServices,
-    data_tracking_page: Session,
+    data_tracking_page: SessionPage,
     timer_page: Timers,
 }
 
@@ -27,7 +30,7 @@ impl Default for TemplateApp {
             file_err_string: None,
 
             randomness_page: RandomServices::default(),
-            data_tracking_page: Session::default(),
+            data_tracking_page: SessionPage::default(),
             timer_page: Timers::default(),
         }
     }
@@ -115,7 +118,8 @@ impl eframe::App for TemplateApp {
 
             ui.request_repaint_after_secs(5.0);
             ui.label(format!(
-                "The Current Date/Time is {}", date_time_string(Local::now()),
+                "The Current Date/Time is {}",
+                date_time_string(Local::now()),
             ));
 
             ui.add_space(5.0);

@@ -1,7 +1,5 @@
-pub mod data_tracking_page;
-pub mod timer;
 pub mod counter;
+pub mod timer;
 
-pub use data_tracking_page::*;
-pub use timer::*;
 pub use counter::*;
+pub use timer::*;

@@ -65,11 +65,14 @@ impl Timers {
                         timer.split = !timer.split;
                     }
                 }
+                if ui.button("Show Bouts").clicked() {
+                    for timer in self.timers.iter_mut() {
+                        timer.show_bouts = !timer.show_bouts;
+                    }
+                }
             });
 
-            ui.label(
-                "Press 0 to toggle linked timers. Press number keyes to toggle numbered timers.",
-            );
+            ui.label("Press 1-5 to toggle timers.\nPress 0 to toggle linked timers.");
 
             for (n, (timer, linked)) in self
                 .timers

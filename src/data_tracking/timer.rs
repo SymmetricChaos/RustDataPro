@@ -19,12 +19,20 @@ macro_rules! timer_display_off {
     };
 }
 
+macro_rules! bout_display {
+    ($bouts:expr) => {
+        RichText::new(format!("{:>2}", $bouts))
+    };
+}
+
 #[derive(Debug, Clone)]
 pub struct Timer {
     pub key: Option<Key>,
     pub description: Option<String>,
     pub start_time: DateTime<Local>,
     pub saved_time: Duration,
+    pub bouts: u32,
+    pub show_bouts: bool,
     pub active: bool,
     pub split: bool,
 }
@@ -36,6 +44,8 @@ impl Timer {
             description: None,
             start_time: Local::now(),
             saved_time: Duration::zero(),
+            bouts: 0,
+            show_bouts: false,
             active: false,
             split: false,
         }
@@ -47,6 +57,8 @@ impl Timer {
             description: None,
             start_time: Local::now(),
             saved_time: Duration::zero(),
+            bouts: 0,
+            show_bouts: false,
             active: false,
             split: true,
         }
@@ -64,6 +76,12 @@ impl Timer {
         self
     }
 
+    /// Build a timer with a description.
+    pub fn with_bouts(mut self) -> Self {
+        self.show_bouts = true;
+        self
+    }
+
     /// Switch between active and inactive.
     pub fn toggle(&mut self) {
         if self.active {
@@ -78,6 +96,15 @@ impl Timer {
         if !self.active {
             self.active = true;
             self.start_time = Local::now();
+            self.bouts += 1;
+        }
+    }
+
+    /// If active stop without updating the saved time.
+    pub fn unstart(&mut self) {
+        if self.active {
+            self.active = false;
+            self.bouts = self.bouts.saturating_sub(1); // prevents potential overflow
         }
     }
 
@@ -93,6 +120,7 @@ impl Timer {
     pub fn reset(&mut self) {
         self.active = false;
         self.saved_time = Duration::zero();
+        self.bouts = 0;
     }
 
     /// The amount of time currently saved in seconds.
@@ -117,11 +145,17 @@ impl Timer {
                 ui.monospace(timer_display_on!(self.saved_time()));
                 ui.monospace(timer_display_on!(self.current_time()));
             });
+            if self.show_bouts {
+                ui.monospace(bout_display!(self.bouts));
+            }
         } else {
             ui.horizontal(|ui| {
                 ui.monospace(timer_display_off!(self.saved_time()));
                 ui.monospace(timer_display_off!(0.0));
             });
+            if self.show_bouts {
+                ui.monospace(bout_display!(self.bouts));
+            }
         }
     }
 
@@ -129,12 +163,17 @@ impl Timer {
         if self.active {
             ui.request_repaint();
             ui.monospace(timer_display_on!(self.total_time()));
+            if self.show_bouts {
+                ui.monospace(bout_display!(self.bouts));
+            }
         } else {
             ui.monospace(timer_display_off!(self.saved_time()));
+            if self.show_bouts {
+                ui.monospace(bout_display!(self.bouts));
+            }
         }
     }
 
-    /// A timer will reserve six monospace characters of space to display.
     pub fn view(&mut self, ui: &mut Ui) {
         if let Some(des) = &self.description {
             ui.label(des);

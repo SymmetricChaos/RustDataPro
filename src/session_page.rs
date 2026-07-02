@@ -1,6 +1,6 @@
 use crate::{
+    data::{ksf::Ksf, session::SessionData},
     data_tracking::{counter::Counter, timer::Timer},
-    ksf::Ksf,
     utils::date_time_string,
 };
 use chrono::Local;
@@ -19,7 +19,8 @@ macro_rules! record_keypress {
     };
 }
 
-pub struct Session {
+pub struct SessionPage {
+    session_data: SessionData,
     ksf_name: String,
     timers: [Timer; MAX_DUR],
     counters: [Counter; MAX_FREQ],
@@ -30,9 +31,10 @@ pub struct Session {
     keypresses_display: VecDeque<&'static str>,
 }
 
-impl Default for Session {
+impl Default for SessionPage {
     fn default() -> Self {
         Self {
+            session_data: SessionData::default(),
             ksf_name: String::new(),
             session_timer: Timer::new(),
             timers: [
@@ -87,7 +89,7 @@ impl Default for Session {
     }
 }
 
-impl Session {
+impl SessionPage {
     fn reset(&mut self) {
         self.timers.iter_mut().for_each(|t| t.reset());
         self.counters.iter_mut().for_each(|c| c.reset());
@@ -95,6 +97,7 @@ impl Session {
         self.keypresses.clear();
         self.keypresses_display = VecDeque::from(["_"; 10]);
         self.ksf_name.clear();
+        self.session_data = SessionData::blank();
     }
 
     pub fn load_ksf(&mut self, ksf: &Ksf) {
@@ -109,13 +112,19 @@ impl Session {
         }
     }
 
-    pub fn load_client_data(&mut self) {
-        
-    }
-
     fn save_session(&mut self) {
+        // Stop all timers
+        for timer in self.timers.iter_mut() {
+            timer.stop();
+        }
         self.session_timer.stop();
+
         self.output_file_contents.clear();
+
+        // Save session information
+        self.output_file_contents
+            .push_str(&self.session_data.to_string());
+        self.output_file_contents.push('\n');
 
         // Save session time information
         self.output_file_contents.push_str(&format!(
@@ -125,10 +134,9 @@ impl Session {
             (Local::now() - self.session_timer.start_time).as_seconds_f32()
         ));
         self.output_file_contents.push('\n');
+
         // Save duration data
-        for timer in self.timers.iter_mut() {
-            timer.stop();
-        }
+        self.output_file_contents.push_str("Duration Data\n");
         for timer in self.timers.iter_mut() {
             // Stop timers if they are running and update the total
             if let Some(description) = &timer.description {
@@ -140,7 +148,9 @@ impl Session {
             }
         }
         self.output_file_contents.push('\n');
+
         // Save frequency data
+        self.output_file_contents.push_str("Frequency Data\n");
         for counter in self.counters.iter() {
             if let Some(description) = &counter.description {
                 self.output_file_contents
@@ -156,8 +166,27 @@ impl Session {
 
     pub fn view(&mut self, ui: &mut Ui) {
         egui::CentralPanel::default().show(ui, |ui| {
-            ui.group(|ui| {
-                ui.label(format!("KSF: {}",self.ksf_name))
+            ui.horizontal(|ui| {
+                ui.group(|ui| {
+                    ui.vertical(|ui| {
+                        ui.label(format!(
+                            "Client: {} {}",
+                            self.session_data.first_name, self.session_data.last_name
+                        ));
+                        ui.label(format!(
+                            "Session Number: {}",
+                            self.session_data.session_number
+                        ));
+                        ui.label(format!("KSF: {}", self.ksf_name))
+                    });
+                });
+                ui.group(|ui| {
+                    ui.vertical(|ui| {
+                        ui.label(format!("Assessment: {}", self.session_data.assessment));
+                        ui.label(format!("Condition: {}", self.session_data.condition));
+                        ui.label(format!("Data Type: {}", self.session_data.data_type));
+                    });
+                });
             });
 
             ui.heading("Session Controls");
@@ -188,59 +217,67 @@ impl Session {
                 }
             }
 
-            ui.heading("Timers");
-            ui.add_enabled_ui(self.session_timer.active, |ui| {
-                egui::Grid::new("timer_grid").striped(true).show(ui, |ui| {
-                    ui.label("Description");
-                    ui.label("Key");
-                    ui.label("Current");
-                    ui.label("Total");
-                    ui.end_row();
+            ui.horizontal(|ui| {
+                ui.vertical(|ui| {
+                    ui.group(|ui| {
+                        ui.label("Frequency Keys");
+                        ui.add_enabled_ui(self.session_timer.active, |ui| {
+                            egui::Grid::new("counter_grid")
+                                .striped(true)
+                                .show(ui, |ui| {
+                                    ui.label("Description");
+                                    ui.label("Key");
+                                    ui.label("Total");
+                                    ui.end_row();
 
-                    for timer in self.timers.iter_mut() {
-                        if let Some(key) = timer.key {
-                            if self.session_timer.active {
-                                ui.ctx().input(|i| {
-                                    if i.num_presses(key) > 0 {
-                                        timer.toggle();
-                                        record_keypress!(self, key);
+                                    for counter in self.counters.iter_mut() {
+                                        if let Some(key) = counter.key {
+                                            if self.session_timer.active {
+                                                ui.ctx().input(|i| {
+                                                    if i.num_presses(key) > 0 {
+                                                        counter.inc();
+                                                        record_keypress!(self, key);
+                                                    }
+                                                });
+                                            }
+                                            counter.view(ui);
+                                            ui.end_row();
+                                        }
                                     }
                                 });
-                            }
-
-                            timer.view(ui);
-                            ui.end_row();
-                        }
-                    }
+                        });
+                    })
                 });
-            });
-            ui.add_space(10.0);
-
-            ui.heading("Counters");
-            ui.add_enabled_ui(self.session_timer.active, |ui| {
-                egui::Grid::new("counter_grid")
-                    .striped(true)
-                    .show(ui, |ui| {
-                        ui.label("Description");
-                        ui.label("Key");
-                        ui.label("Total");
-                        ui.end_row();
-
-                        for counter in self.counters.iter_mut() {
-                            if let Some(key) = counter.key {
-                                if self.session_timer.active {
-                                    ui.ctx().input(|i| {
-                                        if i.num_presses(key) > 0 {
-                                            counter.inc();
-                                            record_keypress!(self, key);
-                                        }
-                                    });
-                                }
-                                counter.view(ui);
+                ui.vertical(|ui| {
+                    ui.group(|ui| {
+                        ui.label("Duration Keys");
+                        ui.add_enabled_ui(self.session_timer.active, |ui| {
+                            egui::Grid::new("timer_grid").striped(true).show(ui, |ui| {
+                                ui.label("Description");
+                                ui.label("Key");
+                                ui.label("Current");
+                                ui.label("Total");
                                 ui.end_row();
-                            }
-                        }
-                    });
+
+                                for timer in self.timers.iter_mut() {
+                                    if let Some(key) = timer.key {
+                                        if self.session_timer.active {
+                                            ui.ctx().input(|i| {
+                                                if i.num_presses(key) > 0 {
+                                                    timer.toggle();
+                                                    record_keypress!(self, key);
+                                                }
+                                            });
+                                        }
+
+                                        timer.view(ui);
+                                        ui.end_row();
+                                    }
+                                }
+                            });
+                        });
+                    })
+                });
             });
 
             ui.group(|ui| {
