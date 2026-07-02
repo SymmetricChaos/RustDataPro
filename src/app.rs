@@ -1,5 +1,3 @@
-use std::{cell::RefCell, rc::Rc};
-
 use crate::{
     data::ksf::Ksf, pages::Page, randomness_page::RandomServices, session_page::SessionPage,
     timers::Timers, utils::date_time_string,
@@ -9,7 +7,7 @@ use egui::{RichText, warn_if_debug_build, widgets};
 use egui_file_dialog::FileDialog;
 
 pub struct DataPro {
-    active_page: Rc<RefCell<Page>>,
+    active_page: Page,
     timers_active: bool,
 
     file_dialog: FileDialog,
@@ -23,9 +21,8 @@ pub struct DataPro {
 
 impl Default for DataPro {
     fn default() -> Self {
-        let active_page = Rc::new(RefCell::new(Page::About));
         Self {
-            active_page: active_page.clone(),
+            active_page: Page::About,
             timers_active: false,
 
             file_dialog: FileDialog::new(),
@@ -47,7 +44,7 @@ impl DataPro {
     }
 
     fn set_page(&mut self, page: Page) {
-        *self.active_page.borrow_mut() = page;
+        self.active_page = page;
     }
 }
 
@@ -86,10 +83,10 @@ impl eframe::App for DataPro {
             self.timer_page.view(ui)
         }
 
-        match self.active_page.borrow().clone() {
+        match self.active_page {
             Page::About => {}
             Page::Randomness => self.randomness_page.view(ui),
-            Page::DataTracking => self.data_tracking_page.view(ui),
+            Page::DataTracking => self.data_tracking_page.view(ui, &mut self.active_page),
         }
 
         egui::Panel::left("welcome_panel")

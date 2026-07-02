@@ -1,6 +1,7 @@
 use crate::{
     data::{ksf::Ksf, session::SessionData},
     data_tracking::{counter::Counter, timer::Timer},
+    pages::Page,
     utils::{ClickedKeys, date_time_string},
 };
 use chrono::Local;
@@ -164,26 +165,14 @@ impl SessionPage {
 
         // Open save dialog
         self.file_dialog.save_file();
-        if let Some(path) = self.file_dialog.take_picked() {
-            if std::fs::write(&path, &self.output_file_contents).is_ok() {
-                println!("Successfully saved to: {:?}", path);
-            }
-        }
 
         // *self.active_page.borrow_mut() = Page::About;
     }
 
-    pub fn view(&mut self, ui: &mut Ui) {
+    pub fn view(&mut self, ui: &mut Ui, active_page: &mut Page) {
         ui.ctx().input(|i| {
             self.clicked_keys.update(i);
         });
-
-        if self.clicked_keys.contains(&Key::Tab) {
-            self.session_timer.start();
-        }
-        if self.clicked_keys.contains(&Key::Escape) {
-            self.save_session();
-        }
 
         egui::CentralPanel::default().show(ui, |ui| {
             ui.horizontal(|ui| {
@@ -209,25 +198,39 @@ impl SessionPage {
                 });
             });
 
-            ui.horizontal(|ui| {
+            ui.add_space(10.0);
+            ui.label("Tab to start or end session.");
+            if self.session_timer.active {
                 if ui
-                    .button(RichText::new("START").color(Color32::GREEN))
+                    .button(RichText::new(" END ").monospace().color(Color32::RED))
                     .clicked()
-                {
-                    self.session_timer.start();
-                }
-                if ui
-                    .button(RichText::new("END").color(Color32::RED))
-                    .clicked()
+                    || self.clicked_keys.contains(&Key::Tab)
                 {
                     self.save_session();
                 }
-            });
+            } else {
+                if ui
+                    .button(RichText::new("START").monospace().color(Color32::GREEN))
+                    .clicked()
+                    || self.clicked_keys.contains(&Key::Tab)
+                {
+                    self.session_timer.start();
+                }
+            }
             self.file_dialog.update(ui.ctx());
-
+            if let Some(path) = self.file_dialog.take_picked() {
+                if std::fs::write(&path, &self.output_file_contents).is_ok() {
+                    println!("Successfully saved to: {:?}", path);
+                    *active_page = Page::About;
+                }
+            }
             ui.add_space(10.0);
 
-            self.session_timer.view(ui);
+            ui.horizontal(|ui| {
+                ui.label("Session Time:");
+                self.session_timer.view(ui);
+            });
+
             ui.add_space(10.0);
 
             ui.horizontal(|ui| {
