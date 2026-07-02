@@ -22,7 +22,7 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "Rust Data Pro",
         native_options,
-        Box::new(|cc| Ok(Box::new(datapro::app::TemplateApp::new(cc)))),
+        Box::new(|cc| Ok(Box::new(datapro::app::DataPro::new(cc)))),
     )
 }
 
@@ -52,7 +52,7 @@ fn main() {
             .start(
                 canvas,
                 web_options,
-                Box::new(|cc| Ok(Box::new(datapro::app::TemplateApp::new(cc)))),
+                Box::new(|cc| Ok(Box::new(datapro::app::DataPro::new(cc)))),
             )
             .await;
 

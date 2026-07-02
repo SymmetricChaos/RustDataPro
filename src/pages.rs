@@ -3,5 +3,4 @@ pub enum Page {
     About,
     Randomness,
     DataTracking,
-    Timers,
 }

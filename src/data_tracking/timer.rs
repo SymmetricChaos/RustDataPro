@@ -9,20 +9,20 @@ macro_rules! timer_format {
 
 macro_rules! timer_display_on {
     ($ui:ident, $timer:expr) => {
-        $ui.monospace(RichText::new(format!(timer_format!(), $timer)).color(Color32::YELLOW));
+        $ui.monospace(RichText::new(format!(timer_format!(), $timer)).color(Color32::YELLOW))
     };
 }
 
 macro_rules! timer_display_off {
     ($ui:ident, $timer:expr) => {
-        $ui.monospace(RichText::new(format!(timer_format!(), $timer)));
+        $ui.monospace(RichText::new(format!(timer_format!(), $timer)))
     };
 }
 
 macro_rules! bout_display {
     ($ui:ident, $active:expr, $bouts:expr) => {
         if $active {
-            $ui.monospace(RichText::new(format!("{:>2}", $bouts)));
+            $ui.centered_and_justified(|ui| ui.monospace(RichText::new(format!("{:>2}", $bouts))));
         }
     };
 }
@@ -154,12 +154,14 @@ impl Timer {
     fn view_unsplit(&mut self, ui: &mut Ui) {
         if self.active {
             ui.request_repaint();
+
             timer_display_on!(ui, self.total_time());
         } else {
             timer_display_off!(ui, self.saved_time());
         }
     }
 
+    /// View does not specify horizontal.
     pub fn view(&mut self, ui: &mut Ui) {
         if let Some(description) = &self.description {
             ui.label(description);

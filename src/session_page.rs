@@ -31,8 +31,8 @@ pub struct SessionPage {
     keypresses_display: VecDeque<&'static str>,
 }
 
-impl Default for SessionPage {
-    fn default() -> Self {
+impl SessionPage {
+    pub fn new() -> Self {
         Self {
             session_data: SessionData::default(),
             ksf_name: String::new(),
@@ -87,9 +87,7 @@ impl Default for SessionPage {
             keypresses_display: VecDeque::from(["_"; 10]),
         }
     }
-}
 
-impl SessionPage {
     fn reset(&mut self) {
         self.timers.iter_mut().for_each(|t| t.reset());
         self.counters.iter_mut().for_each(|c| c.reset());
@@ -100,7 +98,7 @@ impl SessionPage {
         self.session_data = SessionData::blank();
     }
 
-    pub fn load_ksf(&mut self, ksf: &Ksf) {
+    pub fn load(&mut self, ksf: &Ksf) {
         self.ksf_name = ksf.name.clone();
         for (keybind, timer) in ksf.duration.iter().zip(self.timers.iter_mut()) {
             timer.key = Some(keybind.key);
@@ -158,10 +156,18 @@ impl SessionPage {
             }
         }
 
+        // Reset timers, counters, and session information
         self.reset();
 
         // Open save dialog
         self.file_dialog.save_file();
+        if let Some(path) = self.file_dialog.take_picked() {
+            if std::fs::write(&path, &self.output_file_contents).is_ok() {
+                println!("Successfully saved to: {:?}", path);
+            }
+        }
+
+        // *self.active_page.borrow_mut() = Page::About;
     }
 
     pub fn view(&mut self, ui: &mut Ui) {
@@ -189,6 +195,14 @@ impl SessionPage {
                 });
             });
 
+            ui.ctx().input(|i| {
+                if i.num_presses(Key::Tab) > 0 {
+                    self.session_timer.start();
+                }
+                if i.num_presses(Key::Escape) > 0 {
+                    self.save_session();
+                }
+            });
             ui.horizontal(|ui| {
                 if ui
                     .button(RichText::new("START").color(Color32::GREEN))
@@ -203,18 +217,12 @@ impl SessionPage {
                     self.save_session();
                 }
             });
-
-            ui.add_space(10.0);
-            self.session_timer.view(ui);
-
-            ui.add_space(10.0);
             self.file_dialog.update(ui.ctx());
 
-            if let Some(path) = self.file_dialog.take_picked() {
-                if std::fs::write(&path, &self.output_file_contents).is_ok() {
-                    println!("Successfully saved to: {:?}", path);
-                }
-            }
+            ui.add_space(10.0);
+
+            self.session_timer.view(ui);
+            ui.add_space(10.0);
 
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {

@@ -1,16 +1,18 @@
+use std::{cell::RefCell, rc::Rc};
+
 use crate::{
     data::ksf::Ksf, pages::Page, randomness_page::RandomServices, session_page::SessionPage,
-    timers_page::Timers, utils::date_time_string,
+    timers::Timers, utils::date_time_string,
 };
 use chrono::Local;
 use egui::{RichText, warn_if_debug_build, widgets};
 use egui_file_dialog::FileDialog;
 
-pub struct TemplateApp {
-    active_page: Page,
+pub struct DataPro {
+    active_page: Rc<RefCell<Page>>,
+    timers_active: bool,
 
     file_dialog: FileDialog,
-    ksf_name: Option<String>,
     ksf: Option<Ksf>,
     file_err_string: Option<String>,
 
@@ -19,32 +21,37 @@ pub struct TemplateApp {
     timer_page: Timers,
 }
 
-impl Default for TemplateApp {
+impl Default for DataPro {
     fn default() -> Self {
+        let active_page = Rc::new(RefCell::new(Page::About));
         Self {
-            active_page: Page::About,
+            active_page: active_page.clone(),
+            timers_active: false,
 
             file_dialog: FileDialog::new(),
-            ksf_name: None,
             ksf: None,
             file_err_string: None,
 
             randomness_page: RandomServices::default(),
-            data_tracking_page: SessionPage::default(),
+            data_tracking_page: SessionPage::new(),
             timer_page: Timers::default(),
         }
     }
 }
 
-impl TemplateApp {
+impl DataPro {
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         cc.egui_ctx.set_pixels_per_point(1.5);
         Default::default()
     }
+
+    fn set_page(&mut self, page: Page) {
+        *self.active_page.borrow_mut() = page;
+    }
 }
 
-impl eframe::App for TemplateApp {
+impl eframe::App for DataPro {
     /// Called each time the UI needs repainting, which may be many times per second.
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         egui::Panel::top("top_panel").show(ui, |ui| {
@@ -53,33 +60,36 @@ impl eframe::App for TemplateApp {
                 ui.separator();
 
                 if ui.button("About").clicked() {
-                    self.active_page = Page::About;
+                    self.set_page(Page::About);
                 }
 
                 if ui.button("Randomness").clicked() {
-                    self.active_page = Page::Randomness;
+                    self.set_page(Page::Randomness);
                 }
 
                 if ui.button("Timers").clicked() {
-                    self.active_page = Page::Timers;
+                    self.timers_active = !self.timers_active;
                 }
 
                 if ui.button("Data Tracking").clicked() {
+                    self.set_page(Page::DataTracking);
                     if let Some(ksf) = &self.ksf {
-                        self.data_tracking_page.load_ksf(ksf);
+                        self.data_tracking_page.load(ksf);
                     } else {
-                        self.data_tracking_page.load_ksf(&Ksf::default());
+                        self.data_tracking_page.load(&Ksf::default());
                     }
-                    self.active_page = Page::DataTracking;
                 }
             });
         });
 
-        match self.active_page {
-            Page::About => (),
+        if self.timers_active {
+            self.timer_page.view(ui)
+        }
+
+        match self.active_page.borrow().clone() {
+            Page::About => {}
             Page::Randomness => self.randomness_page.view(ui),
             Page::DataTracking => self.data_tracking_page.view(ui),
-            Page::Timers => self.timer_page.view(ui),
         }
 
         egui::Panel::left("welcome_panel")
@@ -108,14 +118,7 @@ impl eframe::App for TemplateApp {
                     ui.label(".");
                 });
             });
-
         egui::CentralPanel::default().show(ui, |ui| {
-            ui.label(
-                RichText::new("Data Collection and Management")
-                    .heading()
-                    .strong(),
-            );
-
             ui.request_repaint_after_secs(5.0);
             ui.label(format!(
                 "The Current Date/Time is {}",
@@ -126,12 +129,12 @@ impl eframe::App for TemplateApp {
             ui.separator();
             ui.add_space(5.0);
 
-            if ui.button("Select File").clicked() {
+            if ui.button("Select KSF File").clicked() {
                 self.file_dialog.pick_file();
             }
 
-            if let Some(n) = &self.ksf_name {
-                ui.label(format!("Picked file: {}", n));
+            if let Some(ksf) = &self.ksf {
+                ui.label(format!("KSF file: {}", ksf.name));
             }
             if let Some(e) = &self.file_err_string {
                 ui.strong(e);
@@ -142,10 +145,8 @@ impl eframe::App for TemplateApp {
                 if path.extension().unwrap().to_str().unwrap() != "txt" {
                     self.file_err_string = Some(String::from("KSF files must have extension .txt"));
                 } else {
-                    match Ksf::from_file(path.to_str().unwrap()) {
+                    match Ksf::from_file(path) {
                         Ok(ksf) => {
-                            self.ksf_name =
-                                Some(path.file_name().unwrap().to_str().unwrap().to_string());
                             self.ksf = Some(ksf);
                             self.file_err_string = None
                         }

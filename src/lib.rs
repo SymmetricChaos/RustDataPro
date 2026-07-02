@@ -5,5 +5,5 @@ pub mod pages;
 pub mod prng;
 pub mod randomness_page;
 pub mod session_page;
-pub mod timers_page;
+pub mod timers;
 pub mod utils;

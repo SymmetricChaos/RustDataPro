@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use csv::StringRecord;
 use itertools::Itertools;
-use std::{fmt::Display, fs::File};
+use std::{fmt::Display, fs::File, path::PathBuf};
 
 /// A keybind consists of a Key and a description string.
 #[derive(Debug, Clone)]
@@ -49,8 +49,12 @@ impl Default for Ksf {
     fn default() -> Self {
         Self {
             name: String::from("Default KSF Loaded"),
-            duration: vec![Keybind::from_string("4,Toy Engage"),],
-            frequency: vec![Keybind::from_string("M,Mand"),Keybind::from_string("A,Agression"),Keybind::from_string("S,SIB"),],
+            duration: vec![Keybind::from_string("4,Toy Engage")],
+            frequency: vec![
+                Keybind::from_string("M,Mand"),
+                Keybind::from_string("A,Agression"),
+                Keybind::from_string("S,SIB"),
+            ],
         }
     }
 }
@@ -64,10 +68,11 @@ impl Ksf {
         }
     }
 
-    pub fn from_file(file_path: &str) -> Result<Ksf> {
-        let file = File::open(file_path).context("file name not found")?;
+    pub fn from_file(file_path: PathBuf) -> Result<Ksf> {
+        let file = File::open(file_path.to_str().unwrap()).context("file name not found")?;
         let mut rdr = csv::Reader::from_reader(file);
         let mut ksf = Ksf::new();
+        ksf.name = file_path.file_name().unwrap().to_str().unwrap().to_string();
         for result in rdr.records() {
             let mut record: StringRecord = result.context("StringRecord invalid")?;
             record.trim();
