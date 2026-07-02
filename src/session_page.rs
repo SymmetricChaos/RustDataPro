@@ -5,8 +5,13 @@ use crate::{
     utils::{ClickedKeys, date_time_string},
 };
 use chrono::Local;
-use egui::{Color32, Key, RichText, Ui};
+use egui::{
+    Color32,
+    Key::{self},
+    RichText, Ui,
+};
 use egui_file_dialog::FileDialog;
+use itertools::Itertools;
 use std::collections::VecDeque;
 
 const MAX_DUR: usize = 20;
@@ -99,7 +104,7 @@ impl SessionPage {
         self.keypresses_display = VecDeque::from(["_"; 10]);
         self.ksf_name.clear();
         self.session_data = SessionData::blank();
-        self.clicked_keys = ClickedKeys::new();
+        self.clicked_keys.clear();
     }
 
     pub fn load(&mut self, ksf: &Ksf) {
@@ -131,15 +136,13 @@ impl SessionPage {
 
         // Save session time information
         self.output_file_contents.push_str(&format!(
-            "Start {}\nEnd {}\nDuration {}\n",
+            "\nStart {}\nEnd {}\nDuration {}\n",
             date_time_string(self.session_timer.start_time),
             date_time_string(Local::now()),
             (Local::now() - self.session_timer.start_time).as_seconds_f32()
         ));
-        self.output_file_contents.push('\n');
 
-        // Save duration data
-        self.output_file_contents.push_str("Duration Data\n");
+        self.output_file_contents.push_str("\nDuration Data\n");
         for timer in self.timers.iter_mut() {
             if let Some(description) = &timer.description {
                 self.output_file_contents.push_str(&format!(
@@ -149,10 +152,8 @@ impl SessionPage {
                 ));
             }
         }
-        self.output_file_contents.push('\n');
 
-        // Save frequency data
-        self.output_file_contents.push_str("Frequency Data\n");
+        self.output_file_contents.push_str("\nFrequency Data\n");
         for counter in self.counters.iter() {
             if let Some(description) = &counter.description {
                 self.output_file_contents
@@ -160,17 +161,33 @@ impl SessionPage {
             }
         }
 
-        // Reset timers, counters, and session information
-        self.reset();
+        self.output_file_contents.push_str("\nRaw Input Data\n");
+        self.output_file_contents
+            .push_str(&self.keypresses.iter().map(|k| k.name()).join(" "));
 
         // Open save dialog
         self.file_dialog.save_file();
-
-        // *self.active_page.borrow_mut() = Page::About;
     }
 
     pub fn view(&mut self, ui: &mut Ui, active_page: &mut Page) {
-        ui.ctx().input(|i| {
+        ui.ctx().input_mut(|i| {
+            if i.consume_key(egui::Modifiers::NONE, egui::Key::Escape) {
+                if self.session_timer.active {
+                    self.session_timer.stop();
+                    self.keypresses.push(Key::Escape);
+                    self.keypresses_display.pop_front();
+                    self.keypresses_display.push_back("ESC");
+                    self.save_session();
+                }
+            }
+            if i.consume_key(egui::Modifiers::NONE, egui::Key::Tab) {
+                if !self.session_timer.active {
+                    self.session_timer.start();
+                    self.keypresses.push(Key::Tab);
+                    self.keypresses_display.pop_front();
+                    self.keypresses_display.push_back("ST");
+                }
+            }
             self.clicked_keys.update(i);
         });
 
@@ -199,28 +216,34 @@ impl SessionPage {
             });
 
             ui.add_space(10.0);
-            ui.label("Tab to start or end session.");
+            ui.label("Tab to start. Esc to save and exit.");
             if self.session_timer.active {
                 if ui
                     .button(RichText::new(" END ").monospace().color(Color32::RED))
                     .clicked()
-                    || self.clicked_keys.contains(&Key::Tab)
                 {
+                    self.session_timer.stop();
+                    self.keypresses.push(Key::Escape);
+                    self.keypresses_display.pop_front();
+                    self.keypresses_display.push_back("ESC");
                     self.save_session();
                 }
             } else {
                 if ui
                     .button(RichText::new("START").monospace().color(Color32::GREEN))
                     .clicked()
-                    || self.clicked_keys.contains(&Key::Tab)
                 {
+                    self.session_timer.start();
+                    self.keypresses.push(Key::Tab);
+                    self.keypresses_display.pop_front();
+                    self.keypresses_display.push_back("ST");
                     self.session_timer.start();
                 }
             }
             self.file_dialog.update(ui.ctx());
             if let Some(path) = self.file_dialog.take_picked() {
                 if std::fs::write(&path, &self.output_file_contents).is_ok() {
-                    println!("Successfully saved to: {:?}", path);
+                    self.reset();
                     *active_page = Page::About;
                 }
             }

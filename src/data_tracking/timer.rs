@@ -78,11 +78,11 @@ impl Timer {
     //     self
     // }
 
-    // /// Build a timer with a description.
-    // pub fn with_bouts(mut self) -> Self {
-    //     self.show_bouts = true;
-    //     self
-    // }
+    /// Build a timer with a description.
+    pub fn with_bouts(mut self) -> Self {
+        self.show_bouts = true;
+        self
+    }
 
     /// Switch between active and inactive.
     pub fn toggle(&mut self) {

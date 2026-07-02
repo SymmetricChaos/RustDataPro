@@ -13,11 +13,11 @@ impl Default for Timers {
     fn default() -> Self {
         Self {
             timers: [
-                Timer::new_splits_and_bouts(),
-                Timer::new_splits_and_bouts(),
-                Timer::new_splits_and_bouts(),
-                Timer::new_splits_and_bouts(),
-                Timer::new_splits_and_bouts(),
+                Timer::new().with_bouts(),
+                Timer::new().with_bouts(),
+                Timer::new().with_bouts(),
+                Timer::new().with_bouts(),
+                Timer::new().with_bouts(),
             ],
             linked_timers: [true, true, false, false, false],
             clicked_keys: ClickedKeys::new(),
@@ -80,8 +80,7 @@ impl Timers {
                 .striped(true)
                 .show(ui, |ui| {
                     ui.label("");
-                    ui.label("Total");
-                    ui.label("Current");
+                    ui.label("Time");
                     ui.label("Bouts");
                     ui.label("");
                     ui.label("");
