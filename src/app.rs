@@ -39,7 +39,7 @@ impl Default for TemplateApp {
 impl TemplateApp {
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        cc.egui_ctx.set_pixels_per_point(2.0);
+        cc.egui_ctx.set_pixels_per_point(1.5);
         Default::default()
     }
 }

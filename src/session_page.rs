@@ -38,26 +38,26 @@ impl Default for SessionPage {
             ksf_name: String::new(),
             session_timer: Timer::new(),
             timers: [
-                Timer::new_split(),
-                Timer::new_split(),
-                Timer::new_split(),
-                Timer::new_split(),
-                Timer::new_split(),
-                Timer::new_split(),
-                Timer::new_split(),
-                Timer::new_split(),
-                Timer::new_split(),
-                Timer::new_split(),
-                Timer::new_split(),
-                Timer::new_split(),
-                Timer::new_split(),
-                Timer::new_split(),
-                Timer::new_split(),
-                Timer::new_split(),
-                Timer::new_split(),
-                Timer::new_split(),
-                Timer::new_split(),
-                Timer::new_split(),
+                Timer::new_splits_and_bouts(),
+                Timer::new_splits_and_bouts(),
+                Timer::new_splits_and_bouts(),
+                Timer::new_splits_and_bouts(),
+                Timer::new_splits_and_bouts(),
+                Timer::new_splits_and_bouts(),
+                Timer::new_splits_and_bouts(),
+                Timer::new_splits_and_bouts(),
+                Timer::new_splits_and_bouts(),
+                Timer::new_splits_and_bouts(),
+                Timer::new_splits_and_bouts(),
+                Timer::new_splits_and_bouts(),
+                Timer::new_splits_and_bouts(),
+                Timer::new_splits_and_bouts(),
+                Timer::new_splits_and_bouts(),
+                Timer::new_splits_and_bouts(),
+                Timer::new_splits_and_bouts(),
+                Timer::new_splits_and_bouts(),
+                Timer::new_splits_and_bouts(),
+                Timer::new_splits_and_bouts(),
             ],
             counters: [
                 Counter::new(),
@@ -119,6 +119,7 @@ impl SessionPage {
         }
         self.session_timer.stop();
 
+        // Reset the output
         self.output_file_contents.clear();
 
         // Save session information
@@ -138,7 +139,6 @@ impl SessionPage {
         // Save duration data
         self.output_file_contents.push_str("Duration Data\n");
         for timer in self.timers.iter_mut() {
-            // Stop timers if they are running and update the total
             if let Some(description) = &timer.description {
                 self.output_file_contents.push_str(&format!(
                     "{} {}\n",
@@ -189,7 +189,6 @@ impl SessionPage {
                 });
             });
 
-            ui.heading("Session Controls");
             ui.horizontal(|ui| {
                 if ui
                     .button(RichText::new("START").color(Color32::GREEN))
@@ -255,8 +254,9 @@ impl SessionPage {
                             egui::Grid::new("timer_grid").striped(true).show(ui, |ui| {
                                 ui.label("Description");
                                 ui.label("Key");
-                                ui.label("Current");
                                 ui.label("Total");
+                                ui.label("Current");
+                                ui.label("Bouts");
                                 ui.end_row();
 
                                 for timer in self.timers.iter_mut() {

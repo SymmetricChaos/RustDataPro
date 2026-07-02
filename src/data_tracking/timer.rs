@@ -8,20 +8,22 @@ macro_rules! timer_format {
 }
 
 macro_rules! timer_display_on {
-    ($timer:expr) => {
-        RichText::new(format!(timer_format!(), $timer)).color(Color32::YELLOW)
+    ($ui:ident, $timer:expr) => {
+        $ui.monospace(RichText::new(format!(timer_format!(), $timer)).color(Color32::YELLOW));
     };
 }
 
 macro_rules! timer_display_off {
-    ($timer:expr) => {
-        RichText::new(format!(timer_format!(), $timer))
+    ($ui:ident, $timer:expr) => {
+        $ui.monospace(RichText::new(format!(timer_format!(), $timer)));
     };
 }
 
 macro_rules! bout_display {
-    ($bouts:expr) => {
-        RichText::new(format!("{:>2}", $bouts))
+    ($ui:ident, $active:expr, $bouts:expr) => {
+        if $active {
+            $ui.monospace(RichText::new(format!("{:>2}", $bouts)));
+        }
     };
 }
 
@@ -33,8 +35,8 @@ pub struct Timer {
     pub saved_time: Duration,
     pub bouts: u32,
     pub show_bouts: bool,
-    pub active: bool,
     pub split: bool,
+    pub active: bool,
 }
 
 impl Timer {
@@ -46,41 +48,41 @@ impl Timer {
             saved_time: Duration::zero(),
             bouts: 0,
             show_bouts: false,
-            active: false,
             split: false,
+            active: false,
         }
     }
 
-    pub fn new_split() -> Self {
+    pub fn new_splits_and_bouts() -> Self {
         Self {
             key: None,
             description: None,
             start_time: Local::now(),
             saved_time: Duration::zero(),
             bouts: 0,
-            show_bouts: false,
-            active: false,
+            show_bouts: true,
             split: true,
+            active: false,
         }
     }
 
-    /// Build a timer with a keybind.
-    pub fn with_key(mut self, key: Key) -> Self {
-        self.key = Some(key);
-        self
-    }
+    // /// Build a timer with a keybind.
+    // pub fn with_key(mut self, key: Key) -> Self {
+    //     self.key = Some(key);
+    //     self
+    // }
 
-    /// Build a timer with a description.
-    pub fn with_description(mut self, description: String) -> Self {
-        self.description = Some(description);
-        self
-    }
+    // /// Build a timer with a description.
+    // pub fn with_description(mut self, description: String) -> Self {
+    //     self.description = Some(description);
+    //     self
+    // }
 
-    /// Build a timer with a description.
-    pub fn with_bouts(mut self) -> Self {
-        self.show_bouts = true;
-        self
-    }
+    // /// Build a timer with a description.
+    // pub fn with_bouts(mut self) -> Self {
+    //     self.show_bouts = true;
+    //     self
+    // }
 
     /// Switch between active and inactive.
     pub fn toggle(&mut self) {
@@ -141,50 +143,36 @@ impl Timer {
     fn view_split(&mut self, ui: &mut Ui) {
         if self.active {
             ui.request_repaint();
-            ui.horizontal(|ui| {
-                ui.monospace(timer_display_on!(self.saved_time()));
-                ui.monospace(timer_display_on!(self.current_time()));
-            });
-            if self.show_bouts {
-                ui.monospace(bout_display!(self.bouts));
-            }
+            timer_display_on!(ui, self.saved_time());
+            timer_display_on!(ui, self.current_time());
         } else {
-            ui.horizontal(|ui| {
-                ui.monospace(timer_display_off!(self.saved_time()));
-                ui.monospace(timer_display_off!(0.0));
-            });
-            if self.show_bouts {
-                ui.monospace(bout_display!(self.bouts));
-            }
+            timer_display_off!(ui, self.saved_time());
+            timer_display_off!(ui, 0.0);
         }
     }
 
     fn view_unsplit(&mut self, ui: &mut Ui) {
         if self.active {
             ui.request_repaint();
-            ui.monospace(timer_display_on!(self.total_time()));
-            if self.show_bouts {
-                ui.monospace(bout_display!(self.bouts));
-            }
+            timer_display_on!(ui, self.total_time());
         } else {
-            ui.monospace(timer_display_off!(self.saved_time()));
-            if self.show_bouts {
-                ui.monospace(bout_display!(self.bouts));
-            }
+            timer_display_off!(ui, self.saved_time());
         }
     }
 
     pub fn view(&mut self, ui: &mut Ui) {
-        if let Some(des) = &self.description {
-            ui.label(des);
+        if let Some(description) = &self.description {
+            ui.label(description);
         }
-        if let Some(k) = &self.key {
-            ui.label(k.name());
+        if let Some(key) = &self.key {
+            ui.label(key.name());
         }
         if self.split {
             self.view_split(ui);
+            bout_display!(ui, self.show_bouts, self.bouts);
         } else {
             self.view_unsplit(ui);
+            bout_display!(ui, self.show_bouts, self.bouts);
         }
     }
 }
