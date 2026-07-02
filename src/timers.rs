@@ -1,13 +1,12 @@
-use crate::{data_tracking::timer::Timer, utils::clicked_keys};
+use crate::{data_tracking::timer::Timer, utils::ClickedKeys};
 use egui::{Key, Ui};
-use std::collections::HashSet;
 
 const NUM_TIMERS: usize = 5;
 
 pub struct Timers {
     timers: [Timer; NUM_TIMERS],
     linked_timers: [bool; NUM_TIMERS],
-    clicked_keys: HashSet<Key>,
+    clicked_keys: ClickedKeys,
 }
 
 impl Default for Timers {
@@ -21,7 +20,7 @@ impl Default for Timers {
                 Timer::new_splits_and_bouts(),
             ],
             linked_timers: [true, true, false, false, false],
-            clicked_keys: HashSet::new(),
+            clicked_keys: ClickedKeys::new(),
         }
     }
 }
@@ -34,7 +33,7 @@ impl Timers {
     pub fn view(&mut self, ui: &mut Ui) {
         egui::Window::new("Timers").show(ui, |ui| {
             ui.ctx().input_mut(|input| {
-                clicked_keys(input, &mut self.clicked_keys);
+                self.clicked_keys.update(input);
 
                 // Detect toggle linked
                 if self.clicked_keys.contains(&Key::Num0) {

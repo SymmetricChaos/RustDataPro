@@ -1,7 +1,7 @@
 use crate::{
     data::{ksf::Ksf, session::SessionData},
     data_tracking::{counter::Counter, timer::Timer},
-    utils::date_time_string,
+    utils::{ClickedKeys, date_time_string},
 };
 use chrono::Local;
 use egui::{Color32, Key, RichText, Ui};
@@ -29,6 +29,7 @@ pub struct SessionPage {
     output_file_contents: String,
     keypresses: Vec<Key>,
     keypresses_display: VecDeque<&'static str>,
+    clicked_keys: ClickedKeys,
 }
 
 impl SessionPage {
@@ -85,6 +86,7 @@ impl SessionPage {
             output_file_contents: String::new(),
             keypresses: Vec::new(),
             keypresses_display: VecDeque::from(["_"; 10]),
+            clicked_keys: ClickedKeys::new(),
         }
     }
 
@@ -96,6 +98,7 @@ impl SessionPage {
         self.keypresses_display = VecDeque::from(["_"; 10]);
         self.ksf_name.clear();
         self.session_data = SessionData::blank();
+        self.clicked_keys = ClickedKeys::new();
     }
 
     pub fn load(&mut self, ksf: &Ksf) {
@@ -171,6 +174,17 @@ impl SessionPage {
     }
 
     pub fn view(&mut self, ui: &mut Ui) {
+        ui.ctx().input(|i| {
+            self.clicked_keys.update(i);
+        });
+
+        if self.clicked_keys.contains(&Key::Tab) {
+            self.session_timer.start();
+        }
+        if self.clicked_keys.contains(&Key::Escape) {
+            self.save_session();
+        }
+
         egui::CentralPanel::default().show(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.group(|ui| {
@@ -195,14 +209,6 @@ impl SessionPage {
                 });
             });
 
-            ui.ctx().input(|i| {
-                if i.num_presses(Key::Tab) > 0 {
-                    self.session_timer.start();
-                }
-                if i.num_presses(Key::Escape) > 0 {
-                    self.save_session();
-                }
-            });
             ui.horizontal(|ui| {
                 if ui
                     .button(RichText::new("START").color(Color32::GREEN))
@@ -239,13 +245,11 @@ impl SessionPage {
 
                                     for counter in self.counters.iter_mut() {
                                         if let Some(key) = counter.key {
-                                            if self.session_timer.active {
-                                                ui.ctx().input(|i| {
-                                                    if i.num_presses(key) > 0 {
-                                                        counter.inc();
-                                                        record_keypress!(self, key);
-                                                    }
-                                                });
+                                            if self.session_timer.active
+                                                && self.clicked_keys.contains(&key)
+                                            {
+                                                counter.inc();
+                                                record_keypress!(self, key);
                                             }
                                             counter.view(ui);
                                             ui.end_row();
@@ -269,15 +273,12 @@ impl SessionPage {
 
                                 for timer in self.timers.iter_mut() {
                                     if let Some(key) = timer.key {
-                                        if self.session_timer.active {
-                                            ui.ctx().input(|i| {
-                                                if i.num_presses(key) > 0 {
-                                                    timer.toggle();
-                                                    record_keypress!(self, key);
-                                                }
-                                            });
+                                        if self.session_timer.active
+                                            && self.clicked_keys.contains(&key)
+                                        {
+                                            timer.toggle();
+                                            record_keypress!(self, key);
                                         }
-
                                         timer.view(ui);
                                         ui.end_row();
                                     }
