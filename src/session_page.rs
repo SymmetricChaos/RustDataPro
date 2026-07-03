@@ -114,6 +114,27 @@ impl SessionPage {
         self.session_data = session_data;
     }
 
+    fn start_session(&mut self) {
+        if !self.session_timer.active {
+            self.session_timer.start();
+            self.session_start = Local::now();
+            self.keypresses.push(Key::Tab);
+            self.keypresses_display.pop_front();
+            self.keypresses_display.push_back("ST");
+        }
+    }
+
+    fn end_session(&mut self) {
+        if self.session_timer.active {
+            self.session_timer.stop();
+            self.keypresses.push(Key::Escape);
+            self.keypresses_display.pop_front();
+            self.keypresses_display.push_back("END");
+            self.record_data();
+            self.output_file_dialog.save_file();
+        }
+    }
+
     fn reset(&mut self) {
         self.timers.iter_mut().for_each(|t| t.reset());
         self.counters.iter_mut().for_each(|c| c.reset());
@@ -135,14 +156,10 @@ impl SessionPage {
         // Reset the output
         self.output_file_contents.clear();
 
-        // Save session information
+        self.output_file_contents.push_str("\n---Session---\n");
         self.output_file_contents
             .push_str(&self.session_data.to_string());
         self.output_file_contents.push('\n');
-
-        self.output_file_contents.push_str("\n---Session Time---\n");
-
-        // Save session time information
         self.output_file_contents.push_str(&format!(
             "\nStart {}\nDuration {}\n",
             date_time_string(self.session_start),
@@ -177,23 +194,12 @@ impl SessionPage {
 
     pub fn view(&mut self, ui: &mut Ui, active_page: &mut Page) {
         ui.ctx().input_mut(|i| {
+            // Need to consume Esc in order to prevent egui from using it for other purposes
             if i.consume_key(egui::Modifiers::NONE, egui::Key::Escape) {
-                if self.session_timer.active {
-                    self.session_timer.stop();
-                    self.keypresses.push(Key::Escape);
-                    self.keypresses_display.pop_front();
-                    self.keypresses_display.push_back("END");
-                    self.record_data();
-                    self.output_file_dialog.save_file();
-                }
+                self.end_session();
             }
             if i.consume_key(egui::Modifiers::NONE, egui::Key::Tab) {
-                if !self.session_timer.active {
-                    self.session_timer.start();
-                    self.keypresses.push(Key::Tab);
-                    self.keypresses_display.pop_front();
-                    self.keypresses_display.push_back("ST");
-                }
+                self.start_session();
             }
             self.clicked_keys.update(i);
         });
@@ -229,22 +235,14 @@ impl SessionPage {
                     .button(RichText::new(" END ").monospace().color(Color32::RED))
                     .clicked()
                 {
-                    self.session_timer.stop();
-                    self.keypresses.push(Key::Escape);
-                    self.keypresses_display.pop_front();
-                    self.keypresses_display.push_back("ESC");
-                    self.record_data();
+                    self.end_session();
                 }
             } else {
                 if ui
                     .button(RichText::new("START").monospace().color(Color32::GREEN))
                     .clicked()
                 {
-                    self.session_timer.start();
-                    self.keypresses.push(Key::Tab);
-                    self.keypresses_display.pop_front();
-                    self.keypresses_display.push_back("ST");
-                    self.session_timer.start();
+                    self.start_session();
                 }
             }
             self.output_file_dialog.update(ui.ctx());
@@ -268,7 +266,7 @@ impl SessionPage {
                     ui.group(|ui| {
                         ui.label("Frequency Keys");
                         ui.add_enabled_ui(self.session_timer.active, |ui| {
-                            egui::Grid::new("counter_grid")
+                            egui::Grid::new("frequency_grid")
                                 .striped(true)
                                 .show(ui, |ui| {
                                     ui.label("Description");
@@ -296,27 +294,29 @@ impl SessionPage {
                     ui.group(|ui| {
                         ui.label("Duration Keys");
                         ui.add_enabled_ui(self.session_timer.active, |ui| {
-                            egui::Grid::new("timer_grid").striped(true).show(ui, |ui| {
-                                ui.label("Description");
-                                ui.label("Key");
-                                ui.label("Total");
-                                ui.label("Current");
-                                ui.label("Bouts");
-                                ui.end_row();
+                            egui::Grid::new("duration_grid")
+                                .striped(true)
+                                .show(ui, |ui| {
+                                    ui.label("Description");
+                                    ui.label("Key");
+                                    ui.label("Total");
+                                    ui.label("Current");
+                                    ui.label("Bouts");
+                                    ui.end_row();
 
-                                for timer in self.timers.iter_mut() {
-                                    if let Some(key) = timer.key {
-                                        if self.session_timer.active
-                                            && self.clicked_keys.contains(&key)
-                                        {
-                                            timer.toggle();
-                                            record_keypress!(self, key);
+                                    for timer in self.timers.iter_mut() {
+                                        if let Some(key) = timer.key {
+                                            if self.session_timer.active
+                                                && self.clicked_keys.contains(&key)
+                                            {
+                                                timer.toggle();
+                                                record_keypress!(self, key);
+                                            }
+                                            timer.view(ui);
+                                            ui.end_row();
                                         }
-                                        timer.view(ui);
-                                        ui.end_row();
                                     }
-                                }
-                            });
+                                });
                         });
                     })
                 });

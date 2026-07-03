@@ -1,7 +1,7 @@
 use crate::{
     data::{SessionData, ksf::Ksf},
     pages::Page,
-    randomness_page::RandomServices,
+    random_services::RandomServices,
     session_page::SessionPage,
     timers::Timers,
     utils::date_time_string,
