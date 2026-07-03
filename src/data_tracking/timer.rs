@@ -1,6 +1,5 @@
-use std::time::{Duration, Instant};
-
 use egui::{Color32, Key, RichText, Ui};
+use std::time::{Duration, Instant};
 
 macro_rules! timer_format {
     () => {

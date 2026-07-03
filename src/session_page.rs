@@ -10,16 +10,12 @@ use egui::{
     Key::{self},
     RichText, Ui,
 };
-use egui_file_dialog::FileDialog;
 use itertools::Itertools;
 use std::{
     collections::VecDeque,
     fs::File,
     io::{BufWriter, Write},
 };
-
-const MAX_DUR: usize = 20;
-const MAX_FREQ: usize = 20;
 
 macro_rules! record_keypress {
     ($self:ident, $key:expr) => {
@@ -31,11 +27,11 @@ macro_rules! record_keypress {
 
 pub struct SessionPage {
     ksf_name: String,
-    timers: [Timer; MAX_DUR],
-    counters: [Counter; MAX_FREQ],
+    timers: [Timer; 20],
+    counters: [Counter; 20],
     session_timer: Timer,
     session_start: DateTime<Local>,
-    output_file_dialog: FileDialog,
+    // output_file_dialog: FileDialog,
     output_file_contents: String,
     keypresses: Vec<Key>,
     keypresses_display: VecDeque<&'static str>,
@@ -92,7 +88,7 @@ impl SessionPage {
                 Counter::new(),
                 Counter::new(),
             ],
-            output_file_dialog: FileDialog::new().default_file_name("SaveData.txt"),
+            // output_file_dialog: FileDialog::new().default_file_name("SaveData.txt"),
             output_file_contents: String::new(),
             keypresses: Vec::new(),
             keypresses_display: VecDeque::from(["_"; 10]),
@@ -103,12 +99,12 @@ impl SessionPage {
     pub fn load_ksf(&mut self, ksf: &Ksf) {
         self.ksf_name = ksf.name.clone();
         for (keybind, timer) in ksf.duration.iter().zip(self.timers.iter_mut()) {
-            timer.key = Some(keybind.key);
-            timer.description = Some(keybind.description.clone());
+            timer.key = Some(keybind.0);
+            timer.description = Some(keybind.1.clone());
         }
         for (keybind, counter) in ksf.frequency.iter().zip(self.counters.iter_mut()) {
-            counter.key = Some(keybind.key);
-            counter.description = Some(keybind.description.clone());
+            counter.key = Some(keybind.0);
+            counter.description = Some(keybind.1.clone());
         }
     }
 
@@ -152,18 +148,15 @@ impl SessionPage {
         // Reset the output
         self.output_file_contents.clear();
 
-        self.output_file_contents.push_str("\n---Session---\n");
+        self.output_file_contents.push_str("---Session---\n");
         self.output_file_contents.push_str(&client_data.to_string());
-        self.output_file_contents.push('\n');
         self.output_file_contents.push_str(&format!(
             "\nStart {}\nDuration {}\n",
             date_time_string(self.session_start),
             self.session_timer.total_time()
         ));
 
-        self.output_file_contents.push_str("\n---Data---\n");
-
-        self.output_file_contents.push_str("\nDuration\n");
+        self.output_file_contents.push_str("\n--Duration--\n");
         for timer in self.timers.iter_mut() {
             if let Some(description) = &timer.description {
                 self.output_file_contents.push_str(&format!(
@@ -174,7 +167,7 @@ impl SessionPage {
             }
         }
 
-        self.output_file_contents.push_str("\nFrequency\n");
+        self.output_file_contents.push_str("\n--Frequency--\n");
         for counter in self.counters.iter() {
             if let Some(description) = &counter.description {
                 self.output_file_contents
@@ -182,7 +175,7 @@ impl SessionPage {
             }
         }
 
-        self.output_file_contents.push_str("\nRaw Inputs\n");
+        self.output_file_contents.push_str("\n--Raw Inputs--\n");
         self.output_file_contents
             .push_str(&self.keypresses.iter().map(|k| k.name()).join(" "));
 
@@ -193,15 +186,13 @@ impl SessionPage {
             client_data.last_name.chars().next().unwrap(),
             client_data.session_number,
         ))
-        .expect("failed to create file, this should be a graceful failure");
+        .expect("failed to create file");
         let mut writer = BufWriter::new(file);
 
         writer
             .write_all(self.output_file_contents.as_bytes())
-            .expect("failed to write file, this should be a graceful failure");
-        writer
-            .flush()
-            .expect("failed to flush file, this should be a graceful failure");
+            .expect("failed to write file");
+        writer.flush().expect("failed to flush file");
     }
 
     pub fn view(
@@ -261,13 +252,13 @@ impl SessionPage {
                     self.start_session(ksf);
                 }
             }
-            self.output_file_dialog.update(ui.ctx());
-            if let Some(path) = self.output_file_dialog.take_picked() {
-                if std::fs::write(&path, &self.output_file_contents).is_ok() {
-                    self.reset();
-                    *active_page = Page::About;
-                }
-            }
+            // self.output_file_dialog.update(ui.ctx());
+            // if let Some(path) = self.output_file_dialog.take_picked() {
+            //     if std::fs::write(&path, &self.output_file_contents).is_ok() {
+            //         self.reset();
+            //         *active_page = Page::About;
+            //     }
+            // }
             ui.add_space(10.0);
 
             ui.horizontal(|ui| {

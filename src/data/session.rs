@@ -25,8 +25,8 @@ pub struct SessionData {
 impl Default for SessionData {
     fn default() -> Self {
         Self {
-            assessment: "MISSING".into(),
-            condition: "MISSING".into(),
+            assessment: "NONE".into(),
+            condition: "NONE".into(),
             data_type: DataType::Primary,
         }
     }

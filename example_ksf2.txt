@@ -1,7 +1,0 @@
-type,key,decription
-f, v , NegVoc
-d,4,ToyEngage
-d,1,Sr+
-d,2,Sdelta
-f,a,Aggression
-f,m,Mand

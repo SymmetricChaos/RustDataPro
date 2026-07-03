@@ -7,18 +7,19 @@ pub struct ClientData {
     pub first_name: String,
     pub last_name: String,
     pub client_id: String,
+    pub assessments: Vec<String>,
+    pub conditions: Vec<String>,
     pub session_number: u32,
 }
 
 impl Default for ClientData {
     fn default() -> Self {
         Self {
-            first_name: "MISSING".into(),
-            last_name: "MISSING".into(),
-            client_id: "MISSING".into(),
-            // assessment: "MISSING".into(),
-            // condition: "MISSING".into(),
-            // data_type: "MISSING".into(),
+            first_name: "<<MISSING>>".into(),
+            last_name: "<<MISSING>>".into(),
+            client_id: "<<MISSING>>".into(),
+            assessments: Vec::new(),
+            conditions: Vec::new(),
             session_number: 99999,
         }
     }
@@ -28,14 +29,8 @@ impl Display for ClientData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Client: {} {}\nID: {}\nSession Number: {}",
-            self.first_name,
-            self.last_name,
-            self.client_id,
-            // self.assessment,
-            // self.condition,
-            // self.data_type,
-            self.session_number
+            "Client: {} {}\nID: {}\nSession Number: {}", // NOTICE: assessments and conditions are exluded from this display
+            self.first_name, self.last_name, self.client_id, self.session_number
         )
     }
 }
@@ -47,7 +42,7 @@ impl ClientData {
         }
     }
 
-    pub fn from_file(file_path: PathBuf) -> Result<ClientData> {
+    pub fn from_file(file_path: PathBuf) -> Result<Self> {
         let mut file = File::open(&file_path)?;
         let mut s = String::new();
         file.read_to_string(&mut s)?;

@@ -1,5 +1,5 @@
 use crate::{
-    data::{ClientData, SessionData, ksf::Ksf},
+    data::{ClientData, DataType, SessionData, ksf::Ksf},
     pages::Page,
     random_services::RandomServices,
     session_page::SessionPage,
@@ -87,6 +87,7 @@ impl eframe::App for DataPro {
                 }
 
                 if ui.button("Data Tracking").clicked() {
+                    self.session_page.load_ksf(&self.ksf);
                     self.set_page(Page::DataTracking);
                 }
             });
@@ -155,18 +156,14 @@ impl eframe::App for DataPro {
             }
             self.ksf_file_dialog.update(ui.ctx());
             if let Some(path) = self.ksf_file_dialog.take_picked() {
-                if path.extension().unwrap().to_str().unwrap() != "txt" {
-                    self.ksf_err = Some(String::from("KSF files must have extension .txt"));
-                } else {
-                    match Ksf::from_file(path) {
-                        Ok(ksf) => {
-                            self.ksf = ksf;
-                            self.session_page.load_ksf(&self.ksf);
-                            self.ksf_err = None
-                        }
-                        Err(e) => self.ksf_err = Some(e.to_string()),
-                    };
-                }
+                match Ksf::from_file(path) {
+                    Ok(ksf) => {
+                        self.ksf = ksf;
+                        self.session_page.load_ksf(&self.ksf);
+                        self.ksf_err = None
+                    }
+                    Err(e) => self.ksf_err = Some(e.to_string()),
+                };
             }
             ui.add_space(5.0);
 
@@ -175,12 +172,14 @@ impl eframe::App for DataPro {
                 self.client_data_file_dialog.pick_file();
             }
             ui.label(format!(
-                "{} {}",
+                "Client: {} {}",
                 &self.client_data.first_name, &self.client_data.last_name
             ));
             ui.label(format!("ID: {}", &self.client_data.client_id));
-            ui.label(format!("Session: {}", &self.client_data.session_number));
-
+            ui.label(format!(
+                "Session: {} TODO: make user adujustable",
+                &self.client_data.session_number
+            ));
             if let Some(e) = &self.client_data_err {
                 ui.strong(e);
             } else {
@@ -188,19 +187,59 @@ impl eframe::App for DataPro {
             }
             self.client_data_file_dialog.update(ui.ctx());
             if let Some(path) = self.client_data_file_dialog.take_picked() {
-                if path.extension().unwrap().to_str().unwrap() != "json" {
-                    self.client_data_err =
-                        Some(String::from("Client files must have extension .json"));
-                } else {
-                    match ClientData::from_file(path) {
-                        Ok(sess_data) => {
-                            self.client_data = sess_data;
-                            self.client_data_err = None
-                        }
-                        Err(e) => self.client_data_err = Some(e.to_string()),
-                    };
-                }
+                match ClientData::from_file(path) {
+                    Ok(sess_data) => {
+                        self.client_data = sess_data;
+                        self.client_data_err = None
+                    }
+                    Err(e) => self.client_data_err = Some(e.to_string()),
+                };
             }
+
+            // ### DROPDOWMS ###
+            ui.group(|ui| {
+                ui.label("Data Type");
+                egui::ComboBox::from_id_salt("datatype")
+                    .selected_text(self.session_data.data_type.to_string())
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(
+                            &mut self.session_data.data_type,
+                            DataType::Primary,
+                            "Primary",
+                        );
+                        ui.selectable_value(
+                            &mut self.session_data.data_type,
+                            DataType::Reliability,
+                            "Reliability",
+                        );
+                    });
+                ui.add_space(5.0);
+                ui.label("Assessment");
+                egui::ComboBox::from_id_salt("assessment")
+                    .selected_text(&self.session_data.assessment)
+                    .show_ui(ui, |ui| {
+                        for item in self.client_data.assessments.iter() {
+                            ui.selectable_value(
+                                &mut self.session_data.assessment,
+                                item.to_string(),
+                                item,
+                            );
+                        }
+                    });
+                ui.add_space(5.0);
+                ui.label("Condition");
+                egui::ComboBox::from_id_salt("condition")
+                    .selected_text(&self.session_data.condition)
+                    .show_ui(ui, |ui| {
+                        for item in self.client_data.conditions.iter() {
+                            ui.selectable_value(
+                                &mut self.session_data.condition,
+                                item.to_string(),
+                                item,
+                            );
+                        }
+                    })
+            });
         });
     }
 }

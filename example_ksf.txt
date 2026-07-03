@@ -1,6 +1,13 @@
-type,key,decription
-f, s , SIB
-d,1,Sr+
-d,2,Sdelta
-f,a,Aggression
-
+{
+    "name": "Example",
+    "frequency": [
+        ["V", "NegVoc"],
+        ["A", "Aggression"],
+		["M", "Mand"]
+    ],
+    "duration": [
+		["4", "ToyEngage"],
+		["1", "Sr+"],
+		["2", "Sdelta"]
+    ]
+}
