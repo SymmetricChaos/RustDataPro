@@ -1,4 +1,5 @@
-use chrono::{DateTime, Duration, Local};
+use std::time::{Duration, Instant};
+
 use egui::{Color32, Key, RichText, Ui};
 
 macro_rules! timer_format {
@@ -31,7 +32,7 @@ macro_rules! bout_display {
 pub struct Timer {
     pub key: Option<Key>,
     pub description: Option<String>,
-    pub start_time: DateTime<Local>,
+    pub start_time: Instant,
     pub saved_time: Duration,
     pub bouts: u32,
     pub show_bouts: bool,
@@ -44,8 +45,8 @@ impl Default for Timer {
         Self {
             key: None,
             description: None,
-            start_time: Local::now(),
-            saved_time: Duration::zero(),
+            start_time: Instant::now(),
+            saved_time: Duration::ZERO,
             bouts: 0,
             show_bouts: false,
             show_split: false,
@@ -59,8 +60,8 @@ impl Timer {
         Self {
             key: None,
             description: None,
-            start_time: Local::now(),
-            saved_time: Duration::zero(),
+            start_time: Instant::now(),
+            saved_time: Duration::ZERO,
             bouts: 0,
             show_bouts: false,
             show_split: false,
@@ -72,8 +73,8 @@ impl Timer {
         Self {
             key: None,
             description: None,
-            start_time: Local::now(),
-            saved_time: Duration::zero(),
+            start_time: Instant::now(),
+            saved_time: Duration::ZERO,
             bouts: 0,
             show_bouts: true,
             show_split: true,
@@ -112,7 +113,7 @@ impl Timer {
     pub fn start(&mut self) {
         if !self.active {
             self.active = true;
-            self.start_time = Local::now();
+            self.start_time = Instant::now();
             self.bouts += 1;
         }
     }
@@ -129,30 +130,42 @@ impl Timer {
     pub fn stop(&mut self) {
         if self.active {
             self.active = false;
-            self.saved_time += Local::now() - self.start_time;
+            self.saved_time += Instant::now() - self.start_time;
         }
     }
 
     /// Stop the timer and set the saved time and bouts to zero.
     pub fn reset(&mut self) {
         self.active = false;
-        self.saved_time = Duration::zero();
+        self.saved_time = Duration::ZERO;
         self.bouts = 0;
     }
 
     /// The amount of time currently saved in seconds.
     pub fn saved_time(&self) -> f32 {
-        self.saved_time.as_seconds_f32()
+        self.saved_time.as_secs_f32()
+    }
+
+    pub fn saved_time_raw(&self) -> Duration {
+        self.saved_time
     }
 
     /// How long the timer has been running since it was last started in seconds.
     pub fn current_time(&self) -> f32 {
-        (Local::now() - self.start_time).as_seconds_f32()
+        (Instant::now() - self.start_time).as_secs_f32()
+    }
+
+    pub fn current_time_raw(&self) -> Duration {
+        Instant::now() - self.start_time
     }
 
     /// The total time recorded in seconds. Sum of .saved_time() and .current_time().
     pub fn total_time(&self) -> f32 {
-        (Local::now() - self.start_time + self.saved_time).as_seconds_f32()
+        (Instant::now() - self.start_time + self.saved_time).as_secs_f32()
+    }
+
+    pub fn total_time_raw(&self) -> Duration {
+        Instant::now() - self.start_time + self.saved_time
     }
 
     fn view_split(&mut self, ui: &mut Ui) {

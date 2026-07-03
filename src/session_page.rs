@@ -4,7 +4,7 @@ use crate::{
     pages::Page,
     utils::{ClickedKeys, date_time_string},
 };
-use chrono::Local;
+use chrono::{DateTime, Local};
 use egui::{
     Color32,
     Key::{self},
@@ -31,6 +31,7 @@ pub struct SessionPage {
     timers: [Timer; MAX_DUR],
     counters: [Counter; MAX_FREQ],
     session_timer: Timer,
+    session_start: DateTime<Local>,
     output_file_dialog: FileDialog,
     output_file_contents: String,
     keypresses: Vec<Key>,
@@ -44,6 +45,7 @@ impl SessionPage {
             session_data: SessionData::new(),
             ksf_name: String::new(),
             session_timer: Timer::new(),
+            session_start: Local::now(),
             timers: [
                 Timer::new_splits_and_bouts(),
                 Timer::new_splits_and_bouts(),
@@ -142,10 +144,9 @@ impl SessionPage {
 
         // Save session time information
         self.output_file_contents.push_str(&format!(
-            "\nStart {}\nEnd {}\nDuration {}\n",
-            date_time_string(self.session_timer.start_time),
-            date_time_string(Local::now()),
-            (Local::now() - self.session_timer.start_time).as_seconds_f32()
+            "\nStart {}\nDuration {}\n",
+            date_time_string(self.session_start),
+            self.session_timer.total_time()
         ));
 
         self.output_file_contents.push_str("\n---Data---\n");
@@ -156,7 +157,7 @@ impl SessionPage {
                 self.output_file_contents.push_str(&format!(
                     "{} {}\n",
                     description,
-                    timer.saved_time.as_seconds_f32()
+                    timer.saved_time(),
                 ));
             }
         }
