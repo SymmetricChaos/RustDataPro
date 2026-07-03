@@ -1,6 +1,6 @@
 use crate::prng::Prng;
 use chrono::Local;
-use egui::{CentralPanel, DragValue, TextEdit, Ui};
+use egui::{DragValue, TextEdit, Ui};
 use itertools::Itertools;
 
 pub struct RandomServices {
@@ -24,8 +24,8 @@ impl Default for RandomServices {
 }
 
 impl RandomServices {
-    pub fn view(&mut self, ui: &mut Ui) {
-        CentralPanel::default().show(ui, |ui| {
+    pub fn view(&mut self, ui: &mut Ui, open: &mut bool) {
+        egui::Window::new("Random").open(open).show(ui, |ui| {
             ui.heading("Random Numbers in a Range");
             ui.horizontal(|ui| {
                 ui.add_space(2.0);

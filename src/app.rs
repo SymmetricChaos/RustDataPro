@@ -12,7 +12,8 @@ use egui_file_dialog::FileDialog;
 
 pub struct DataPro {
     active_page: Page,
-    timers_active: bool,
+    timers_open: bool,
+    random_open: bool,
 
     ksf_file_dialog: FileDialog,
     ksf: Option<Ksf>,
@@ -31,7 +32,8 @@ impl Default for DataPro {
     fn default() -> Self {
         Self {
             active_page: Page::About,
-            timers_active: false,
+            timers_open: false,
+            random_open: false,
 
             ksf_file_dialog: FileDialog::new(),
             ksf: None,
@@ -73,11 +75,11 @@ impl eframe::App for DataPro {
                 }
 
                 if ui.button("Randomness").clicked() {
-                    self.set_page(Page::Randomness);
+                    self.random_open = !self.random_open;
                 }
 
                 if ui.button("Timers").clicked() {
-                    self.timers_active = !self.timers_active;
+                    self.timers_open = !self.timers_open;
                 }
 
                 if ui.button("Data Tracking").clicked() {
@@ -96,13 +98,11 @@ impl eframe::App for DataPro {
             });
         });
 
-        if self.timers_active {
-            self.timers.view(ui)
-        }
+        self.timers.view(ui, &mut self.timers_open);
+        self.randomness_page.view(ui, &mut self.random_open);
 
         match self.active_page {
             Page::About => {}
-            Page::Randomness => self.randomness_page.view(ui),
             Page::DataTracking => self.session_page.view(ui, &mut self.active_page),
         }
 

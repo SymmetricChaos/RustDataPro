@@ -96,17 +96,6 @@ impl SessionPage {
         }
     }
 
-    fn reset(&mut self) {
-        self.timers.iter_mut().for_each(|t| t.reset());
-        self.counters.iter_mut().for_each(|c| c.reset());
-        self.session_timer.reset();
-        self.keypresses.clear();
-        self.keypresses_display = VecDeque::from(["_"; 10]);
-        self.ksf_name.clear();
-        self.session_data = SessionData::new();
-        self.clicked_keys.clear();
-    }
-
     pub fn load_ksf(&mut self, ksf: &Ksf) {
         self.ksf_name = ksf.name.clone();
         for (keybind, timer) in ksf.duration.iter().zip(self.timers.iter_mut()) {
@@ -123,7 +112,18 @@ impl SessionPage {
         self.session_data = session_data;
     }
 
-    fn save_session(&mut self) {
+    fn reset(&mut self) {
+        self.timers.iter_mut().for_each(|t| t.reset());
+        self.counters.iter_mut().for_each(|c| c.reset());
+        self.session_timer.reset();
+        self.keypresses.clear();
+        self.keypresses_display = VecDeque::from(["_"; 10]);
+        self.ksf_name.clear();
+        self.session_data = SessionData::new();
+        self.clicked_keys.clear();
+    }
+
+    fn record_data(&mut self) {
         // Stop all timers
         for timer in self.timers.iter_mut() {
             timer.stop();
@@ -138,6 +138,8 @@ impl SessionPage {
             .push_str(&self.session_data.to_string());
         self.output_file_contents.push('\n');
 
+        self.output_file_contents.push_str("\n---Session Time---\n");
+
         // Save session time information
         self.output_file_contents.push_str(&format!(
             "\nStart {}\nEnd {}\nDuration {}\n",
@@ -146,7 +148,9 @@ impl SessionPage {
             (Local::now() - self.session_timer.start_time).as_seconds_f32()
         ));
 
-        self.output_file_contents.push_str("\nDuration Data\n");
+        self.output_file_contents.push_str("\n---Data---\n");
+
+        self.output_file_contents.push_str("\nDuration\n");
         for timer in self.timers.iter_mut() {
             if let Some(description) = &timer.description {
                 self.output_file_contents.push_str(&format!(
@@ -157,7 +161,7 @@ impl SessionPage {
             }
         }
 
-        self.output_file_contents.push_str("\nFrequency Data\n");
+        self.output_file_contents.push_str("\nFrequency\n");
         for counter in self.counters.iter() {
             if let Some(description) = &counter.description {
                 self.output_file_contents
@@ -165,12 +169,9 @@ impl SessionPage {
             }
         }
 
-        self.output_file_contents.push_str("\nRaw Input Data\n");
+        self.output_file_contents.push_str("\nRaw Inputs\n");
         self.output_file_contents
             .push_str(&self.keypresses.iter().map(|k| k.name()).join(" "));
-
-        // Open save dialog
-        self.output_file_dialog.save_file();
     }
 
     pub fn view(&mut self, ui: &mut Ui, active_page: &mut Page) {
@@ -180,8 +181,9 @@ impl SessionPage {
                     self.session_timer.stop();
                     self.keypresses.push(Key::Escape);
                     self.keypresses_display.pop_front();
-                    self.keypresses_display.push_back("ESC");
-                    self.save_session();
+                    self.keypresses_display.push_back("END");
+                    self.record_data();
+                    self.output_file_dialog.save_file();
                 }
             }
             if i.consume_key(egui::Modifiers::NONE, egui::Key::Tab) {
@@ -230,7 +232,7 @@ impl SessionPage {
                     self.keypresses.push(Key::Escape);
                     self.keypresses_display.pop_front();
                     self.keypresses_display.push_back("ESC");
-                    self.save_session();
+                    self.record_data();
                 }
             } else {
                 if ui

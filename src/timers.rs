@@ -30,8 +30,8 @@ impl Timers {
         self.timers.iter_mut().zip(self.linked_timers.iter_mut())
     }
 
-    pub fn view(&mut self, ui: &mut Ui) {
-        egui::Window::new("Timers").show(ui, |ui| {
+    pub fn view(&mut self, ui: &mut Ui, open: &mut bool) {
+        egui::Window::new("Timers").open(open).show(ui, |ui| {
             ui.ctx().input_mut(|input| {
                 self.clicked_keys.update(input);
 

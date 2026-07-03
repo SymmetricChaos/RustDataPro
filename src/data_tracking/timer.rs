@@ -35,8 +35,23 @@ pub struct Timer {
     pub saved_time: Duration,
     pub bouts: u32,
     pub show_bouts: bool,
-    pub split: bool,
+    pub show_split: bool,
     pub active: bool,
+}
+
+impl Default for Timer {
+    fn default() -> Self {
+        Self {
+            key: None,
+            description: None,
+            start_time: Local::now(),
+            saved_time: Duration::zero(),
+            bouts: 0,
+            show_bouts: false,
+            show_split: false,
+            active: false,
+        }
+    }
 }
 
 impl Timer {
@@ -48,7 +63,7 @@ impl Timer {
             saved_time: Duration::zero(),
             bouts: 0,
             show_bouts: false,
-            split: false,
+            show_split: false,
             active: false,
         }
     }
@@ -61,24 +76,24 @@ impl Timer {
             saved_time: Duration::zero(),
             bouts: 0,
             show_bouts: true,
-            split: true,
+            show_split: true,
             active: false,
         }
     }
 
-    // /// Build a timer with a keybind.
-    // pub fn with_key(mut self, key: Key) -> Self {
-    //     self.key = Some(key);
-    //     self
-    // }
-
-    // /// Build a timer with a description.
-    // pub fn with_description(mut self, description: String) -> Self {
-    //     self.description = Some(description);
-    //     self
-    // }
+    /// Build a timer with an associated key.
+    pub fn with_key(mut self, key: Key) -> Self {
+        self.key = Some(key);
+        self
+    }
 
     /// Build a timer with a description.
+    pub fn with_description(mut self, description: String) -> Self {
+        self.description = Some(description);
+        self
+    }
+
+    /// Build a timer that shows how many time it has been started.
     pub fn with_bouts(mut self) -> Self {
         self.show_bouts = true;
         self
@@ -93,7 +108,7 @@ impl Timer {
         }
     }
 
-    /// Start if inactive. Otherwise do nothing.
+    /// If inactive, start, set the start to to Local::now(), and increment bouts by 1. Otherwise do nothing.
     pub fn start(&mut self) {
         if !self.active {
             self.active = true;
@@ -102,7 +117,7 @@ impl Timer {
         }
     }
 
-    /// If active stop without updating the saved time.
+    /// If active, stop without updating the saved time and decrement bouts by 1. Otherwise do nothing.
     pub fn unstart(&mut self) {
         if self.active {
             self.active = false;
@@ -110,7 +125,7 @@ impl Timer {
         }
     }
 
-    /// Stop if active. Otherwise do nothing.
+    /// If active stop and update the saved time. Otherwise do nothing.
     pub fn stop(&mut self) {
         if self.active {
             self.active = false;
@@ -118,7 +133,7 @@ impl Timer {
         }
     }
 
-    /// Stop if active and set total time to zero.
+    /// Stop the timer and set the saved time and bouts to zero.
     pub fn reset(&mut self) {
         self.active = false;
         self.saved_time = Duration::zero();
@@ -130,12 +145,12 @@ impl Timer {
         self.saved_time.as_seconds_f32()
     }
 
-    /// How long the timer has been running since it was last started.
+    /// How long the timer has been running since it was last started in seconds.
     pub fn current_time(&self) -> f32 {
         (Local::now() - self.start_time).as_seconds_f32()
     }
 
-    /// The total time recorded. Sum of .saved_time() and .current_time().
+    /// The total time recorded in seconds. Sum of .saved_time() and .current_time().
     pub fn total_time(&self) -> f32 {
         (Local::now() - self.start_time + self.saved_time).as_seconds_f32()
     }
@@ -161,7 +176,6 @@ impl Timer {
         }
     }
 
-    /// View does not specify horizontal.
     pub fn view(&mut self, ui: &mut Ui) {
         if let Some(description) = &self.description {
             ui.label(description);
@@ -169,12 +183,11 @@ impl Timer {
         if let Some(key) = &self.key {
             ui.label(key.name());
         }
-        if self.split {
+        if self.show_split {
             self.view_split(ui);
-            bout_display!(ui, self.show_bouts, self.bouts);
         } else {
             self.view_unsplit(ui);
-            bout_display!(ui, self.show_bouts, self.bouts);
         }
+        bout_display!(ui, self.show_bouts, self.bouts);
     }
 }
