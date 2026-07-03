@@ -98,13 +98,13 @@ impl SessionPage {
 
     pub fn load_ksf(&mut self, ksf: &Ksf) {
         self.ksf_name = ksf.name.clone();
-        for (keybind, timer) in ksf.duration.iter().zip(self.timers.iter_mut()) {
+        for (keybind, timer) in ksf.duration.iter().cloned().zip(self.timers.iter_mut()) {
             timer.key = Some(keybind.0);
-            timer.description = Some(keybind.1.clone());
+            timer.description = Some(keybind.1);
         }
-        for (keybind, counter) in ksf.frequency.iter().zip(self.counters.iter_mut()) {
+        for (keybind, counter) in ksf.frequency.iter().cloned().zip(self.counters.iter_mut()) {
             counter.key = Some(keybind.0);
-            counter.description = Some(keybind.1.clone());
+            counter.description = Some(keybind.1);
         }
     }
 
@@ -119,12 +119,17 @@ impl SessionPage {
         }
     }
 
-    fn end_session(&mut self, client_data: &mut ClientData, active_page: &mut Page) {
+    fn end_session(
+        &mut self,
+        client_data: &mut ClientData,
+        active_page: &mut Page,
+        client_data_path: &Option<String>,
+    ) {
         if self.session_timer.active {
             self.keypresses.push(Key::Escape);
             self.keypresses_display.pop_front();
             self.keypresses_display.push_back("END");
-            self.record_data(client_data);
+            self.record_data(client_data, client_data_path);
             client_data.session_number += 1;
             self.reset();
             *active_page = Page::About;
@@ -138,7 +143,7 @@ impl SessionPage {
         self.clicked_keys.clear();
     }
 
-    fn record_data(&mut self, client_data: &mut ClientData) {
+    fn record_data(&mut self, client_data: &mut ClientData, client_data_path: &Option<String>) {
         // Stop all timers
         for timer in self.timers.iter_mut() {
             timer.stop();
@@ -193,6 +198,12 @@ impl SessionPage {
             .write_all(self.output_file_contents.as_bytes())
             .expect("failed to write file");
         writer.flush().expect("failed to flush file");
+
+        std::fs::write(
+            client_data_path.clone().unwrap(),
+            serde_json::to_string(&client_data).unwrap(),
+        )
+        .unwrap();
     }
 
     pub fn view(
@@ -202,11 +213,12 @@ impl SessionPage {
         client_data: &mut ClientData,
         session_data: &mut SessionData,
         ksf: &mut Ksf,
+        client_data_path: &Option<String>,
     ) {
         ui.ctx().input_mut(|i| {
             // Need to consume Esc in order to prevent egui from using it for other purposes
             if i.consume_key(egui::Modifiers::NONE, egui::Key::Escape) {
-                self.end_session(client_data, active_page);
+                self.end_session(client_data, active_page, client_data_path);
             }
             if i.consume_key(egui::Modifiers::NONE, egui::Key::Tab) {
                 self.start_session(&ksf);
@@ -242,7 +254,7 @@ impl SessionPage {
                     .button(RichText::new(" END ").monospace().color(Color32::RED))
                     .clicked()
                 {
-                    self.end_session(client_data, active_page);
+                    self.end_session(client_data, active_page, client_data_path);
                 }
             } else {
                 if ui

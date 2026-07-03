@@ -42,7 +42,7 @@ impl ClientData {
         }
     }
 
-    pub fn from_file(file_path: PathBuf) -> Result<Self> {
+    pub fn from_file(file_path: &PathBuf) -> Result<Self> {
         let mut file = File::open(&file_path)?;
         let mut s = String::new();
         file.read_to_string(&mut s)?;

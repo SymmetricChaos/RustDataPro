@@ -22,12 +22,13 @@ pub struct DataPro {
     client_data_file_dialog: FileDialog,
     client_data: ClientData,
     client_data_err: Option<String>,
+    client_data_path: Option<String>,
 
     session_data: SessionData,
 
     randomness_page: RandomServices,
-    session_page: SessionPage,
     timers: Timers,
+    session_page: SessionPage,
 }
 
 impl Default for DataPro {
@@ -44,6 +45,7 @@ impl Default for DataPro {
             client_data_file_dialog: FileDialog::new(),
             client_data: ClientData::default(),
             client_data_err: None,
+            client_data_path: None,
 
             session_data: SessionData::default(),
 
@@ -104,6 +106,7 @@ impl eframe::App for DataPro {
                 &mut self.client_data,
                 &mut self.session_data,
                 &mut self.ksf,
+                &self.client_data_path,
             ),
         }
 
@@ -187,10 +190,12 @@ impl eframe::App for DataPro {
             }
             self.client_data_file_dialog.update(ui.ctx());
             if let Some(path) = self.client_data_file_dialog.take_picked() {
-                match ClientData::from_file(path) {
+                match ClientData::from_file(&path) {
                     Ok(sess_data) => {
+                        self.client_data_path = Some(path.as_path().to_str().unwrap().to_string());
                         self.client_data = sess_data;
-                        self.client_data_err = None
+                        self.client_data.session_number += 1;
+                        self.client_data_err = None;
                     }
                     Err(e) => self.client_data_err = Some(e.to_string()),
                 };
