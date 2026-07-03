@@ -1,5 +1,5 @@
 use crate::{
-    data::{ksf::Ksf, session::SessionData},
+    data::{SessionData, client::ClientData, ksf::Ksf},
     data_tracking::{counter::Counter, timer::Timer},
     pages::Page,
     utils::{ClickedKeys, date_time_string},
@@ -12,7 +12,11 @@ use egui::{
 };
 use egui_file_dialog::FileDialog;
 use itertools::Itertools;
-use std::collections::VecDeque;
+use std::{
+    collections::VecDeque,
+    fs::File,
+    io::{BufWriter, Write},
+};
 
 const MAX_DUR: usize = 20;
 const MAX_FREQ: usize = 20;
@@ -26,7 +30,6 @@ macro_rules! record_keypress {
 }
 
 pub struct SessionPage {
-    session_data: SessionData,
     ksf_name: String,
     timers: [Timer; MAX_DUR],
     counters: [Counter; MAX_FREQ],
@@ -42,7 +45,6 @@ pub struct SessionPage {
 impl SessionPage {
     pub fn new() -> Self {
         Self {
-            session_data: SessionData::new(),
             ksf_name: String::new(),
             session_timer: Timer::new(),
             session_start: Local::now(),
@@ -110,12 +112,9 @@ impl SessionPage {
         }
     }
 
-    pub fn load_session_data(&mut self, session_data: SessionData) {
-        self.session_data = session_data;
-    }
-
-    fn start_session(&mut self) {
+    fn start_session(&mut self, ksf: &Ksf) {
         if !self.session_timer.active {
+            self.load_ksf(ksf);
             self.session_timer.start();
             self.session_start = Local::now();
             self.keypresses.push(Key::Tab);
@@ -124,29 +123,26 @@ impl SessionPage {
         }
     }
 
-    fn end_session(&mut self) {
+    fn end_session(&mut self, client_data: &mut ClientData, active_page: &mut Page) {
         if self.session_timer.active {
-            self.session_timer.stop();
             self.keypresses.push(Key::Escape);
             self.keypresses_display.pop_front();
             self.keypresses_display.push_back("END");
-            self.record_data();
-            self.output_file_dialog.save_file();
+            self.record_data(client_data);
+            client_data.session_number += 1;
+            self.reset();
+            *active_page = Page::About;
         }
     }
 
     fn reset(&mut self) {
-        self.timers.iter_mut().for_each(|t| t.reset());
-        self.counters.iter_mut().for_each(|c| c.reset());
         self.session_timer.reset();
         self.keypresses.clear();
         self.keypresses_display = VecDeque::from(["_"; 10]);
-        self.ksf_name.clear();
-        self.session_data = SessionData::new();
         self.clicked_keys.clear();
     }
 
-    fn record_data(&mut self) {
+    fn record_data(&mut self, client_data: &mut ClientData) {
         // Stop all timers
         for timer in self.timers.iter_mut() {
             timer.stop();
@@ -157,8 +153,7 @@ impl SessionPage {
         self.output_file_contents.clear();
 
         self.output_file_contents.push_str("\n---Session---\n");
-        self.output_file_contents
-            .push_str(&self.session_data.to_string());
+        self.output_file_contents.push_str(&client_data.to_string());
         self.output_file_contents.push('\n');
         self.output_file_contents.push_str(&format!(
             "\nStart {}\nDuration {}\n",
@@ -190,16 +185,40 @@ impl SessionPage {
         self.output_file_contents.push_str("\nRaw Inputs\n");
         self.output_file_contents
             .push_str(&self.keypresses.iter().map(|k| k.name()).join(" "));
+
+        // Create the file and save it
+        let file = File::create(&format!(
+            "{}{}_{}.txt",
+            client_data.first_name.chars().next().unwrap(),
+            client_data.last_name.chars().next().unwrap(),
+            client_data.session_number,
+        ))
+        .expect("failed to create file, this should be a graceful failure");
+        let mut writer = BufWriter::new(file);
+
+        writer
+            .write_all(self.output_file_contents.as_bytes())
+            .expect("failed to write file, this should be a graceful failure");
+        writer
+            .flush()
+            .expect("failed to flush file, this should be a graceful failure");
     }
 
-    pub fn view(&mut self, ui: &mut Ui, active_page: &mut Page) {
+    pub fn view(
+        &mut self,
+        ui: &mut Ui,
+        active_page: &mut Page,
+        client_data: &mut ClientData,
+        session_data: &mut SessionData,
+        ksf: &mut Ksf,
+    ) {
         ui.ctx().input_mut(|i| {
             // Need to consume Esc in order to prevent egui from using it for other purposes
             if i.consume_key(egui::Modifiers::NONE, egui::Key::Escape) {
-                self.end_session();
+                self.end_session(client_data, active_page);
             }
             if i.consume_key(egui::Modifiers::NONE, egui::Key::Tab) {
-                self.start_session();
+                self.start_session(&ksf);
             }
             self.clicked_keys.update(i);
         });
@@ -210,20 +229,17 @@ impl SessionPage {
                     ui.vertical(|ui| {
                         ui.label(format!(
                             "Client: {} {}",
-                            self.session_data.first_name, self.session_data.last_name
+                            client_data.first_name, client_data.last_name
                         ));
-                        ui.label(format!(
-                            "Session Number: {}",
-                            self.session_data.session_number
-                        ));
+                        ui.label(format!("Session Number: {}", client_data.session_number));
                         ui.label(format!("KSF: {}", self.ksf_name))
                     });
                 });
                 ui.group(|ui| {
                     ui.vertical(|ui| {
-                        ui.label(format!("Assessment: {}", self.session_data.assessment));
-                        ui.label(format!("Condition: {}", self.session_data.condition));
-                        ui.label(format!("Data Type: {}", self.session_data.data_type));
+                        ui.label(format!("Assessment: {}", session_data.assessment));
+                        ui.label(format!("Condition: {}", session_data.condition));
+                        ui.label(format!("Data Type: {}", session_data.data_type));
                     });
                 });
             });
@@ -235,14 +251,14 @@ impl SessionPage {
                     .button(RichText::new(" END ").monospace().color(Color32::RED))
                     .clicked()
                 {
-                    self.end_session();
+                    self.end_session(client_data, active_page);
                 }
             } else {
                 if ui
                     .button(RichText::new("START").monospace().color(Color32::GREEN))
                     .clicked()
                 {
-                    self.start_session();
+                    self.start_session(ksf);
                 }
             }
             self.output_file_dialog.update(ui.ctx());

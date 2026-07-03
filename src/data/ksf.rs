@@ -48,7 +48,7 @@ pub struct Ksf {
 impl Default for Ksf {
     fn default() -> Self {
         Self {
-            name: String::from("Default KSF Loaded"),
+            name: String::from("DEFAULT"),
             duration: vec![Keybind::from_string("4,Toy Engage")],
             frequency: vec![
                 Keybind::from_string("M,Mand"),

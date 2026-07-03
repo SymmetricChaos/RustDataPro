@@ -1,5 +1,5 @@
 use crate::{
-    data::{SessionData, ksf::Ksf},
+    data::{ClientData, SessionData, ksf::Ksf},
     pages::Page,
     random_services::RandomServices,
     session_page::SessionPage,
@@ -16,12 +16,14 @@ pub struct DataPro {
     random_open: bool,
 
     ksf_file_dialog: FileDialog,
-    ksf: Option<Ksf>,
-    ksf_err_string: Option<String>,
+    ksf: Ksf,
+    ksf_err: Option<String>,
 
-    session_data_file_dialog: FileDialog,
-    session_data: Option<SessionData>,
-    session_data_err_string: Option<String>,
+    client_data_file_dialog: FileDialog,
+    client_data: ClientData,
+    client_data_err: Option<String>,
+
+    session_data: SessionData,
 
     randomness_page: RandomServices,
     session_page: SessionPage,
@@ -36,12 +38,14 @@ impl Default for DataPro {
             random_open: false,
 
             ksf_file_dialog: FileDialog::new(),
-            ksf: None,
-            ksf_err_string: None,
+            ksf: Ksf::default(),
+            ksf_err: None,
 
-            session_data_file_dialog: FileDialog::new(),
-            session_data: None,
-            session_data_err_string: None,
+            client_data_file_dialog: FileDialog::new(),
+            client_data: ClientData::default(),
+            client_data_err: None,
+
+            session_data: SessionData::default(),
 
             randomness_page: RandomServices::default(),
             session_page: SessionPage::new(),
@@ -84,16 +88,6 @@ impl eframe::App for DataPro {
 
                 if ui.button("Data Tracking").clicked() {
                     self.set_page(Page::DataTracking);
-                    if let Some(ksf) = &self.ksf {
-                        self.session_page.load_ksf(ksf);
-                    } else {
-                        self.session_page.load_ksf(&Ksf::default());
-                    }
-                    if let Some(session_data) = &self.session_data {
-                        self.session_page.load_session_data(session_data.clone());
-                    } else {
-                        self.session_page.load_session_data(SessionData::default());
-                    }
                 }
             });
         });
@@ -103,7 +97,13 @@ impl eframe::App for DataPro {
 
         match self.active_page {
             Page::About => {}
-            Page::DataTracking => self.session_page.view(ui, &mut self.active_page),
+            Page::DataTracking => self.session_page.view(
+                ui,
+                &mut self.active_page,
+                &mut self.client_data,
+                &mut self.session_data,
+                &mut self.ksf,
+            ),
         }
 
         egui::Panel::left("welcome_panel")
@@ -143,15 +143,12 @@ impl eframe::App for DataPro {
             ui.separator();
             ui.add_space(5.0);
 
+            // ### KSF FILE ###
             if ui.button("Select KSF File").clicked() {
                 self.ksf_file_dialog.pick_file();
             }
-            if let Some(ksf) = &self.ksf {
-                ui.label(format!("KSF file: {}", ksf.name));
-            } else {
-                ui.label("KSF file: DEFAULT");
-            }
-            if let Some(e) = &self.ksf_err_string {
+            ui.label(format!("KSF file: {}", self.ksf.name));
+            if let Some(e) = &self.ksf_err {
                 ui.strong(e);
             } else {
                 ui.strong("");
@@ -159,46 +156,48 @@ impl eframe::App for DataPro {
             self.ksf_file_dialog.update(ui.ctx());
             if let Some(path) = self.ksf_file_dialog.take_picked() {
                 if path.extension().unwrap().to_str().unwrap() != "txt" {
-                    self.ksf_err_string = Some(String::from("KSF files must have extension .txt"));
+                    self.ksf_err = Some(String::from("KSF files must have extension .txt"));
                 } else {
                     match Ksf::from_file(path) {
                         Ok(ksf) => {
-                            self.ksf = Some(ksf);
-                            self.ksf_err_string = None
+                            self.ksf = ksf;
+                            self.session_page.load_ksf(&self.ksf);
+                            self.ksf_err = None
                         }
-                        Err(e) => self.ksf_err_string = Some(e.to_string()),
+                        Err(e) => self.ksf_err = Some(e.to_string()),
                     };
                 }
             }
             ui.add_space(5.0);
 
+            // ### CLIENT FILE ###
             if ui.button("Select Client File").clicked() {
-                self.session_data_file_dialog.pick_file();
+                self.client_data_file_dialog.pick_file();
             }
-            if let Some(sd) = &self.session_data {
-                ui.label(format!("{} {}", &sd.first_name, &sd.last_name));
-                ui.label(format!("ID: {}", &sd.client_id));
-            } else {
-                ui.label("Client Data");
-                ui.label("Not Loaded");
-            }
-            if let Some(e) = &self.session_data_err_string {
+            ui.label(format!(
+                "{} {}",
+                &self.client_data.first_name, &self.client_data.last_name
+            ));
+            ui.label(format!("ID: {}", &self.client_data.client_id));
+            ui.label(format!("Session: {}", &self.client_data.session_number));
+
+            if let Some(e) = &self.client_data_err {
                 ui.strong(e);
             } else {
                 ui.strong("");
             }
-            self.session_data_file_dialog.update(ui.ctx());
-            if let Some(path) = self.session_data_file_dialog.take_picked() {
+            self.client_data_file_dialog.update(ui.ctx());
+            if let Some(path) = self.client_data_file_dialog.take_picked() {
                 if path.extension().unwrap().to_str().unwrap() != "json" {
-                    self.session_data_err_string =
+                    self.client_data_err =
                         Some(String::from("Client files must have extension .json"));
                 } else {
-                    match SessionData::from_file(path) {
+                    match ClientData::from_file(path) {
                         Ok(sess_data) => {
-                            self.session_data = Some(sess_data);
-                            self.session_data_err_string = None
+                            self.client_data = sess_data;
+                            self.client_data_err = None
                         }
-                        Err(e) => self.session_data_err_string = Some(e.to_string()),
+                        Err(e) => self.client_data_err = Some(e.to_string()),
                     };
                 }
             }
