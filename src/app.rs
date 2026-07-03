@@ -23,8 +23,8 @@ pub struct DataPro {
     session_data_err_string: Option<String>,
 
     randomness_page: RandomServices,
-    data_tracking_page: SessionPage,
-    timer_page: Timers,
+    session_page: SessionPage,
+    timers: Timers,
 }
 
 impl Default for DataPro {
@@ -36,13 +36,14 @@ impl Default for DataPro {
             ksf_file_dialog: FileDialog::new(),
             ksf: None,
             ksf_err_string: None,
+
             session_data_file_dialog: FileDialog::new(),
             session_data: None,
             session_data_err_string: None,
 
             randomness_page: RandomServices::default(),
-            data_tracking_page: SessionPage::new(),
-            timer_page: Timers::default(),
+            session_page: SessionPage::new(),
+            timers: Timers::default(),
         }
     }
 }
@@ -82,29 +83,27 @@ impl eframe::App for DataPro {
                 if ui.button("Data Tracking").clicked() {
                     self.set_page(Page::DataTracking);
                     if let Some(ksf) = &self.ksf {
-                        self.data_tracking_page.load_ksf(ksf);
+                        self.session_page.load_ksf(ksf);
                     } else {
-                        self.data_tracking_page.load_ksf(&Ksf::default());
+                        self.session_page.load_ksf(&Ksf::default());
                     }
                     if let Some(session_data) = &self.session_data {
-                        self.data_tracking_page
-                            .load_session_data(session_data.clone());
+                        self.session_page.load_session_data(session_data.clone());
                     } else {
-                        self.data_tracking_page
-                            .load_session_data(SessionData::default());
+                        self.session_page.load_session_data(SessionData::default());
                     }
                 }
             });
         });
 
         if self.timers_active {
-            self.timer_page.view(ui)
+            self.timers.view(ui)
         }
 
         match self.active_page {
             Page::About => {}
             Page::Randomness => self.randomness_page.view(ui),
-            Page::DataTracking => self.data_tracking_page.view(ui, &mut self.active_page),
+            Page::DataTracking => self.session_page.view(ui, &mut self.active_page),
         }
 
         egui::Panel::left("welcome_panel")
@@ -180,10 +179,9 @@ impl eframe::App for DataPro {
                 ui.label(format!("{} {}", &sd.first_name, &sd.last_name));
                 ui.label(format!("ID: {}", &sd.client_id));
             } else {
-                ui.label("Session Data");
+                ui.label("Client Data");
                 ui.label("Not Loaded");
             }
-
             if let Some(e) = &self.session_data_err_string {
                 ui.strong(e);
             } else {
