@@ -4,8 +4,7 @@ use std::{fmt::Display, fs::File, io::Read, path::PathBuf};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ClientData {
-    pub first_name: String,
-    pub last_name: String,
+    pub name: String,
     pub client_id: String,
     pub case_manager: String,
     pub primary_therapist: String,
@@ -17,11 +16,10 @@ pub struct ClientData {
 impl Default for ClientData {
     fn default() -> Self {
         Self {
-            first_name: String::from("NONE"),
-            last_name: String::from("NONE"),
-            client_id: String::from("NONE"),
-            case_manager: String::from("NONE"),
-            primary_therapist: String::from("NONE"),
+            name: String::from("NONE NONE"),
+            client_id: String::from("0000000000000000"),
+            case_manager: String::from("NONE NONE"),
+            primary_therapist: String::from("NONE NONE"),
             assessments: vec![String::from("NONE")],
             conditions: vec![String::from("NONE")],
             session_number: 0,
@@ -33,9 +31,8 @@ impl Display for ClientData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Client: {} {}\nID: {}\nCase Manager: {}\nPrimary Therapist: {}\nSession Number: {}", // NOTICE: assessments and conditions are exluded from this display
-            self.first_name,
-            self.last_name,
+            "Client: {}\nID: {}\nCase Manager: {}\nPrimary Therapist: {}\nSession Number: {}", // NOTICE: assessments and conditions are exluded from this display
+            self.name,
             self.client_id,
             self.case_manager,
             self.primary_therapist,

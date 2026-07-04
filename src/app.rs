@@ -174,10 +174,7 @@ impl eframe::App for DataPro {
             if ui.button("Select Client File").clicked() {
                 self.client_data_file_dialog.pick_file();
             }
-            ui.label(format!(
-                "Client: {} {}",
-                &self.client_data.first_name, &self.client_data.last_name
-            ));
+            ui.label(format!("Client: {}", &self.client_data.name));
             ui.label(format!("ID: {}", &self.client_data.client_id));
             ui.label(format!("Case Manager: {}", &self.client_data.case_manager));
             ui.label(format!(

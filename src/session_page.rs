@@ -31,7 +31,6 @@ pub struct SessionPage {
     counters: [Counter; 20],
     session_timer: Timer,
     session_start: DateTime<Local>,
-    // output_file_dialog: FileDialog,
     output_file_contents: String,
     keypresses: Vec<Key>,
     keypresses_display: VecDeque<&'static str>,
@@ -89,7 +88,6 @@ impl SessionPage {
                 Counter::new(),
                 Counter::new(),
             ],
-            // output_file_dialog: FileDialog::new().default_file_name("SaveData.txt"),
             output_file_contents: String::new(),
             keypresses: Vec::new(),
             keypresses_display: VecDeque::from(["_"; 10]),
@@ -198,17 +196,12 @@ impl SessionPage {
 
         // Create the file and save it
         let file = File::create(&format!(
-            "{}{}_{}.txt",
+            "{}{}.txt",
             client_data
-                .first_name
+                .name
                 .chars()
-                .next()
-                .expect("client first name missing"),
-            client_data
-                .last_name
-                .chars()
-                .next()
-                .expect("client last name missing"),
+                .filter(|c| c.is_ascii_uppercase())
+                .join(""),
             client_data.session_number,
         ))
         .expect("failed to create file");
@@ -254,10 +247,7 @@ impl SessionPage {
             ui.horizontal(|ui| {
                 ui.group(|ui| {
                     ui.vertical(|ui| {
-                        ui.label(format!(
-                            "Client: {} {}",
-                            client_data.first_name, client_data.last_name
-                        ));
+                        ui.label(format!("Client: {}", client_data.name));
                         ui.label(format!("Session Number: {}", client_data.session_number));
                         ui.label(format!("KSF: {}", self.ksf_name))
                     });
