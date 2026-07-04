@@ -1,5 +1,7 @@
+use std::path::PathBuf;
+
 use crate::{
-    data::{ClientData, DataType, SessionData, ksf::Ksf},
+    data::{ClientData, Data, DataType, SessionData, ksf::Ksf},
     pages::Page,
     random_services::RandomServices,
     session_page::SessionPage,
@@ -11,21 +13,22 @@ use egui::{RichText, warn_if_debug_build, widgets};
 use egui_file_dialog::FileDialog;
 
 pub struct DataPro {
+    data: Data,
+
     active_page: Page,
     timers_open: bool,
     random_open: bool,
 
     ksf_file_dialog: FileDialog,
-    ksf: Ksf,
+    // ksf: Ksf,
     ksf_err: String,
 
     client_data_file_dialog: FileDialog,
-    client_data: ClientData,
+    // client_data: ClientData,
     client_data_err: String,
     client_data_path: Option<String>,
 
-    session_data: SessionData,
-
+    // session_data: SessionData,
     randomness_page: RandomServices,
     timers: Timers,
     session_page: SessionPage,
@@ -34,21 +37,26 @@ pub struct DataPro {
 impl Default for DataPro {
     fn default() -> Self {
         Self {
+            data: Data {
+                client: ClientData::default(),
+                session: SessionData::default(),
+                ksf: Ksf::default(),
+            },
+
             active_page: Page::About,
             timers_open: false,
             random_open: false,
 
             ksf_file_dialog: FileDialog::new(),
-            ksf: Ksf::default(),
+            // ksf: Ksf::default(),
             ksf_err: String::new(),
 
             client_data_file_dialog: FileDialog::new(),
-            client_data: ClientData::default(),
+            // client_data: ClientData::default(),
             client_data_err: String::new(),
             client_data_path: None,
 
-            session_data: SessionData::default(),
-
+            // session_data: SessionData::default(),
             randomness_page: RandomServices::default(),
             session_page: SessionPage::new(),
             timers: Timers::default(),
@@ -66,6 +74,42 @@ impl DataPro {
     fn set_page(&mut self, page: Page) {
         self.active_page = page;
     }
+
+    fn load_ksf_file(&mut self, path: PathBuf) {
+        match Ksf::from_file(path) {
+            Ok(ksf) => {
+                self.data.ksf = ksf;
+                self.session_page.load_ksf(&self.data.ksf);
+                self.ksf_err.clear();
+            }
+            Err(e) => self.ksf_err = e.to_string(),
+        };
+    }
+
+    fn load_client_file(&mut self, path: PathBuf) {
+        match ClientData::from_file(&path) {
+            Ok(sess_data) => {
+                self.client_data_path = Some(path.as_path().to_str().unwrap().to_string());
+                self.data.client = sess_data;
+                self.data.client.session_number += 1;
+                self.client_data_err.clear();
+                if self.data.client.assessments.is_empty() {
+                    self.client_data_err.push_str("NO ASSESSMENTS");
+                } else {
+                    self.data.session.assessment = self.data.client.assessments[0].clone();
+                }
+                if self.data.client.conditions.is_empty() {
+                    if !self.client_data_err.is_empty() {
+                        self.client_data_err.push('\n');
+                    }
+                    self.client_data_err.push_str("NO CONDITIONS");
+                } else {
+                    self.data.session.condition = self.data.client.conditions[0].clone();
+                }
+            }
+            Err(e) => self.client_data_err = e.to_string(),
+        };
+    }
 }
 
 impl eframe::App for DataPro {
@@ -81,7 +125,7 @@ impl eframe::App for DataPro {
                 }
 
                 if ui.button("Data Tracking").clicked() {
-                    self.session_page.load_ksf(&self.ksf);
+                    self.session_page.load_ksf(&self.data.ksf);
                     self.set_page(Page::DataTracking);
                 }
 
@@ -97,9 +141,7 @@ impl eframe::App for DataPro {
             Page::DataTracking => self.session_page.view(
                 ui,
                 &mut self.active_page,
-                &mut self.client_data,
-                &mut self.session_data,
-                &mut self.ksf,
+                &mut self.data,
                 &self.client_data_path,
             ),
         }
@@ -147,18 +189,11 @@ impl eframe::App for DataPro {
             if ui.button("Select KSF File").clicked() {
                 self.ksf_file_dialog.pick_file();
             }
-            ui.label(format!("KSF file: {}", self.ksf.name));
+            ui.label(format!("KSF file: {}", self.data.ksf.name));
             ui.strong(&self.ksf_err);
             self.ksf_file_dialog.update(ui.ctx());
             if let Some(path) = self.ksf_file_dialog.take_picked() {
-                match Ksf::from_file(path) {
-                    Ok(ksf) => {
-                        self.ksf = ksf;
-                        self.session_page.load_ksf(&self.ksf);
-                        self.ksf_err.clear();
-                    }
-                    Err(e) => self.ksf_err = e.to_string(),
-                };
+                self.load_ksf_file(path);
             }
             ui.add_space(15.0);
 
@@ -168,68 +203,50 @@ impl eframe::App for DataPro {
             }
             ui.strong(&self.client_data_err);
             ui.add_space(5.0);
-            ui.monospace(format!("           Client: {}", &self.client_data.name));
+            ui.monospace(format!("           Client: {}", &self.data.client.name));
             ui.monospace(format!(
                 "               ID: {}",
-                &self.client_data.client_id
+                &self.data.client.client_id
             ));
             ui.monospace(format!(
                 "     Case Manager: {}",
-                &self.client_data.case_manager
+                &self.data.client.case_manager
             ));
             ui.monospace(format!(
                 "Primary Therapist: {}",
-                &self.client_data.primary_therapist
+                &self.data.client.primary_therapist
             ));
             ui.monospace(format!(
                 "          Session: {}       TODO: make user adujustable",
-                &self.client_data.session_number
+                &self.data.client.session_number
             ));
             ui.horizontal(|ui| {
                 ui.monospace("        Therapist:");
-                ui.text_edit_singleline(&mut self.session_data.therapist);
+                ui.text_edit_singleline(&mut self.data.session.therapist);
             });
             ui.horizontal(|ui| {
                 ui.monospace("   Data Collector:");
-                ui.text_edit_singleline(&mut self.session_data.data_collector);
+                ui.text_edit_singleline(&mut self.data.session.data_collector);
             });
 
             self.client_data_file_dialog.update(ui.ctx());
             if let Some(path) = self.client_data_file_dialog.take_picked() {
-                match ClientData::from_file(&path) {
-                    Ok(sess_data) => {
-                        self.client_data_path = Some(path.as_path().to_str().unwrap().to_string());
-                        self.client_data = sess_data;
-                        self.client_data.session_number += 1;
-                        self.client_data_err.clear();
-                        if self.client_data.assessments.is_empty() {
-                            self.client_data_err.push_str("NO ASSESSMENTS");
-                        } else {
-                            self.session_data.assessment = self.client_data.assessments[0].clone();
-                        }
-                        if self.client_data.conditions.is_empty() {
-                            self.client_data_err.push_str("NO CONDITIONS");
-                        } else {
-                            self.session_data.condition = self.client_data.conditions[0].clone();
-                        }
-                    }
-                    Err(e) => self.client_data_err = e.to_string(),
-                };
+                self.load_client_file(path);
             }
 
             // ### DROPDOWMS ###
             ui.group(|ui| {
                 ui.label("Data Type");
                 egui::ComboBox::from_id_salt("datatype")
-                    .selected_text(self.session_data.data_type.to_string())
+                    .selected_text(self.data.session.data_type.to_string())
                     .show_ui(ui, |ui| {
                         ui.selectable_value(
-                            &mut self.session_data.data_type,
+                            &mut self.data.session.data_type,
                             DataType::Primary,
                             "Primary",
                         );
                         ui.selectable_value(
-                            &mut self.session_data.data_type,
+                            &mut self.data.session.data_type,
                             DataType::Reliability,
                             "Reliability",
                         );
@@ -237,11 +254,11 @@ impl eframe::App for DataPro {
                 ui.add_space(5.0);
                 ui.label("Assessment");
                 egui::ComboBox::from_id_salt("assessment")
-                    .selected_text(&self.session_data.assessment)
+                    .selected_text(&self.data.session.assessment)
                     .show_ui(ui, |ui| {
-                        for item in self.client_data.assessments.iter() {
+                        for item in self.data.client.assessments.iter() {
                             ui.selectable_value(
-                                &mut self.session_data.assessment,
+                                &mut self.data.session.assessment,
                                 item.to_string(),
                                 item,
                             );
@@ -250,11 +267,11 @@ impl eframe::App for DataPro {
                 ui.add_space(5.0);
                 ui.label("Condition");
                 egui::ComboBox::from_id_salt("condition")
-                    .selected_text(&self.session_data.condition)
+                    .selected_text(&self.data.session.condition)
                     .show_ui(ui, |ui| {
-                        for item in self.client_data.conditions.iter() {
+                        for item in self.data.client.conditions.iter() {
                             ui.selectable_value(
-                                &mut self.session_data.condition,
+                                &mut self.data.session.condition,
                                 item.to_string(),
                                 item,
                             );

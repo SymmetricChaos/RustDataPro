@@ -1,5 +1,5 @@
 use crate::{
-    data::{SessionData, client::ClientData, ksf::Ksf},
+    data::{Data, ksf::Ksf},
     data_tracking::{counter::Counter, timer::Timer},
     pages::Page,
     utils::{ClickedKeys, date_time_string},
@@ -139,18 +139,12 @@ impl SessionPage {
         }
     }
 
-    fn save_session(
-        &mut self,
-        client_data: &mut ClientData,
-        session_data: &SessionData,
-        client_data_path: &Option<String>,
-    ) {
+    fn save_session(&mut self, data: &mut Data, client_data_path: &Option<String>) {
         self.keypresses.push(Key::Escape);
         self.keypresses_display.pop_front();
         self.keypresses_display.push_back("END");
-        self.save_output(client_data, session_data).unwrap();
-        self.update_client_file(client_data, client_data_path)
-            .unwrap()
+        self.save_output(data).unwrap();
+        self.update_client_file(data, client_data_path).unwrap()
     }
 
     fn end_session(&mut self, active_page: &mut Page) {
@@ -158,11 +152,11 @@ impl SessionPage {
         *active_page = Page::About;
     }
 
-    fn write_data(&mut self, client_data: &mut ClientData, session_data: &SessionData) -> String {
+    fn write_data(&mut self, data: &mut Data) -> String {
         let mut output = String::new();
 
         output.push_str("---Session---\n");
-        output.push_str(&client_data.to_string());
+        output.push_str(&data.client.to_string());
         output.push('\n');
         output.push_str(&format!(
             "\nStart {}\nDuration {:.1}\n",
@@ -170,7 +164,7 @@ impl SessionPage {
             self.session_timer.total_time()
         ));
         output.push('\n');
-        output.push_str(&session_data.to_string());
+        output.push_str(&data.session.to_string());
 
         output.push_str("\n\n--Duration--\n");
         for timer in self.timers.iter_mut() {
@@ -194,33 +188,29 @@ impl SessionPage {
 
     fn update_client_file(
         &mut self,
-        client_data: &mut ClientData,
+        data: &mut Data,
         client_data_path: &Option<String>,
     ) -> Result<()> {
         if let Some(path) = client_data_path {
-            std::fs::write(path, serde_json::to_string_pretty(&client_data)?)?;
+            std::fs::write(path, serde_json::to_string_pretty(&data.client)?)?;
         }
-        client_data.session_number += 1;
+        data.client.session_number += 1;
         Ok(())
     }
 
-    fn save_output(
-        &mut self,
-        client_data: &mut ClientData,
-        session_data: &SessionData,
-    ) -> Result<()> {
+    fn save_output(&mut self, data: &mut Data) -> Result<()> {
         //Create the output file and save it
         let file = File::create(&format!(
             "{}{}.txt",
-            client_data
+            data.client
                 .name
                 .chars()
                 .filter(|c| c.is_ascii_uppercase())
                 .join(""),
-            client_data.session_number,
+            data.client.session_number,
         ))?;
         let mut writer = BufWriter::new(file);
-        writer.write_all(self.write_data(client_data, session_data).as_bytes())?;
+        writer.write_all(self.write_data(data).as_bytes())?;
         writer.flush()?;
 
         Ok(())
@@ -230,9 +220,7 @@ impl SessionPage {
         &mut self,
         ui: &mut Ui,
         active_page: &mut Page,
-        client_data: &mut ClientData,
-        session_data: &mut SessionData,
-        ksf: &mut Ksf,
+        data: &mut Data,
         client_data_path: &Option<String>,
     ) {
         ui.ctx().input_mut(|i| {
@@ -242,7 +230,7 @@ impl SessionPage {
                 self.stop_all_timers();
             }
             if i.consume_key(egui::Modifiers::NONE, egui::Key::Tab) {
-                self.start_session(&ksf);
+                self.start_session(&data.ksf);
             }
             self.clicked_keys.update(i);
         });
@@ -251,16 +239,16 @@ impl SessionPage {
             ui.horizontal(|ui| {
                 ui.group(|ui| {
                     ui.vertical(|ui| {
-                        ui.label(format!("Client: {}", client_data.name));
-                        ui.label(format!("Session Number: {}", client_data.session_number));
+                        ui.label(format!("Client: {}", data.client.name));
+                        ui.label(format!("Session Number: {}", data.client.session_number));
                         ui.label(format!("KSF: {}", self.ksf_name))
                     });
                 });
                 ui.group(|ui| {
                     ui.vertical(|ui| {
-                        ui.label(format!("Assessment: {}", session_data.assessment));
-                        ui.label(format!("Condition: {}", session_data.condition));
-                        ui.label(format!("Data Type: {}", session_data.data_type));
+                        ui.label(format!("Assessment: {}", data.session.assessment));
+                        ui.label(format!("Condition: {}", data.session.condition));
+                        ui.label(format!("Data Type: {}", data.session.data_type));
                     });
                 });
             });
@@ -359,7 +347,7 @@ impl SessionPage {
                         .button(RichText::new("SAVE").monospace().color(Color32::GREEN))
                         .clicked()
                     {
-                        self.save_session(client_data, session_data, client_data_path);
+                        self.save_session(data, client_data_path);
                         self.end_session(active_page);
                     }
                     if ui
