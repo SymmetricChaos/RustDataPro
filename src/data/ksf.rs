@@ -39,7 +39,7 @@ impl Default for Ksf {
     fn default() -> Self {
         serde_json::from_str(
             r#"{
-                "name": "EXAMPLE",
+                "name": "DEFAULT",
                 "frequency": [
                     ["V", "NegVoc"],
                     ["A", "Aggression"],

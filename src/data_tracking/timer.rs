@@ -27,29 +27,54 @@ macro_rules! bout_display {
     };
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TimerStatus {
+    Active,
+    Stopped,
+    Paused,
+}
+
+impl TimerStatus {
+    pub fn is_active(&self) -> bool {
+        *self == TimerStatus::Active
+    }
+
+    pub fn is_inactive(&self) -> bool {
+        *self != TimerStatus::Active
+    }
+
+    pub fn is_paused(&self) -> bool {
+        *self == TimerStatus::Paused
+    }
+
+    pub fn is_stopped(&self) -> bool {
+        *self == TimerStatus::Stopped
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Timer {
-    pub key: Option<Key>,
-    pub description: Option<String>,
     pub start_time: Instant,
     pub saved_time: Duration,
     pub bouts: u32,
+    pub status: TimerStatus,
+    pub key: Option<Key>,
+    pub description: Option<String>,
     pub show_bouts: bool,
     pub show_split: bool,
-    pub active: bool,
 }
 
 impl Default for Timer {
     fn default() -> Self {
         Self {
-            key: None,
-            description: None,
             start_time: Instant::now(),
             saved_time: Duration::ZERO,
             bouts: 0,
+            status: TimerStatus::Stopped,
+            key: None,
+            description: None,
             show_bouts: false,
             show_split: false,
-            active: false,
         }
     }
 }
@@ -57,14 +82,14 @@ impl Default for Timer {
 impl Timer {
     pub fn new() -> Self {
         Self {
-            key: None,
-            description: None,
             start_time: Instant::now(),
             saved_time: Duration::ZERO,
             bouts: 0,
+            status: TimerStatus::Stopped,
+            key: None,
+            description: None,
             show_bouts: false,
             show_split: false,
-            active: false,
         }
     }
 
@@ -77,7 +102,7 @@ impl Timer {
             bouts: 0,
             show_bouts: true,
             show_split: true,
-            active: false,
+            status: TimerStatus::Stopped,
         }
     }
 
@@ -99,19 +124,36 @@ impl Timer {
         self
     }
 
-    /// Switch between active and inactive.
+    /// Stop or start. Does nothing if the timer is Paused.
     pub fn toggle(&mut self) {
-        if self.active {
-            self.stop();
-        } else {
-            self.start();
+        match self.status {
+            TimerStatus::Active => {
+                self.stop();
+            }
+            TimerStatus::Stopped => self.start(),
+            TimerStatus::Paused => (),
+        }
+    }
+
+    /// Pause or unpause. Does nothing is the timer is Stopped. Does not update bouts.
+    pub fn toggle_pause(&mut self) {
+        match self.status {
+            TimerStatus::Active => {
+                self.status = TimerStatus::Paused;
+                self.saved_time += Instant::now() - self.start_time;
+            }
+            TimerStatus::Stopped => (),
+            TimerStatus::Paused => {
+                self.status = TimerStatus::Active;
+                self.start_time = Instant::now();
+            }
         }
     }
 
     /// If inactive, start, set the start to to Local::now(), and increment bouts by 1. Otherwise do nothing.
     pub fn start(&mut self) {
-        if !self.active {
-            self.active = true;
+        if self.status.is_inactive() {
+            self.status = TimerStatus::Active;
             self.start_time = Instant::now();
             self.bouts += 1;
         }
@@ -119,23 +161,23 @@ impl Timer {
 
     /// If active, stop without updating the saved time and decrement bouts by 1. Otherwise do nothing.
     pub fn unstart(&mut self) {
-        if self.active {
-            self.active = false;
+        if self.status.is_active() {
+            self.status = TimerStatus::Stopped;
             self.bouts = self.bouts.saturating_sub(1); // prevents potential overflow
         }
     }
 
     /// If active stop and update the saved time. Otherwise do nothing.
     pub fn stop(&mut self) {
-        if self.active {
-            self.active = false;
+        if self.status.is_active() {
+            self.status = TimerStatus::Stopped;
             self.saved_time += Instant::now() - self.start_time;
         }
     }
 
-    /// Stop the timer and set the saved time and bouts to zero.
+    /// Set the status to Stopped, set saved_time and bouts to zero.
     pub fn reset(&mut self) {
-        self.active = false;
+        self.status = TimerStatus::Stopped;
         self.saved_time = Duration::ZERO;
         self.bouts = 0;
     }
@@ -168,7 +210,7 @@ impl Timer {
     }
 
     fn view_split(&mut self, ui: &mut Ui) {
-        if self.active {
+        if self.status.is_active() {
             ui.request_repaint();
             timer_display_on!(ui, self.saved_time());
             timer_display_on!(ui, self.current_time());
@@ -179,9 +221,8 @@ impl Timer {
     }
 
     fn view_unsplit(&mut self, ui: &mut Ui) {
-        if self.active {
+        if self.status.is_active() {
             ui.request_repaint();
-
             timer_display_on!(ui, self.total_time());
         } else {
             timer_display_off!(ui, self.saved_time());
@@ -203,3 +244,48 @@ impl Timer {
         bout_display!(ui, self.show_bouts, self.bouts);
     }
 }
+
+// pub struct TimerView {
+//     pub timer: Timer,
+//     pub key: Option<Key>,
+//     pub description: Option<String>,
+//     pub show_bouts: bool,
+//     pub show_split: bool,
+// }
+
+// impl TimerView {
+//     fn view_split(&mut self, ui: &mut Ui) {
+//         if self.timer.status.is_active() {
+//             ui.request_repaint();
+//             timer_display_on!(ui, self.timer.saved_time());
+//             timer_display_on!(ui, self.timer.current_time());
+//         } else {
+//             timer_display_off!(ui, self.timer.saved_time());
+//             timer_display_off!(ui, 0.0);
+//         }
+//     }
+
+//     fn view_unsplit(&mut self, ui: &mut Ui) {
+//         if self.timer.status.is_active() {
+//             ui.request_repaint();
+//             timer_display_on!(ui, self.timer.total_time());
+//         } else {
+//             timer_display_off!(ui, self.timer.saved_time());
+//         }
+//     }
+
+//     pub fn view(&mut self, ui: &mut Ui) {
+//         if let Some(description) = &self.description {
+//             ui.label(description);
+//         }
+//         if let Some(key) = &self.key {
+//             ui.label(key.name());
+//         }
+//         if self.show_split {
+//             self.view_split(ui);
+//         } else {
+//             self.view_unsplit(ui);
+//         }
+//         bout_display!(ui, self.show_bouts, self.timer.bouts);
+//     }
+// }

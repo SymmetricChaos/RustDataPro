@@ -1,9 +1,8 @@
 use crate::{
-    app::Data,
-    data::ksf::Ksf,
-    data_tracking::{counter::Counter, timer::Timer},
-    pages::Page,
-    utils::{ClickedKeys, date_time_string},
+    app::{Data, DisplayInfo},
+    data::{DataType, ksf::Ksf},
+    data_tracking::{TimerStatus, counter::Counter, timer::Timer},
+    utils::{ClickedKeys, DataProUiElements, date_time_string},
 };
 use anyhow::Result;
 use chrono::{DateTime, Local};
@@ -129,15 +128,20 @@ impl SessionPage {
         self.session_timer.stop();
     }
 
-    fn start_session(&mut self, ksf: &Ksf) {
-        if !self.session_timer.active {
-            self.load_ksf(ksf);
-            self.session_timer.start();
-            self.session_start = Local::now();
-            self.keypresses.push(Key::Tab);
-            self.keypresses_display.pop_front();
-            self.keypresses_display.push_back("ST");
+    fn toggle_pause_all_timers(&mut self) {
+        for timer in self.timers.iter_mut() {
+            timer.toggle_pause();
         }
+        self.session_timer.toggle_pause();
+    }
+
+    fn start_session(&mut self, ksf: &Ksf) {
+        self.load_ksf(ksf);
+        self.session_timer.start();
+        self.session_start = Local::now();
+        self.keypresses.push(Key::Tab);
+        self.keypresses_display.pop_front();
+        self.keypresses_display.push_back("ST");
     }
 
     fn save_session(&mut self, data: &mut Data, client_data_path: &Option<String>) {
@@ -148,9 +152,9 @@ impl SessionPage {
         self.update_client_file(data, client_data_path).unwrap()
     }
 
-    fn end_session(&mut self, active_page: &mut Page) {
+    fn end_session(&mut self, display_info: &mut DisplayInfo) {
         self.reset();
-        *active_page = Page::About;
+        display_info.go_to_about();
     }
 
     fn write_data(&mut self, data: &mut Data) -> String {
@@ -192,23 +196,25 @@ impl SessionPage {
         data: &mut Data,
         client_data_path: &Option<String>,
     ) -> Result<()> {
-        if let Some(path) = client_data_path {
-            std::fs::write(path, serde_json::to_string_pretty(&data.client)?)?;
+        if data.session.data_type == DataType::Primary {
+            if let Some(path) = client_data_path {
+                std::fs::write(path, serde_json::to_string_pretty(&data.client)?)?;
+            }
+            data.client.session_number += 1;
         }
-        data.client.session_number += 1;
         Ok(())
     }
 
     fn save_output(&mut self, data: &mut Data) -> Result<()> {
-        //Create the output file and save it
         let file = File::create(&format!(
-            "{}{}.txt",
+            "{}{}{}.txt",
             data.client
                 .name
                 .chars()
                 .filter(|c| c.is_ascii_uppercase())
                 .join(""),
             data.client.session_number,
+            data.session.data_type
         ))?;
         let mut writer = BufWriter::new(file);
         writer.write_all(self.write_data(data).as_bytes())?;
@@ -220,20 +226,27 @@ impl SessionPage {
     pub fn view(
         &mut self,
         ui: &mut Ui,
-        active_page: &mut Page,
+        display_info: &mut DisplayInfo,
         data: &mut Data,
         client_data_path: &Option<String>,
     ) {
         ui.ctx().input_mut(|i| {
-            // Need to consume Esc in order to prevent egui from using it for other purposes
             if i.consume_key(egui::Modifiers::NONE, egui::Key::Escape) {
-                self.save_discard_open = true;
-                self.stop_all_timers();
+                if self.session_timer.status.is_active() {
+                    self.save_discard_open = true;
+                    self.stop_all_timers();
+                }
             }
             if i.consume_key(egui::Modifiers::NONE, egui::Key::Tab) {
-                self.start_session(&data.ksf);
+                if self.session_timer.status.is_inactive() {
+                    self.start_session(&data.ksf);
+                }
+            }
+            if i.consume_key(egui::Modifiers::NONE, egui::Key::Space) {
+                self.toggle_pause_all_timers();
             }
             self.clicked_keys.update(i);
+            i.events.clear();
         });
 
         egui::CentralPanel::default().show(ui, |ui| {
@@ -255,16 +268,18 @@ impl SessionPage {
             });
             ui.add_space(10.0);
 
-            ui.label("TAB to start. ESC to save and exit.");
-            if self.session_timer.active {
-                ui.label(RichText::new("ACTIVE").monospace().color(Color32::GREEN));
-            } else {
-                if self.session_timer.saved_time() == 0.0 {
-                    ui.label(RichText::new("NOT STARTED").monospace().color(Color32::RED));
-                } else {
-                    ui.label(RichText::new("PAUSED").monospace().color(Color32::YELLOW));
+            ui.label("TAB to start. ESC return to about page.");
+            match self.session_timer.status {
+                TimerStatus::Active => {
+                    ui.label(RichText::new("ACTIVE").monospace().color(Color32::GREEN))
                 }
-            }
+                TimerStatus::Stopped => {
+                    ui.label(RichText::new("STOPPED").monospace().color(Color32::RED))
+                }
+                TimerStatus::Paused => {
+                    ui.label(RichText::new("PAUSED").monospace().color(Color32::YELLOW))
+                }
+            };
             ui.add_space(10.0);
 
             ui.horizontal(|ui| {
@@ -277,7 +292,7 @@ impl SessionPage {
                 ui.vertical(|ui| {
                     ui.group(|ui| {
                         ui.label("Frequency Keys");
-                        ui.add_enabled_ui(self.session_timer.active, |ui| {
+                        ui.add_enabled_ui(self.session_timer.status.is_active(), |ui| {
                             egui::Grid::new("frequency_grid")
                                 .striped(true)
                                 .show(ui, |ui| {
@@ -288,7 +303,7 @@ impl SessionPage {
 
                                     for counter in self.counters.iter_mut() {
                                         if let Some(key) = counter.key {
-                                            if self.session_timer.active
+                                            if self.session_timer.status.is_active()
                                                 && self.clicked_keys.contains(&key)
                                             {
                                                 counter.inc();
@@ -305,7 +320,7 @@ impl SessionPage {
                 ui.vertical(|ui| {
                     ui.group(|ui| {
                         ui.label("Duration Keys");
-                        ui.add_enabled_ui(self.session_timer.active, |ui| {
+                        ui.add_enabled_ui(self.session_timer.status.is_active(), |ui| {
                             egui::Grid::new("duration_grid")
                                 .striped(true)
                                 .show(ui, |ui| {
@@ -318,7 +333,7 @@ impl SessionPage {
 
                                     for timer in self.timers.iter_mut() {
                                         if let Some(key) = timer.key {
-                                            if self.session_timer.active
+                                            if self.session_timer.status.is_active()
                                                 && self.clicked_keys.contains(&key)
                                             {
                                                 timer.toggle();
@@ -344,19 +359,16 @@ impl SessionPage {
             });
             if self.save_discard_open {
                 egui::Window::new("Save/Discard").show(ui, |ui| {
-                    if ui
-                        .button(RichText::new("SAVE").monospace().color(Color32::GREEN))
-                        .clicked()
-                    {
-                        self.save_session(data, client_data_path);
-                        self.end_session(active_page);
-                    }
-                    if ui
-                        .button(RichText::new("DISCARD").monospace().color(Color32::RED))
-                        .clicked()
-                    {
-                        self.end_session(active_page);
-                    }
+                    ui.horizontal(|ui| {
+                        if ui.large_green_button("SAVE").clicked() {
+                            self.save_session(data, client_data_path);
+                            self.end_session(display_info);
+                        }
+                        ui.add_space(30.0);
+                        if ui.large_red_button("DISCARD").clicked() {
+                            self.end_session(display_info);
+                        }
+                    });
                 });
             }
         });

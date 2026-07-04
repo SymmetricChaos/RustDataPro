@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use chrono::{DateTime, Datelike, Local, Timelike};
-use egui::{InputState, Key};
+use egui::{Color32, InputState, Key, Response, RichText, Ui};
 
 pub fn date_time_string(dt: DateTime<Local>) -> String {
     format!(
@@ -51,5 +51,25 @@ impl ClickedKeys {
                 }
             }
         }
+    }
+}
+
+pub trait DataProUiElements {
+    fn large_green_button(&mut self, text: &'static str) -> Response;
+    fn large_red_button(&mut self, text: &'static str) -> Response;
+}
+
+impl DataProUiElements for Ui {
+    fn large_green_button(&mut self, text: &'static str) -> Response {
+        self.add_sized(
+            [110.0, 40.0],
+            egui::Button::new(RichText::new(text).color(Color32::GREEN)),
+        )
+    }
+    fn large_red_button(&mut self, text: &'static str) -> Response {
+        self.add_sized(
+            [110.0, 40.0],
+            egui::Button::new(RichText::new(text).color(Color32::RED)),
+        )
     }
 }
