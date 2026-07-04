@@ -27,10 +27,10 @@ pub struct SessionData {
 impl Default for SessionData {
     fn default() -> Self {
         Self {
-            assessment: "NONE".into(),
-            condition: "NONE".into(),
-            therapist: String::new(),
-            data_collector: String::new(),
+            assessment: String::from("None"),
+            condition: String::from("None"),
+            therapist: String::from("None"),
+            data_collector: String::from("None"),
             data_type: DataType::Primary,
         }
     }

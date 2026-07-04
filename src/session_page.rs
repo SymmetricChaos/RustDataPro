@@ -1,5 +1,6 @@
 use crate::{
-    data::{Data, ksf::Ksf},
+    app::Data,
+    data::ksf::Ksf,
     data_tracking::{counter::Counter, timer::Timer},
     pages::Page,
     utils::{ClickedKeys, date_time_string},

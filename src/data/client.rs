@@ -15,15 +15,22 @@ pub struct ClientData {
 
 impl Default for ClientData {
     fn default() -> Self {
-        Self {
-            name: String::from("NONE NONE"),
-            client_id: String::from("0000000000000000"),
-            case_manager: String::from("NONE NONE"),
-            primary_therapist: String::from("NONE NONE"),
-            assessments: vec![String::from("NONE")],
-            conditions: vec![String::from("NONE")],
-            session_number: 0,
-        }
+        serde_json::from_str(
+            r#"{
+                "name": "None None",
+                "client_id": "0000000000000000",
+                "case_manager": "None None",
+                "primary_therapist": "None None",
+                "assessments": [
+                    "None"
+                ],
+                "conditions": [
+                    "None"
+                ],
+                "session_number": 0
+            }"#,
+        )
+        .unwrap()
     }
 }
 

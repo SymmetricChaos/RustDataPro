@@ -27,16 +27,6 @@ impl TryFrom<(String, String)> for Keybind {
     }
 }
 
-impl Keybind {
-    /// Only for development use. Users should always build from a KSF file.
-    pub fn from_string(s: &str) -> Self {
-        let mut pair = s.split(",");
-        let key = egui::Key::from_name(pair.next().unwrap().trim()).unwrap();
-        let description = pair.next().unwrap().to_string();
-        Keybind(key, description)
-    }
-}
-
 /// A list of keybinds divided into Duration and Frequency
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Ksf {
@@ -47,15 +37,22 @@ pub struct Ksf {
 
 impl Default for Ksf {
     fn default() -> Self {
-        Self {
-            name: String::from("DEFAULT"),
-            duration: vec![Keybind::from_string("4,Toy Engage")],
-            frequency: vec![
-                Keybind::from_string("M,Mand"),
-                Keybind::from_string("A,Agression"),
-                Keybind::from_string("S,SIB"),
-            ],
-        }
+        serde_json::from_str(
+            r#"{
+                "name": "EXAMPLE",
+                "frequency": [
+                    ["V", "NegVoc"],
+                    ["A", "Aggression"],
+                    ["M", "Mand"]
+                ],
+                "duration": [
+                    ["4", "ToyEngage"],
+                    ["1", "Sr+"],
+                    ["2", "Sdelta"]
+                ]
+            }"#,
+        )
+        .unwrap()
     }
 }
 

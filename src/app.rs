@@ -1,7 +1,5 @@
-use std::path::PathBuf;
-
 use crate::{
-    data::{ClientData, Data, DataType, SessionData, ksf::Ksf},
+    data::{ClientData, DataType, SessionData, ksf::Ksf},
     pages::Page,
     random_services::RandomServices,
     session_page::SessionPage,
@@ -11,6 +9,13 @@ use crate::{
 use chrono::Local;
 use egui::{RichText, warn_if_debug_build, widgets};
 use egui_file_dialog::FileDialog;
+use std::path::PathBuf;
+
+pub struct Data {
+    pub client: ClientData,
+    pub session: SessionData,
+    pub ksf: Ksf,
+}
 
 pub struct DataPro {
     data: Data,
@@ -20,15 +25,12 @@ pub struct DataPro {
     random_open: bool,
 
     ksf_file_dialog: FileDialog,
-    // ksf: Ksf,
     ksf_err: String,
 
     client_data_file_dialog: FileDialog,
-    // client_data: ClientData,
     client_data_err: String,
     client_data_path: Option<String>,
 
-    // session_data: SessionData,
     randomness_page: RandomServices,
     timers: Timers,
     session_page: SessionPage,
@@ -216,10 +218,10 @@ impl eframe::App for DataPro {
                 "Primary Therapist: {}",
                 &self.data.client.primary_therapist
             ));
-            ui.monospace(format!(
-                "          Session: {}       TODO: make user adujustable",
-                &self.data.client.session_number
-            ));
+            ui.horizontal(|ui| {
+                ui.monospace("          Session:");
+                ui.add(egui::DragValue::new(&mut self.data.client.session_number))
+            });
             ui.horizontal(|ui| {
                 ui.monospace("        Therapist:");
                 ui.text_edit_singleline(&mut self.data.session.therapist);
