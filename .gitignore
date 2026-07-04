@@ -3,5 +3,4 @@
 /dist
 build_instructions.txt
 BW*.txt
-test_client.txt
-test_ksf.txt
+test*.txt

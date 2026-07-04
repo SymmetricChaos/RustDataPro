@@ -17,11 +17,11 @@ pub struct DataPro {
 
     ksf_file_dialog: FileDialog,
     ksf: Ksf,
-    ksf_err: Option<String>,
+    ksf_err: String,
 
     client_data_file_dialog: FileDialog,
     client_data: ClientData,
-    client_data_err: Option<String>,
+    client_data_err: String,
     client_data_path: Option<String>,
 
     session_data: SessionData,
@@ -40,11 +40,11 @@ impl Default for DataPro {
 
             ksf_file_dialog: FileDialog::new(),
             ksf: Ksf::default(),
-            ksf_err: None,
+            ksf_err: String::new(),
 
             client_data_file_dialog: FileDialog::new(),
             client_data: ClientData::default(),
-            client_data_err: None,
+            client_data_err: String::new(),
             client_data_path: None,
 
             session_data: SessionData::default(),
@@ -69,10 +69,10 @@ impl DataPro {
 }
 
 impl eframe::App for DataPro {
-    /// Called each time the UI needs repainting, which may be many times per second.
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         egui::Panel::top("top_panel").show(ui, |ui| {
             egui::MenuBar::new().ui(ui, |ui| {
+                ui.request_repaint_after_secs(5.0);
                 widgets::global_theme_preference_switch(ui);
                 ui.separator();
 
@@ -80,18 +80,12 @@ impl eframe::App for DataPro {
                     self.set_page(Page::About);
                 }
 
-                if ui.button("Randomness").clicked() {
-                    self.random_open = !self.random_open;
-                }
-
-                if ui.button("Timers").clicked() {
-                    self.timers_open = !self.timers_open;
-                }
-
                 if ui.button("Data Tracking").clicked() {
                     self.session_page.load_ksf(&self.ksf);
                     self.set_page(Page::DataTracking);
                 }
+
+                ui.label(format!("{}", date_time_string(Local::now())));
             });
         });
 
@@ -135,61 +129,71 @@ impl eframe::App for DataPro {
                     );
                     ui.label(".");
                 });
+
+                ui.add_space(10.0);
+                if ui.button("Randomness").clicked() {
+                    self.random_open = !self.random_open;
+                }
+
+                ui.add_space(10.0);
+                if ui.button("Timers").clicked() {
+                    self.timers_open = !self.timers_open;
+                }
             });
         egui::CentralPanel::default().show(ui, |ui| {
-            ui.request_repaint_after_secs(5.0);
-            ui.label(format!(
-                "The Current Date/Time is {}",
-                date_time_string(Local::now()),
-            ));
-
-            ui.add_space(5.0);
-            ui.separator();
-            ui.add_space(5.0);
+            ui.add_space(15.0);
 
             // ### KSF FILE ###
             if ui.button("Select KSF File").clicked() {
                 self.ksf_file_dialog.pick_file();
             }
             ui.label(format!("KSF file: {}", self.ksf.name));
-            if let Some(e) = &self.ksf_err {
-                ui.strong(e);
-            } else {
-                ui.strong("");
-            }
+            ui.strong(&self.ksf_err);
             self.ksf_file_dialog.update(ui.ctx());
             if let Some(path) = self.ksf_file_dialog.take_picked() {
                 match Ksf::from_file(path) {
                     Ok(ksf) => {
                         self.ksf = ksf;
                         self.session_page.load_ksf(&self.ksf);
-                        self.ksf_err = None
+                        self.ksf_err.clear();
                     }
-                    Err(e) => self.ksf_err = Some(e.to_string()),
+                    Err(e) => self.ksf_err = e.to_string(),
                 };
             }
-            ui.add_space(5.0);
+            ui.add_space(15.0);
 
             // ### CLIENT FILE ###
             if ui.button("Select Client File").clicked() {
                 self.client_data_file_dialog.pick_file();
             }
-            ui.label(format!("Client: {}", &self.client_data.name));
-            ui.label(format!("ID: {}", &self.client_data.client_id));
-            ui.label(format!("Case Manager: {}", &self.client_data.case_manager));
-            ui.label(format!(
+            ui.strong(&self.client_data_err);
+            ui.add_space(5.0);
+            ui.monospace(format!("           Client: {}", &self.client_data.name));
+            ui.monospace(format!(
+                "               ID: {}",
+                &self.client_data.client_id
+            ));
+            ui.monospace(format!(
+                "     Case Manager: {}",
+                &self.client_data.case_manager
+            ));
+            ui.monospace(format!(
                 "Primary Therapist: {}",
                 &self.client_data.primary_therapist
             ));
-            ui.label(format!(
-                "Session: {} TODO: make user adujustable",
+            ui.monospace(format!(
+                "          Session: {}       TODO: make user adujustable",
                 &self.client_data.session_number
             ));
-            if let Some(e) = &self.client_data_err {
-                ui.strong(e);
-            } else {
-                ui.strong("");
-            }
+            ui.horizontal(|ui| {
+                ui.monospace("        Therapist:");
+                ui.text_edit_singleline(&mut self.session_data.therapist);
+            });
+            ui.horizontal(|ui| {
+                ui.monospace("   Data Collector:");
+                ui.text_edit_singleline(&mut self.session_data.data_collector);
+            });
+
             self.client_data_file_dialog.update(ui.ctx());
             if let Some(path) = self.client_data_file_dialog.take_picked() {
                 match ClientData::from_file(&path) {
@@ -197,9 +201,19 @@ impl eframe::App for DataPro {
                         self.client_data_path = Some(path.as_path().to_str().unwrap().to_string());
                         self.client_data = sess_data;
                         self.client_data.session_number += 1;
-                        self.client_data_err = None;
+                        self.client_data_err.clear();
+                        if self.client_data.assessments.is_empty() {
+                            self.client_data_err.push_str("NO ASSESSMENTS");
+                        } else {
+                            self.session_data.assessment = self.client_data.assessments[0].clone();
+                        }
+                        if self.client_data.conditions.is_empty() {
+                            self.client_data_err.push_str("NO CONDITIONS");
+                        } else {
+                            self.session_data.condition = self.client_data.conditions[0].clone();
+                        }
                     }
-                    Err(e) => self.client_data_err = Some(e.to_string()),
+                    Err(e) => self.client_data_err = e.to_string(),
                 };
             }
 

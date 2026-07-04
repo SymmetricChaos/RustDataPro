@@ -4,6 +4,7 @@ use crate::{
     pages::Page,
     utils::{ClickedKeys, date_time_string},
 };
+use anyhow::Result;
 use chrono::{DateTime, Local};
 use egui::{
     Color32,
@@ -31,7 +32,6 @@ pub struct SessionPage {
     counters: [Counter; 20],
     session_timer: Timer,
     session_start: DateTime<Local>,
-    output_file_contents: String,
     keypresses: Vec<Key>,
     keypresses_display: VecDeque<&'static str>,
     clicked_keys: ClickedKeys,
@@ -88,7 +88,6 @@ impl SessionPage {
                 Counter::new(),
                 Counter::new(),
             ],
-            output_file_contents: String::new(),
             keypresses: Vec::new(),
             keypresses_display: VecDeque::from(["_"; 10]),
             clicked_keys: ClickedKeys::new(),
@@ -108,6 +107,27 @@ impl SessionPage {
         }
     }
 
+    fn reset(&mut self) {
+        for timer in self.timers.iter_mut() {
+            timer.reset();
+        }
+        for counter in self.counters.iter_mut() {
+            counter.reset();
+        }
+        self.session_timer.reset();
+        self.keypresses.clear();
+        self.keypresses_display = VecDeque::from(["_"; 10]);
+        self.clicked_keys.clear();
+        self.save_discard_open = false;
+    }
+
+    fn stop_all_timers(&mut self) {
+        for timer in self.timers.iter_mut() {
+            timer.stop();
+        }
+        self.session_timer.stop();
+    }
+
     fn start_session(&mut self, ksf: &Ksf) {
         if !self.session_timer.active {
             self.load_ksf(ksf);
@@ -119,82 +139,77 @@ impl SessionPage {
         }
     }
 
-    fn end_session(
-        &mut self,
-        client_data: &mut ClientData,
-        active_page: &mut Page,
-        session_data: &SessionData,
-        client_data_path: &Option<String>,
-    ) {
-        if self.session_timer.active {
-            self.keypresses.push(Key::Escape);
-            self.keypresses_display.pop_front();
-            self.keypresses_display.push_back("END");
-            self.record_data(client_data, session_data, client_data_path);
-            self.reset();
-            *active_page = Page::About;
-        }
-    }
-
-    fn reset(&mut self) {
-        self.session_timer.reset();
-        self.keypresses.clear();
-        self.keypresses_display = VecDeque::from(["_"; 10]);
-        self.clicked_keys.clear();
-    }
-
-    fn stop_all_timers(&mut self) {
-        for timer in self.timers.iter_mut() {
-            timer.stop();
-        }
-        self.session_timer.stop();
-    }
-
-    fn record_data(
+    fn save_session(
         &mut self,
         client_data: &mut ClientData,
         session_data: &SessionData,
         client_data_path: &Option<String>,
     ) {
-        // Stop all timers
+        self.keypresses.push(Key::Escape);
+        self.keypresses_display.pop_front();
+        self.keypresses_display.push_back("END");
+        self.save_output(client_data, session_data).unwrap();
+        self.update_client_file(client_data, client_data_path)
+            .unwrap()
+    }
 
-        // Reset the output
-        self.output_file_contents.clear();
+    fn end_session(&mut self, active_page: &mut Page) {
+        self.reset();
+        *active_page = Page::About;
+    }
 
-        self.output_file_contents.push_str("---Session---\n");
-        self.output_file_contents.push_str(&client_data.to_string());
-        self.output_file_contents.push_str(&format!(
-            "\nStart {}\nDuration {}\n",
+    fn write_data(&mut self, client_data: &mut ClientData, session_data: &SessionData) -> String {
+        let mut output = String::new();
+
+        output.push_str("---Session---\n");
+        output.push_str(&client_data.to_string());
+        output.push('\n');
+        output.push_str(&format!(
+            "\nStart {}\nDuration {:.1}\n",
             date_time_string(self.session_start),
             self.session_timer.total_time()
         ));
-        self.output_file_contents
-            .push_str(&session_data.to_string());
+        output.push('\n');
+        output.push_str(&session_data.to_string());
 
-        self.output_file_contents.push_str("\n\n--Duration--\n");
+        output.push_str("\n\n--Duration--\n");
         for timer in self.timers.iter_mut() {
             if let Some(description) = &timer.description {
-                self.output_file_contents.push_str(&format!(
-                    "{} {}\n",
-                    description,
-                    timer.saved_time(),
-                ));
+                output.push_str(&format!("{} {:.1}\n", description, timer.saved_time(),));
             }
         }
 
-        self.output_file_contents.push_str("\n--Frequency--\n");
+        output.push_str("\n--Frequency--\n");
         for counter in self.counters.iter() {
             if let Some(description) = &counter.description {
-                self.output_file_contents
-                    .push_str(&format!("{} {}\n", description, counter.counter));
+                output.push_str(&format!("{} {}\n", description, counter.counter));
             }
         }
 
-        self.output_file_contents.push_str("\n--Raw Inputs--\n");
-        self.output_file_contents
-            .push_str(&self.keypresses.iter().map(|k| k.name()).join(" "));
+        output.push_str("\n--Raw Inputs--\n");
+        output.push_str(&self.keypresses.iter().map(|k| k.name()).join(" "));
 
-        // Create the file and save it
+        output
+    }
+
+    fn update_client_file(
+        &mut self,
+        client_data: &mut ClientData,
+        client_data_path: &Option<String>,
+    ) -> Result<()> {
+        if let Some(path) = client_data_path {
+            std::fs::write(path, serde_json::to_string_pretty(&client_data)?)?;
+        }
+        client_data.session_number += 1;
+        Ok(())
+    }
+
+    fn save_output(
+        &mut self,
+        client_data: &mut ClientData,
+        session_data: &SessionData,
+    ) -> Result<()> {
+        //Create the output file and save it
         let file = File::create(&format!(
             "{}{}.txt",
             client_data
@@ -203,23 +218,12 @@ impl SessionPage {
                 .filter(|c| c.is_ascii_uppercase())
                 .join(""),
             client_data.session_number,
-        ))
-        .expect("failed to create file");
+        ))?;
         let mut writer = BufWriter::new(file);
+        writer.write_all(self.write_data(client_data, session_data).as_bytes())?;
+        writer.flush()?;
 
-        writer
-            .write_all(self.output_file_contents.as_bytes())
-            .expect("failed to write file");
-        writer.flush().expect("failed to flush file");
-
-        // Update client data file
-        if let Some(path) = client_data_path {
-            std::fs::write(path, serde_json::to_string_pretty(&client_data).unwrap())
-                .expect("failed to write to client file");
-        }
-
-        // Increment session number
-        client_data.session_number += 1;
+        Ok(())
     }
 
     pub fn view(
@@ -349,22 +353,23 @@ impl SessionPage {
                     }
                 });
             });
-        });
-
-        if self.save_discard_open {
-            egui::Window::new("Save/Discard").show(ui, |ui| {
-                if ui.button("SAVE").clicked() {
-                    for timer in self.timers.iter_mut() {
-                        timer.stop();
+            if self.save_discard_open {
+                egui::Window::new("Save/Discard").show(ui, |ui| {
+                    if ui
+                        .button(RichText::new("SAVE").monospace().color(Color32::GREEN))
+                        .clicked()
+                    {
+                        self.save_session(client_data, session_data, client_data_path);
+                        self.end_session(active_page);
                     }
-                    self.session_timer.stop();
-                    self.end_session(client_data, active_page, session_data, client_data_path);
-                }
-                if ui.button("DISCARD").clicked() {
-                    self.reset();
-                    *active_page = Page::About;
-                }
-            });
-        }
+                    if ui
+                        .button(RichText::new("DISCARD").monospace().color(Color32::RED))
+                        .clicked()
+                    {
+                        self.end_session(active_page);
+                    }
+                });
+            }
+        });
     }
 }

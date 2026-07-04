@@ -18,7 +18,9 @@ impl Default for RandomServices {
             min_rand: 1,
             max_rand: 5,
             random_nums: String::new(),
-            shuffle_list: String::new(),
+            shuffle_list: String::from(
+                "teaching, is, arranging, contingencies, which, bring, changes, in, behavior",
+            ),
         }
     }
 }
