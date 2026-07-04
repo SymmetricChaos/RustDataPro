@@ -201,7 +201,7 @@ impl SessionPage {
 
         std::fs::write(
             client_data_path.clone().unwrap(),
-            serde_json::to_string(&client_data).unwrap(),
+            serde_json::to_string_pretty(&client_data).unwrap(),
         )
         .unwrap();
     }
@@ -264,13 +264,6 @@ impl SessionPage {
                     self.start_session(ksf);
                 }
             }
-            // self.output_file_dialog.update(ui.ctx());
-            // if let Some(path) = self.output_file_dialog.take_picked() {
-            //     if std::fs::write(&path, &self.output_file_contents).is_ok() {
-            //         self.reset();
-            //         *active_page = Page::About;
-            //     }
-            // }
             ui.add_space(10.0);
 
             ui.horizontal(|ui| {
