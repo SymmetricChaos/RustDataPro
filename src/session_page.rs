@@ -130,7 +130,6 @@ impl SessionPage {
             self.keypresses_display.pop_front();
             self.keypresses_display.push_back("END");
             self.record_data(client_data, client_data_path);
-            client_data.session_number += 1;
             self.reset();
             *active_page = Page::About;
         }
@@ -187,8 +186,16 @@ impl SessionPage {
         // Create the file and save it
         let file = File::create(&format!(
             "{}{}_{}.txt",
-            client_data.first_name.chars().next().unwrap(),
-            client_data.last_name.chars().next().unwrap(),
+            client_data
+                .first_name
+                .chars()
+                .next()
+                .expect("client first name missing"),
+            client_data
+                .last_name
+                .chars()
+                .next()
+                .expect("client last name missing"),
             client_data.session_number,
         ))
         .expect("failed to create file");
@@ -199,11 +206,14 @@ impl SessionPage {
             .expect("failed to write file");
         writer.flush().expect("failed to flush file");
 
-        std::fs::write(
-            client_data_path.clone().unwrap(),
-            serde_json::to_string_pretty(&client_data).unwrap(),
-        )
-        .unwrap();
+        // Update client data file
+        if let Some(path) = client_data_path {
+            std::fs::write(path, serde_json::to_string_pretty(&client_data).unwrap())
+                .expect("failed to write to client file");
+        }
+
+        // Increment session number
+        client_data.session_number += 1;
     }
 
     pub fn view(

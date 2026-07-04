@@ -179,6 +179,11 @@ impl eframe::App for DataPro {
                 &self.client_data.first_name, &self.client_data.last_name
             ));
             ui.label(format!("ID: {}", &self.client_data.client_id));
+            ui.label(format!("Case Manager: {}", &self.client_data.case_manager));
+            ui.label(format!(
+                "Primary Therapist: {}",
+                &self.client_data.primary_therapist
+            ));
             ui.label(format!(
                 "Session: {} TODO: make user adujustable",
                 &self.client_data.session_number

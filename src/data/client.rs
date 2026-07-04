@@ -7,6 +7,8 @@ pub struct ClientData {
     pub first_name: String,
     pub last_name: String,
     pub client_id: String,
+    pub case_manager: String,
+    pub primary_therapist: String,
     pub assessments: Vec<String>,
     pub conditions: Vec<String>,
     pub session_number: u32,
@@ -15,12 +17,14 @@ pub struct ClientData {
 impl Default for ClientData {
     fn default() -> Self {
         Self {
-            first_name: "<<MISSING>>".into(),
-            last_name: "<<MISSING>>".into(),
-            client_id: "<<MISSING>>".into(),
+            first_name: String::from("NONE"),
+            last_name: String::from("NONE"),
+            client_id: String::from("NONE"),
+            case_manager: String::from("NONE"),
+            primary_therapist: String::from("NONE"),
             assessments: Vec::new(),
             conditions: Vec::new(),
-            session_number: 99999,
+            session_number: 0,
         }
     }
 }
@@ -36,12 +40,6 @@ impl Display for ClientData {
 }
 
 impl ClientData {
-    pub fn new() -> Self {
-        Self {
-            ..Default::default()
-        }
-    }
-
     pub fn from_file(file_path: &PathBuf) -> Result<Self> {
         let mut file = File::open(&file_path)?;
         let mut s = String::new();
