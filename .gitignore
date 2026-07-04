@@ -1,5 +1,7 @@
 /target
 /docs
-build_instructions.txt
-SaveData.txt
 /dist
+build_instructions.txt
+JD*.txt
+test_client.txt
+test_ksf.txt

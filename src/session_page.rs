@@ -36,6 +36,7 @@ pub struct SessionPage {
     keypresses: Vec<Key>,
     keypresses_display: VecDeque<&'static str>,
     clicked_keys: ClickedKeys,
+    save_discard_open: bool,
 }
 
 impl SessionPage {
@@ -93,6 +94,7 @@ impl SessionPage {
             keypresses: Vec::new(),
             keypresses_display: VecDeque::from(["_"; 10]),
             clicked_keys: ClickedKeys::new(),
+            save_discard_open: false,
         }
     }
 
@@ -123,13 +125,14 @@ impl SessionPage {
         &mut self,
         client_data: &mut ClientData,
         active_page: &mut Page,
+        session_data: &SessionData,
         client_data_path: &Option<String>,
     ) {
         if self.session_timer.active {
             self.keypresses.push(Key::Escape);
             self.keypresses_display.pop_front();
             self.keypresses_display.push_back("END");
-            self.record_data(client_data, client_data_path);
+            self.record_data(client_data, session_data, client_data_path);
             self.reset();
             *active_page = Page::About;
         }
@@ -142,12 +145,20 @@ impl SessionPage {
         self.clicked_keys.clear();
     }
 
-    fn record_data(&mut self, client_data: &mut ClientData, client_data_path: &Option<String>) {
-        // Stop all timers
+    fn stop_all_timers(&mut self) {
         for timer in self.timers.iter_mut() {
             timer.stop();
         }
         self.session_timer.stop();
+    }
+
+    fn record_data(
+        &mut self,
+        client_data: &mut ClientData,
+        session_data: &SessionData,
+        client_data_path: &Option<String>,
+    ) {
+        // Stop all timers
 
         // Reset the output
         self.output_file_contents.clear();
@@ -159,8 +170,10 @@ impl SessionPage {
             date_time_string(self.session_start),
             self.session_timer.total_time()
         ));
+        self.output_file_contents
+            .push_str(&session_data.to_string());
 
-        self.output_file_contents.push_str("\n--Duration--\n");
+        self.output_file_contents.push_str("\n\n--Duration--\n");
         for timer in self.timers.iter_mut() {
             if let Some(description) = &timer.description {
                 self.output_file_contents.push_str(&format!(
@@ -228,7 +241,8 @@ impl SessionPage {
         ui.ctx().input_mut(|i| {
             // Need to consume Esc in order to prevent egui from using it for other purposes
             if i.consume_key(egui::Modifiers::NONE, egui::Key::Escape) {
-                self.end_session(client_data, active_page, client_data_path);
+                self.save_discard_open = true;
+                self.stop_all_timers();
             }
             if i.consume_key(egui::Modifiers::NONE, egui::Key::Tab) {
                 self.start_session(&ksf);
@@ -256,22 +270,16 @@ impl SessionPage {
                     });
                 });
             });
-
             ui.add_space(10.0);
-            ui.label("Tab to start. Esc to save and exit.");
+
+            ui.label("TAB to start. ESC to save and exit.");
             if self.session_timer.active {
-                if ui
-                    .button(RichText::new(" END ").monospace().color(Color32::RED))
-                    .clicked()
-                {
-                    self.end_session(client_data, active_page, client_data_path);
-                }
+                ui.label(RichText::new("ACTIVE").monospace().color(Color32::GREEN));
             } else {
-                if ui
-                    .button(RichText::new("START").monospace().color(Color32::GREEN))
-                    .clicked()
-                {
-                    self.start_session(ksf);
+                if self.session_timer.saved_time() == 0.0 {
+                    ui.label(RichText::new("NOT STARTED").monospace().color(Color32::RED));
+                } else {
+                    ui.label(RichText::new("PAUSED").monospace().color(Color32::YELLOW));
                 }
             }
             ui.add_space(10.0);
@@ -280,7 +288,6 @@ impl SessionPage {
                 ui.label("Session Time:");
                 self.session_timer.view(ui);
             });
-
             ui.add_space(10.0);
 
             ui.horizontal(|ui| {
@@ -353,5 +360,21 @@ impl SessionPage {
                 });
             });
         });
+
+        if self.save_discard_open {
+            egui::Window::new("Save/Discard").show(ui, |ui| {
+                if ui.button("SAVE").clicked() {
+                    for timer in self.timers.iter_mut() {
+                        timer.stop();
+                    }
+                    self.session_timer.stop();
+                    self.end_session(client_data, active_page, session_data, client_data_path);
+                }
+                if ui.button("DISCARD").clicked() {
+                    self.reset();
+                    *active_page = Page::About;
+                }
+            });
+        }
     }
 }

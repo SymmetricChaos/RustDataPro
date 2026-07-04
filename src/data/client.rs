@@ -22,8 +22,8 @@ impl Default for ClientData {
             client_id: String::from("NONE"),
             case_manager: String::from("NONE"),
             primary_therapist: String::from("NONE"),
-            assessments: Vec::new(),
-            conditions: Vec::new(),
+            assessments: vec![String::from("NONE")],
+            conditions: vec![String::from("NONE")],
             session_number: 0,
         }
     }
@@ -33,8 +33,13 @@ impl Display for ClientData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Client: {} {}\nID: {}\nSession Number: {}", // NOTICE: assessments and conditions are exluded from this display
-            self.first_name, self.last_name, self.client_id, self.session_number
+            "Client: {} {}\nID: {}\nCase Manager: {}\nPrimary Therapist: {}\nSession Number: {}", // NOTICE: assessments and conditions are exluded from this display
+            self.first_name,
+            self.last_name,
+            self.client_id,
+            self.case_manager,
+            self.primary_therapist,
+            self.session_number
         )
     }
 }
