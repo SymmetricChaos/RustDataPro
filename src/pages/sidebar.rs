@@ -1,5 +1,6 @@
-use crate::{app::DisplayInfo, utils::DataProUiElements};
+use crate::{app::DataPro, utils::DataProUiElements};
 use egui::{Ui, warn_if_debug_build};
+
 pub struct Sidebar {}
 
 impl Default for Sidebar {
@@ -9,7 +10,7 @@ impl Default for Sidebar {
 }
 
 impl Sidebar {
-    pub fn view(&mut self, ui: &mut Ui, display_info: &mut DisplayInfo) {
+    pub fn view(app: &mut DataPro, ui: &mut Ui) {
         egui::Panel::left("welcome_panel")
             .default_size(200.0)
             .min_size(200.0)
@@ -33,17 +34,17 @@ impl Sidebar {
                 ui.label("Other Useful Functionality");
                 ui.add_space(5.0);
                 if ui.large_button("Randomness").clicked() {
-                    display_info.toggle_random_display();
+                    app.display_info.toggle_random_display();
                 }
 
                 ui.add_space(5.0);
                 if ui.large_button("Timers").clicked() {
-                    display_info.toggle_timer_display();
+                    app.display_info.toggle_timer_display();
                 }
 
                 ui.add_space(5.0);
                 if ui.large_button("Reliability").clicked() {
-                    display_info.go_to_reliability();
+                    app.display_info.go_to_reliability();
                 }
             });
     }

@@ -1,4 +1,4 @@
-use crate::prng::Prng;
+use crate::utils::Prng;
 use chrono::Local;
 use egui::{DragValue, TextEdit, Ui};
 use itertools::Itertools;

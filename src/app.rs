@@ -1,9 +1,7 @@
 use crate::{
-    data::{ClientData, DataType, SessionData, ksf::Ksf},
+    data::{ClientData, SessionData, ksf::Ksf},
     pages::Page,
-    random_services::RandomServices,
-    timers::Timers,
-    utils::{DataProUiElements, date_time_string},
+    utils::date_time_string,
 };
 use chrono::Local;
 use egui::{SurrenderFocusOn::Never, Visuals};
@@ -49,22 +47,21 @@ impl DisplayInfo {
 }
 
 pub struct DataPro {
-    data: Data,
-    display_info: DisplayInfo,
+    pub data: Data,
+    pub display_info: DisplayInfo,
 
-    ksf_file_dialog: FileDialog,
-    ksf_err: String,
+    pub ksf_file_dialog: FileDialog,
+    pub ksf_err: String,
 
-    client_data_file_dialog: FileDialog,
-    client_data_err: String,
-    client_data_path: Option<String>,
+    pub client_data_file_dialog: FileDialog,
+    pub client_data_err: String,
+    pub client_data_path: Option<String>,
 
-    randomness_page: RandomServices,
-    timers: Timers,
+    pub randomness_page: crate::pages::RandomServices,
+    pub timers: crate::pages::Timers,
 
-    session_page: crate::pages::SessionPage,
-    reliability_page: crate::pages::ReliabilityPage,
-    sidebar: crate::pages::Sidebar,
+    pub session_page: crate::pages::SessionPage,
+    pub reliability_page: crate::pages::ReliabilityPage,
 }
 
 impl Default for DataPro {
@@ -82,19 +79,18 @@ impl Default for DataPro {
                 sidebar_open: true,
             },
 
-            ksf_file_dialog: FileDialog::new(),
-            ksf_err: String::new(),
+            ksf_file_dialog: FileDialog::default(),
+            ksf_err: String::default(),
 
-            client_data_file_dialog: FileDialog::new(),
-            client_data_err: String::new(),
+            client_data_file_dialog: FileDialog::default(),
+            client_data_err: String::default(),
             client_data_path: None,
 
-            randomness_page: RandomServices::default(),
-            timers: Timers::default(),
+            randomness_page: crate::pages::RandomServices::default(),
+            timers: crate::pages::Timers::default(),
 
             session_page: crate::pages::SessionPage::new(),
             reliability_page: crate::pages::ReliabilityPage::default(),
-            sidebar: crate::pages::Sidebar::default(),
         }
     }
 }
@@ -108,7 +104,7 @@ impl DataPro {
         Default::default()
     }
 
-    fn load_ksf_file(&mut self, path: PathBuf) {
+    pub fn load_ksf_file(&mut self, path: PathBuf) {
         match Ksf::from_file(path) {
             Ok(ksf) => {
                 self.data.ksf = ksf;
@@ -122,7 +118,7 @@ impl DataPro {
         };
     }
 
-    fn load_client_file(&mut self, path: PathBuf) {
+    pub fn load_client_file(&mut self, path: PathBuf) {
         match ClientData::from_file(&path) {
             Ok(sess_data) => {
                 self.client_data_path = Some(path.as_path().to_str().unwrap().to_string());
@@ -172,7 +168,7 @@ impl eframe::App for DataPro {
         // To show it must go before any other panel
         // It must be not to rendered (even if not shown) when Session is active because it may capture keypresses
         if self.display_info.sidebar_open {
-            self.sidebar.view(ui, &mut self.display_info);
+            crate::pages::Sidebar::view(self, ui);
         };
 
         // ### Main Panel ###
@@ -184,112 +180,7 @@ impl eframe::App for DataPro {
                 &self.client_data_path,
             ),
             Page::Reliability => self.reliability_page.view(ui, &mut self.display_info),
-            Page::About => {
-                egui::CentralPanel::default().show(ui, |ui| {
-                    ui.add_space(15.0);
-
-                    self.ksf_file_dialog.update(ui.ctx());
-                    if let Some(path) = self.ksf_file_dialog.take_picked() {
-                        self.load_ksf_file(path);
-                    }
-                    self.client_data_file_dialog.update(ui.ctx());
-                    if let Some(path) = self.client_data_file_dialog.take_picked() {
-                        self.load_client_file(path);
-                    }
-
-                    if ui.large_button("Select KSF").clicked() {
-                        self.ksf_file_dialog.pick_file();
-                    }
-                    ui.label(format!("KSF: {}", self.data.ksf.name));
-                    ui.strong(&self.ksf_err);
-
-                    if ui.large_button("Select Client File").clicked() {
-                        self.client_data_file_dialog.pick_file();
-                    }
-                    ui.strong(&self.client_data_err);
-                    ui.add_enabled_ui(true, |ui| {
-                        egui::Grid::new("client_and_session_info_grid").show(ui, |ui| {
-                            ui.monospace("Client");
-                            ui.monospace(&self.data.client.name);
-                            ui.end_row();
-
-                            ui.monospace("ID");
-                            ui.monospace(&self.data.client.client_id);
-                            ui.end_row();
-
-                            ui.monospace("Case Manager");
-                            ui.monospace(&self.data.client.case_manager);
-                            ui.end_row();
-
-                            ui.monospace("Primary Therapist");
-                            ui.monospace(&self.data.client.primary_therapist);
-                            ui.end_row();
-
-                            ui.monospace("Session");
-                            ui.add(egui::DragValue::new(&mut self.data.client.session_number));
-                            ui.end_row();
-
-                            ui.monospace("Therapist");
-                            ui.text_edit_singleline(&mut self.data.session.therapist);
-                            ui.end_row();
-
-                            ui.monospace("Data Collector");
-                            ui.text_edit_singleline(&mut self.data.session.data_collector);
-                            ui.end_row();
-                        });
-                    });
-
-                    // ### DROPDOWMS ###
-                    ui.group(|ui| {
-                        ui.label("Data Type");
-                        egui::ComboBox::from_id_salt("datatype")
-                            .selected_text(self.data.session.data_type.to_string())
-                            .show_ui(ui, |ui| {
-                                ui.selectable_value(
-                                    &mut self.data.session.data_type,
-                                    DataType::Primary,
-                                    "Primary",
-                                );
-                                ui.selectable_value(
-                                    &mut self.data.session.data_type,
-                                    DataType::Reliability,
-                                    "Reliability",
-                                );
-                            });
-                        ui.add_space(5.0);
-                        ui.label("Assessment");
-                        egui::ComboBox::from_id_salt("assessment")
-                            .selected_text(&self.data.session.assessment)
-                            .show_ui(ui, |ui| {
-                                for item in self.data.client.assessments.iter() {
-                                    ui.selectable_value(
-                                        &mut self.data.session.assessment,
-                                        item.to_string(),
-                                        item,
-                                    );
-                                }
-                            });
-                        ui.add_space(5.0);
-                        ui.label("Condition");
-                        egui::ComboBox::from_id_salt("condition")
-                            .selected_text(&self.data.session.condition)
-                            .show_ui(ui, |ui| {
-                                for item in self.data.client.conditions.iter() {
-                                    ui.selectable_value(
-                                        &mut self.data.session.condition,
-                                        item.to_string(),
-                                        item,
-                                    );
-                                }
-                            })
-                    });
-                    ui.add_space(10.0);
-
-                    if ui.large_green_button("BEGIN SESSION").clicked() {
-                        self.display_info.go_to_session();
-                    }
-                });
-            }
+            Page::About => crate::pages::About::view(self, ui),
         }
     }
 }
