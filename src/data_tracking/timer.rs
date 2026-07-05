@@ -1,5 +1,8 @@
 use egui::{Color32, Key, RichText, Ui};
+use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
+
+use crate::data::Keybind;
 
 macro_rules! timer_format {
     () => {
@@ -27,11 +30,17 @@ macro_rules! bout_display {
     };
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TimerStatus {
     Active,
     Stopped,
     Paused,
+}
+
+impl Default for TimerStatus {
+    fn default() -> Self {
+        Self::Stopped
+    }
 }
 
 impl TimerStatus {
@@ -104,6 +113,13 @@ impl Timer {
             show_split: true,
             status: TimerStatus::Stopped,
         }
+    }
+
+    /// Build a timer with an associated keybind.
+    pub fn with_keybind(mut self, keybind: &Keybind) -> Self {
+        self.key = Some(keybind.0);
+        self.description = Some(keybind.1.clone());
+        self
     }
 
     /// Build a timer with an associated key.

@@ -1,3 +1,4 @@
+use crate::data::Keybind;
 use egui::{Key, Ui};
 
 pub struct Counter {
@@ -15,7 +16,14 @@ impl Counter {
         }
     }
 
-    /// Build a counter with a keybind.
+    /// Build a counter with an associated keybind.
+    pub fn with_keybind(mut self, keybind: &Keybind) -> Self {
+        self.key = Some(keybind.0);
+        self.description = Some(keybind.1.clone());
+        self
+    }
+
+    /// Build a counter with a key.
     pub fn with_key(mut self, key: Key) -> Self {
         self.key = Some(key);
         self
