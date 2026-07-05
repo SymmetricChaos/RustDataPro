@@ -51,6 +51,7 @@ impl RandomServices {
                     }
                 };
             });
+            ui.add_space(5.0);
 
             if ui.button("Generate").clicked() {
                 let mut v = Vec::new();

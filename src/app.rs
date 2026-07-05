@@ -97,7 +97,7 @@ impl Default for DataPro {
 
 impl DataPro {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        cc.egui_ctx.set_pixels_per_point(1.75);
+        cc.egui_ctx.set_pixels_per_point(1.5);
         cc.egui_ctx.set_visuals(Visuals::dark());
         cc.egui_ctx
             .options_mut(|options| options.input_options.surrender_focus_on = Never);
