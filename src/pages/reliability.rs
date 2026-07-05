@@ -1,7 +1,7 @@
 use crate::{app::DisplayInfo, utils::DataProUiElements};
 use egui::{TextBuffer, Ui};
 use egui_file_dialog::FileDialog;
-use std::path::PathBuf;
+use std::{ffi::OsStr, path::PathBuf};
 
 pub struct ReliabilityPage {
     primary_file_dialog: FileDialog,
@@ -40,7 +40,7 @@ impl ReliabilityPage {
                     for buf in self.primary_bufs.iter() {
                         ui.strong(
                             buf.file_name()
-                                .expect("file name does not exist")
+                                .unwrap_or(&OsStr::new("invalid"))
                                 .to_string_lossy()
                                 .as_str(),
                         );
@@ -53,7 +53,7 @@ impl ReliabilityPage {
                     for buf in self.reli_bufs.iter() {
                         ui.strong(
                             buf.file_name()
-                                .expect("file name does not exist")
+                                .unwrap_or(&OsStr::new("invalid"))
                                 .to_string_lossy()
                                 .as_str(),
                         );
@@ -62,6 +62,13 @@ impl ReliabilityPage {
             });
 
             if ui.large_green_button("Calculate").clicked() {
+                // TODO
+                display_info.go_to_about();
+                self.primary_bufs.clear();
+                self.reli_bufs.clear();
+            }
+
+            if ui.large_red_button("Return").clicked() {
                 display_info.go_to_about();
                 self.primary_bufs.clear();
                 self.reli_bufs.clear();

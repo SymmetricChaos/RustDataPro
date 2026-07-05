@@ -2,13 +2,11 @@ use crate::{
     data::{ClientData, DataType, SessionData, ksf::Ksf},
     pages::Page,
     random_services::RandomServices,
-    reliability::ReliabilityPage,
-    session_page::SessionPage,
     timers::Timers,
     utils::{DataProUiElements, date_time_string},
 };
 use chrono::Local;
-use egui::{RichText, SurrenderFocusOn::Never, Visuals, warn_if_debug_build};
+use egui::{SurrenderFocusOn::Never, Visuals};
 use egui_file_dialog::FileDialog;
 use std::path::PathBuf;
 
@@ -22,23 +20,23 @@ pub struct DisplayInfo {
     pub active_page: Page,
     pub timers_open: bool,
     pub random_open: bool,
-    pub welcome_open: bool,
+    pub sidebar_open: bool,
 }
 
 impl DisplayInfo {
     pub fn go_to_about(&mut self) {
         self.active_page = Page::About;
-        self.welcome_open = true;
+        self.sidebar_open = true;
     }
 
     pub fn go_to_session(&mut self) {
         self.active_page = Page::Session;
-        self.welcome_open = false;
+        self.sidebar_open = false;
     }
 
     pub fn go_to_reliability(&mut self) {
         self.active_page = Page::Reliability;
-        self.welcome_open = false;
+        self.sidebar_open = false;
     }
 
     pub fn toggle_timer_display(&mut self) {
@@ -64,8 +62,9 @@ pub struct DataPro {
     randomness_page: RandomServices,
     timers: Timers,
 
-    session_page: SessionPage,
-    reliability_page: ReliabilityPage,
+    session_page: crate::pages::SessionPage,
+    reliability_page: crate::pages::ReliabilityPage,
+    sidebar: crate::pages::Sidebar,
 }
 
 impl Default for DataPro {
@@ -80,7 +79,7 @@ impl Default for DataPro {
                 active_page: Page::About,
                 timers_open: false,
                 random_open: false,
-                welcome_open: true,
+                sidebar_open: true,
             },
 
             ksf_file_dialog: FileDialog::new(),
@@ -93,8 +92,9 @@ impl Default for DataPro {
             randomness_page: RandomServices::default(),
             timers: Timers::default(),
 
-            session_page: SessionPage::new(),
-            reliability_page: ReliabilityPage::default(),
+            session_page: crate::pages::SessionPage::new(),
+            reliability_page: crate::pages::ReliabilityPage::default(),
+            sidebar: crate::pages::Sidebar::default(),
         }
     }
 }
@@ -153,6 +153,14 @@ impl DataPro {
 
 impl eframe::App for DataPro {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        // ### Windows ###
+        self.timers.view(ui, &mut self.display_info.timers_open);
+        self.randomness_page
+            .view(ui, &mut self.display_info.random_open);
+
+        // ### Top Bar ###
+        // To go fully across it must be specified before any other panel
+        // Nothing here can be a button
         egui::Panel::top("top_panel").show(ui, |ui| {
             egui::MenuBar::new().ui(ui, |ui| {
                 ui.request_repaint_after_secs(5.0);
@@ -160,55 +168,14 @@ impl eframe::App for DataPro {
             });
         });
 
-        self.timers.view(ui, &mut self.display_info.timers_open);
-        self.randomness_page
-            .view(ui, &mut self.display_info.random_open);
-
-        if self.display_info.welcome_open {
-            egui::Panel::left("welcome_panel")
-                .default_size(200.0)
-                .min_size(200.0)
-                .show(ui, |ui| {
-                    warn_if_debug_build(ui);
-                    let hello = RichText::new("Welcome to RustDataPro!").strong();
-                    ui.label(hello);
-                    ui.add_space(10.0);
-                    // ui.hyperlink_to(
-                    //     "view the source code",
-                    //     "https://github.com/SymmetricChaos/RustDataPro",
-                    // );
-                    // ui.add_space(10.0);
-                    ui.horizontal(|ui| {
-                        ui.spacing_mut().item_spacing.x = 0.0;
-                        ui.label("Powered by ");
-                        ui.hyperlink_to("egui", "https://github.com/emilk/egui");
-                        ui.label(" and ");
-                        ui.hyperlink_to(
-                            "eframe",
-                            "https://github.com/emilk/egui/tree/master/crates/eframe",
-                        );
-                        ui.label(".");
-                    });
-
-                    ui.add_space(20.0);
-                    ui.label("Other Useful Functionality");
-                    ui.add_space(5.0);
-                    if ui.large_button("Randomness").clicked() {
-                        self.display_info.toggle_random_display();
-                    }
-
-                    ui.add_space(5.0);
-                    if ui.large_button("Timers").clicked() {
-                        self.display_info.toggle_timer_display();
-                    }
-
-                    ui.add_space(5.0);
-                    if ui.large_button("Reliability").clicked() {
-                        self.display_info.go_to_reliability();
-                    }
-                });
+        // ### Sidebar ###
+        // To show it must go before any other panel
+        // It must be not to rendered (even if not shown) when Session is active because it may capture keypresses
+        if self.display_info.sidebar_open {
+            self.sidebar.view(ui, &mut self.display_info);
         };
 
+        // ### Main Panel ###
         match self.display_info.active_page {
             Page::Session => self.session_page.view(
                 ui,
@@ -235,11 +202,6 @@ impl eframe::App for DataPro {
                     }
                     ui.label(format!("KSF: {}", self.data.ksf.name));
                     ui.strong(&self.ksf_err);
-
-                    // ui.add_enabled_ui(true, |ui| {
-                    //     egui::Grid::new("ksf_info_grid").show(ui, |ui| {
-                    //     });
-                    // });
 
                     if ui.large_button("Select Client File").clicked() {
                         self.client_data_file_dialog.pick_file();
