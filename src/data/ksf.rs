@@ -1,6 +1,5 @@
 use anyhow::{Context, Result};
 use egui::Key;
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, fs::File, io::Read, path::PathBuf};
 
@@ -64,11 +63,7 @@ impl Ksf {
         Ok(serde_json5::from_str(&s)?)
     }
 
-    pub fn pretty_print(&self) -> String {
-        let mut out = String::from("Duration Keys\n");
-        out.push_str(&self.duration.iter().map(|kb| kb.to_string()).join("\n"));
-        out.push_str("\n\nFrequency Keys\n");
-        out.push_str(&self.frequency.iter().map(|kb| kb.to_string()).join("\n"));
-        out
+    pub fn to_json(&self) -> Result<String> {
+        serde_json5::to_string(&self).context("unable to convert ksf to json")
     }
 }

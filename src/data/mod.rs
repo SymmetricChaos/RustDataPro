@@ -1,7 +1,7 @@
-pub mod client;
+pub mod client_data;
 pub mod ksf;
-pub mod session;
+pub mod session_data;
 
-pub use client::*;
+pub use client_data::*;
 pub use ksf::*;
-pub use session::*;
+pub use session_data::*;

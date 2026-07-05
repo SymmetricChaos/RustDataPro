@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, fs::File, io::Read, path::PathBuf};
 
@@ -54,5 +54,9 @@ impl ClientData {
         let mut s = String::new();
         file.read_to_string(&mut s)?;
         Ok(serde_json5::from_str(&s)?)
+    }
+
+    pub fn to_json(&self) -> Result<String> {
+        serde_json5::to_string(&self).context("unable to convert client data to json")
     }
 }
