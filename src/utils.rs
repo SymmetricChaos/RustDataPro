@@ -54,21 +54,40 @@ impl ClickedKeys {
     }
 }
 
+const LARGE_BUTTON_WIDTH: f32 = 110.0;
+const LARGE_BUTTON_HEIGHT: f32 = 40.0;
 pub trait DataProUiElements {
+    fn large_button(&mut self, text: &'static str) -> Response;
+    fn large_color_button(&mut self, text: &'static str, color: Color32) -> Response;
     fn large_green_button(&mut self, text: &'static str) -> Response;
     fn large_red_button(&mut self, text: &'static str) -> Response;
 }
 
 impl DataProUiElements for Ui {
+    fn large_button(&mut self, text: &'static str) -> Response {
+        self.add_sized(
+            [LARGE_BUTTON_WIDTH, LARGE_BUTTON_HEIGHT],
+            egui::Button::new(text),
+        )
+    }
+
+    fn large_color_button(&mut self, text: &'static str, color: Color32) -> Response {
+        self.add_sized(
+            [LARGE_BUTTON_WIDTH, LARGE_BUTTON_HEIGHT],
+            egui::Button::new(RichText::new(text).color(color)),
+        )
+    }
+
     fn large_green_button(&mut self, text: &'static str) -> Response {
         self.add_sized(
-            [110.0, 40.0],
+            [LARGE_BUTTON_WIDTH, LARGE_BUTTON_HEIGHT],
             egui::Button::new(RichText::new(text).color(Color32::GREEN)),
         )
     }
+
     fn large_red_button(&mut self, text: &'static str) -> Response {
         self.add_sized(
-            [110.0, 40.0],
+            [LARGE_BUTTON_WIDTH, LARGE_BUTTON_HEIGHT],
             egui::Button::new(RichText::new(text).color(Color32::RED)),
         )
     }

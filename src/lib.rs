@@ -4,6 +4,7 @@ pub mod data_tracking;
 pub mod pages;
 pub mod prng;
 pub mod random_services;
+pub mod reliability;
 pub mod session_page;
 pub mod timers;
 pub mod utils;

@@ -2,4 +2,5 @@
 pub enum Page {
     About,
     Session,
+    Reliability,
 }
