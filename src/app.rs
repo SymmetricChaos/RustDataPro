@@ -38,7 +38,7 @@ impl DisplayInfo {
 
     pub fn go_to_reliability(&mut self) {
         self.active_page = Page::Reliability;
-        self.welcome_open = true;
+        self.welcome_open = false;
     }
 
     pub fn toggle_timer_display(&mut self) {
