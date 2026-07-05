@@ -22,6 +22,8 @@ impl Default for ReliabilityPage {
 }
 
 impl ReliabilityPage {
+    fn calculate_reli(&self) {}
+
     pub fn view(&mut self, ui: &mut Ui, display_info: &mut DisplayInfo) {
         self.primary_file_dialog.update(ui.ctx());
         self.reli_file_dialog.update(ui.ctx());
@@ -60,14 +62,11 @@ impl ReliabilityPage {
                     }
                 });
             });
+            ui.add_space(20.0);
 
-            if ui.large_green_button("Calculate").clicked() {
-                // TODO
-                display_info.go_to_about();
-                self.primary_bufs.clear();
-                self.reli_bufs.clear();
+            if ui.large_green_button("Calculate Reli").clicked() {
+                self.calculate_reli();
             }
-
             if ui.large_red_button("Return").clicked() {
                 display_info.go_to_about();
                 self.primary_bufs.clear();

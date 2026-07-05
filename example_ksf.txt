@@ -1,13 +1,13 @@
 {
-  name: "Example",
-  frequency: [
+  "name": "Example",
+  "frequency": [
     ["V", "NegVoc"],
     ["A", "Aggression"],
-    ["M", "Mand"],
+    ["M", "Mand"]
   ],
-  duration: [
+  "duration": [
     ["4", "ToyEngage"],
     ["1", "Sr+"],
-    ["2", "Sdelta"],
+    ["2", "Sdelta"]
   ]
 }

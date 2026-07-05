@@ -89,19 +89,6 @@ impl Default for Timer {
 }
 
 impl Timer {
-    pub fn new() -> Self {
-        Self {
-            start_time: Instant::now(),
-            saved_time: Duration::ZERO,
-            bouts: 0,
-            status: TimerStatus::Stopped,
-            key: None,
-            description: String::new(),
-            show_bouts: false,
-            show_split: false,
-        }
-    }
-
     pub fn new_splits_and_bouts() -> Self {
         Self {
             start_time: Instant::now(),
@@ -156,7 +143,7 @@ impl Timer {
         match self.status {
             TimerStatus::Active => {
                 self.status = TimerStatus::Paused;
-                self.saved_time += Instant::now() - self.start_time;
+                self.saved_time += self.start_time.elapsed();
             }
             TimerStatus::Stopped => (),
             TimerStatus::Paused => {
@@ -187,7 +174,7 @@ impl Timer {
     pub fn stop(&mut self) {
         if !self.status.is_stopped() {
             self.status = TimerStatus::Stopped;
-            self.saved_time += Instant::now() - self.start_time;
+            self.saved_time += self.start_time.elapsed();
         }
     }
 
@@ -209,7 +196,7 @@ impl Timer {
 
     /// How long the timer has been running since it was last started in seconds.
     pub fn current_time(&self) -> f32 {
-        (Instant::now() - self.start_time).as_secs_f32()
+        self.current_time_raw().as_secs_f32()
     }
 
     pub fn current_time_raw(&self) -> Duration {
@@ -218,11 +205,11 @@ impl Timer {
 
     /// The total time recorded in seconds. Sum of .saved_time() and .current_time().
     pub fn total_time(&self) -> f32 {
-        (Instant::now() - self.start_time + self.saved_time).as_secs_f32()
+        self.total_time_raw().as_secs_f32()
     }
 
     pub fn total_time_raw(&self) -> Duration {
-        Instant::now() - self.start_time + self.saved_time
+        self.start_time.elapsed() + self.saved_time
     }
 
     fn view_split(&mut self, ui: &mut Ui) {
@@ -250,7 +237,7 @@ impl Timer {
             ui.label(&self.description);
         }
         if let Some(key) = &self.key {
-            ui.label(key.name());
+            ui.label(key.symbol_or_name());
         }
         if self.show_split {
             self.view_split(ui);

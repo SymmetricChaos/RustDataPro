@@ -15,7 +15,7 @@ pub struct ClientData {
 
 impl Default for ClientData {
     fn default() -> Self {
-        serde_json5::from_str(
+        serde_json::from_str(
             r#"{
                 "name": "None None",
                 "client_id": "0000000000000000",
@@ -53,10 +53,10 @@ impl ClientData {
         let mut file = File::open(&file_path)?;
         let mut s = String::new();
         file.read_to_string(&mut s)?;
-        Ok(serde_json5::from_str(&s)?)
+        Ok(serde_json::from_str(&s)?)
     }
 
     pub fn to_json(&self) -> Result<String> {
-        serde_json5::to_string(&self).context("unable to convert client data to json")
+        serde_json::to_string_pretty(&self).context("unable to convert client data to json")
     }
 }

@@ -13,11 +13,11 @@ impl Default for Timers {
     fn default() -> Self {
         Self {
             timers: [
-                Timer::new().with_bouts(),
-                Timer::new().with_bouts(),
-                Timer::new().with_bouts(),
-                Timer::new().with_bouts(),
-                Timer::new().with_bouts(),
+                Timer::default().with_bouts(),
+                Timer::default().with_bouts(),
+                Timer::default().with_bouts(),
+                Timer::default().with_bouts(),
+                Timer::default().with_bouts(),
             ],
             linked_timers: [true, true, false, false, false],
             clicked_keys: ClickedKeys::new(),

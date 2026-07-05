@@ -1,5 +1,5 @@
 use crate::{
-    data::{ClientData, SessionData, ksf::Ksf},
+    data::{ClientData, Data, KsfData, SessionData},
     pages::Page,
     utils::date_time_string,
 };
@@ -7,12 +7,6 @@ use chrono::Local;
 use egui::{SurrenderFocusOn::Never, Visuals};
 use egui_file_dialog::FileDialog;
 use std::path::PathBuf;
-
-pub struct Data {
-    pub client: ClientData,
-    pub session: SessionData,
-    pub ksf: Ksf,
-}
 
 pub struct DisplayInfo {
     pub active_page: Page,
@@ -70,7 +64,7 @@ impl Default for DataPro {
             data: Data {
                 client: ClientData::default(),
                 session: SessionData::default(),
-                ksf: Ksf::default(),
+                ksf: KsfData::default(),
             },
             display_info: DisplayInfo {
                 active_page: Page::About,
@@ -105,15 +99,13 @@ impl DataPro {
     }
 
     pub fn load_ksf_file(&mut self, path: PathBuf) {
-        match Ksf::from_file(path) {
+        match KsfData::from_file(path) {
             Ok(ksf) => {
                 self.data.ksf = ksf;
-                self.session_page.load_ksf(&self.data.ksf);
                 self.ksf_err.clear();
             }
             Err(e) => {
                 self.ksf_err = e.to_string();
-                self.data.ksf = Ksf::default()
             }
         };
     }

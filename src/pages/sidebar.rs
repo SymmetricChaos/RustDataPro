@@ -3,12 +3,6 @@ use egui::{Ui, warn_if_debug_build};
 
 pub struct Sidebar {}
 
-impl Default for Sidebar {
-    fn default() -> Self {
-        Self {}
-    }
-}
-
 impl Sidebar {
     pub fn view(app: &mut DataPro, ui: &mut Ui) {
         egui::Panel::left("welcome_panel")

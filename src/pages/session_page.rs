@@ -1,6 +1,6 @@
 use crate::{
-    app::{Data, DisplayInfo},
-    data::{DataType, ksf::Ksf},
+    app::DisplayInfo,
+    data::{Data, DataType},
     data_tracking::{TimerStatus, counter::Counter, timer::Timer},
     utils::{ClickedKeys, DataProUiElements, date_time_string},
 };
@@ -40,7 +40,7 @@ pub struct SessionPage {
 impl SessionPage {
     pub fn new() -> Self {
         Self {
-            session_timer: Timer::new(),
+            session_timer: Timer::default(),
             session_start: Local::now(),
             timers: Vec::new(),
             counters: Vec::new(),
@@ -48,18 +48,6 @@ impl SessionPage {
             keypresses_display: VecDeque::from(["_"; 10]),
             clicked_keys: ClickedKeys::new(),
             save_discard_open: false,
-        }
-    }
-
-    pub fn load_ksf(&mut self, ksf: &Ksf) {
-        self.timers.clear();
-        self.counters.clear();
-        for keybind in ksf.duration.iter() {
-            self.timers
-                .push(Timer::new_splits_and_bouts().with_keybind(keybind));
-        }
-        for keybind in ksf.frequency.iter() {
-            self.counters.push(Counter::new().with_keybind(keybind));
         }
     }
 
@@ -164,7 +152,7 @@ impl SessionPage {
     ) -> Result<()> {
         if data.session.data_type == DataType::Primary {
             if let Some(path) = client_data_path {
-                std::fs::write(path, serde_json5::to_string(&data.client)?)?;
+                std::fs::write(path, &data.client.to_json()?)?;
             }
             data.client.session_number += 1;
         }

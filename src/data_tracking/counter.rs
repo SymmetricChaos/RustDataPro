@@ -9,15 +9,17 @@ pub struct Counter {
     pub counter: u32,
 }
 
-impl Counter {
-    pub fn new() -> Self {
+impl Default for Counter {
+    fn default() -> Self {
         Self {
-            key: None,
+            key: Default::default(),
             description: String::new(),
             counter: 0,
         }
     }
+}
 
+impl Counter {
     /// Build a counter with an associated keybind.
     pub fn with_keybind(mut self, keybind: &Keybind) -> Self {
         self.key = Some(keybind.0);

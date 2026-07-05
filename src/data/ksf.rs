@@ -28,15 +28,15 @@ impl TryFrom<(String, String)> for Keybind {
 
 /// A list of keybinds divided into Duration and Frequency
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Ksf {
+pub struct KsfData {
     pub name: String,
     pub duration: Vec<Keybind>,
     pub frequency: Vec<Keybind>,
 }
 
-impl Default for Ksf {
+impl Default for KsfData {
     fn default() -> Self {
-        serde_json5::from_str(
+        serde_json::from_str(
             r#"{
                 "name": "DEFAULT",
                 "frequency": [
@@ -47,23 +47,23 @@ impl Default for Ksf {
                 "duration": [
                     ["4", "ToyEngage"],
                     ["1", "Sr+"],
-                    ["2", "Sdelta"],
-                ],
+                    ["2", "Sdelta"]
+                ]
             }"#,
         )
         .unwrap()
     }
 }
 
-impl Ksf {
+impl KsfData {
     pub fn from_file(file_path: PathBuf) -> Result<Self> {
         let mut file = File::open(&file_path)?;
         let mut s = String::new();
         file.read_to_string(&mut s)?;
-        Ok(serde_json5::from_str(&s)?)
+        Ok(serde_json::from_str(&s)?)
     }
 
     pub fn to_json(&self) -> Result<String> {
-        serde_json5::to_string(&self).context("unable to convert ksf to json")
+        serde_json::to_string_pretty(&self).context("unable to convert ksf to json")
     }
 }
