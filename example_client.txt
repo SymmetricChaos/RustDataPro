@@ -1,15 +1,15 @@
 {
-  "name": "Bruce Wayne",
-  "client_id": "882726431037f908",
-  "case_manager": "Richard Grayson",
-  "primary_therapist": "Victoria Vale",
-  "assessments": [
+  name: "Bruce Wayne",
+  client_id: "882726431037f908",
+  case_manager: "Richard Grayson",
+  primary_therapist: "Victoria Vale",
+  assessments: [
     "Treatment",
     "Functional Analysis"
   ],
-  "conditions": [
+  conditions: [
     "FA",
-    "DDTT"
+    "DDTT",
   ],
-  "session_number": 17
+  session_number: 18,
 }

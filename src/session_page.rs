@@ -198,7 +198,7 @@ impl SessionPage {
     ) -> Result<()> {
         if data.session.data_type == DataType::Primary {
             if let Some(path) = client_data_path {
-                std::fs::write(path, serde_json::to_string_pretty(&data.client)?)?;
+                std::fs::write(path, serde_json5::to_string(&data.client)?)?;
             }
             data.client.session_number += 1;
         }
@@ -230,24 +230,29 @@ impl SessionPage {
         data: &mut Data,
         client_data_path: &Option<String>,
     ) {
+        // Itercept key presses to detect clicks and then delete all of them to prevent egui from reusing them.
         ui.ctx().input_mut(|i| {
-            if i.consume_key(egui::Modifiers::NONE, egui::Key::Escape) {
-                if self.session_timer.status.is_active() {
-                    self.save_discard_open = true;
-                    self.stop_all_timers();
-                }
-            }
-            if i.consume_key(egui::Modifiers::NONE, egui::Key::Tab) {
-                if self.session_timer.status.is_inactive() {
-                    self.start_session(&data.ksf);
-                }
-            }
-            if i.consume_key(egui::Modifiers::NONE, egui::Key::Space) {
-                self.toggle_pause_all_timers();
-            }
             self.clicked_keys.update(i);
             i.events.clear();
         });
+
+        // ### Permanent keys are tracked here ###
+        // ### KSF keys are tracked where the counters and timers are drawn ###
+        // Toggle pausing as needed
+        if self.clicked_keys.contains(&egui::Key::Space) {
+            self.toggle_pause_all_timers();
+        }
+        // Allowed at any time in order to close Session in opened incorrectly
+        if self.clicked_keys.contains(&egui::Key::Escape) {
+            self.save_discard_open = true;
+            self.stop_all_timers();
+        }
+        // Starting is only allowed when session is Stopped.
+        if self.clicked_keys.contains(&egui::Key::Tab) {
+            if self.session_timer.status.is_stopped() {
+                self.start_session(&data.ksf);
+            }
+        }
 
         egui::CentralPanel::default().show(ui, |ui| {
             ui.horizontal(|ui| {
@@ -364,7 +369,7 @@ impl SessionPage {
                             self.save_session(data, client_data_path);
                             self.end_session(display_info);
                         }
-                        ui.add_space(30.0);
+                        ui.add_space(20.0);
                         if ui.large_red_button("DISCARD").clicked() {
                             self.end_session(display_info);
                         }

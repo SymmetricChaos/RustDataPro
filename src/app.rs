@@ -245,15 +245,15 @@ impl eframe::App for DataPro {
                     ui.monospace(&self.data.client.primary_therapist);
                     ui.end_row();
 
-                    ui.monospace("Session:");
+                    ui.monospace("Session");
                     ui.add(egui::DragValue::new(&mut self.data.client.session_number));
                     ui.end_row();
 
-                    ui.monospace("Therapist:");
+                    ui.monospace("Therapist");
                     ui.text_edit_singleline(&mut self.data.session.therapist);
                     ui.end_row();
 
-                    ui.monospace("Data Collector:");
+                    ui.monospace("Data Collector");
                     ui.text_edit_singleline(&mut self.data.session.data_collector);
                     ui.end_row();
                 });

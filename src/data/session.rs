@@ -28,7 +28,7 @@ pub struct SessionData {
 
 impl Default for SessionData {
     fn default() -> Self {
-        serde_json::from_str(
+        serde_json5::from_str(
             r#"{
                 "assessment": "None",
                 "condition": "None",
@@ -56,6 +56,6 @@ impl SessionData {
         let mut file = File::open(&file_path)?;
         let mut s = String::new();
         file.read_to_string(&mut s)?;
-        Ok(serde_json::from_str(&s)?)
+        Ok(serde_json5::from_str(&s)?)
     }
 }

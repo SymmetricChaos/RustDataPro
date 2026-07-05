@@ -37,7 +37,7 @@ pub struct Ksf {
 
 impl Default for Ksf {
     fn default() -> Self {
-        serde_json::from_str(
+        serde_json5::from_str(
             r#"{
                 "name": "DEFAULT",
                 "frequency": [
@@ -48,8 +48,8 @@ impl Default for Ksf {
                 "duration": [
                     ["4", "ToyEngage"],
                     ["1", "Sr+"],
-                    ["2", "Sdelta"]
-                ]
+                    ["2", "Sdelta"],
+                ],
             }"#,
         )
         .unwrap()
@@ -61,7 +61,7 @@ impl Ksf {
         let mut file = File::open(&file_path)?;
         let mut s = String::new();
         file.read_to_string(&mut s)?;
-        Ok(serde_json::from_str(&s)?)
+        Ok(serde_json5::from_str(&s)?)
     }
 
     pub fn pretty_print(&self) -> String {
