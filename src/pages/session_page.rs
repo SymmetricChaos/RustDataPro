@@ -27,9 +27,8 @@ macro_rules! record_keypress {
 }
 
 pub struct SessionPage {
-    ksf_name: String,
-    timers: [Timer; 20],
-    counters: [Counter; 20],
+    timers: Vec<Timer>,
+    counters: Vec<Counter>,
     session_timer: Timer,
     session_start: DateTime<Local>,
     keypresses: Vec<(Key, f32)>,
@@ -41,53 +40,10 @@ pub struct SessionPage {
 impl SessionPage {
     pub fn new() -> Self {
         Self {
-            ksf_name: String::new(),
             session_timer: Timer::new(),
             session_start: Local::now(),
-            timers: [
-                Timer::new_splits_and_bouts(),
-                Timer::new_splits_and_bouts(),
-                Timer::new_splits_and_bouts(),
-                Timer::new_splits_and_bouts(),
-                Timer::new_splits_and_bouts(),
-                Timer::new_splits_and_bouts(),
-                Timer::new_splits_and_bouts(),
-                Timer::new_splits_and_bouts(),
-                Timer::new_splits_and_bouts(),
-                Timer::new_splits_and_bouts(),
-                Timer::new_splits_and_bouts(),
-                Timer::new_splits_and_bouts(),
-                Timer::new_splits_and_bouts(),
-                Timer::new_splits_and_bouts(),
-                Timer::new_splits_and_bouts(),
-                Timer::new_splits_and_bouts(),
-                Timer::new_splits_and_bouts(),
-                Timer::new_splits_and_bouts(),
-                Timer::new_splits_and_bouts(),
-                Timer::new_splits_and_bouts(),
-            ],
-            counters: [
-                Counter::new(),
-                Counter::new(),
-                Counter::new(),
-                Counter::new(),
-                Counter::new(),
-                Counter::new(),
-                Counter::new(),
-                Counter::new(),
-                Counter::new(),
-                Counter::new(),
-                Counter::new(),
-                Counter::new(),
-                Counter::new(),
-                Counter::new(),
-                Counter::new(),
-                Counter::new(),
-                Counter::new(),
-                Counter::new(),
-                Counter::new(),
-                Counter::new(),
-            ],
+            timers: Vec::new(),
+            counters: Vec::new(),
             keypresses: Vec::new(),
             keypresses_display: VecDeque::from(["_"; 10]),
             clicked_keys: ClickedKeys::new(),
@@ -96,14 +52,14 @@ impl SessionPage {
     }
 
     pub fn load_ksf(&mut self, ksf: &Ksf) {
-        self.ksf_name = ksf.name.clone();
-        for (keybind, timer) in ksf.duration.iter().cloned().zip(self.timers.iter_mut()) {
-            timer.key = Some(keybind.0);
-            timer.description = Some(keybind.1);
+        self.timers.clear();
+        self.counters.clear();
+        for keybind in ksf.duration.iter() {
+            self.timers
+                .push(Timer::new_splits_and_bouts().with_keybind(keybind));
         }
-        for (keybind, counter) in ksf.frequency.iter().cloned().zip(self.counters.iter_mut()) {
-            counter.key = Some(keybind.0);
-            counter.description = Some(keybind.1);
+        for keybind in ksf.frequency.iter() {
+            self.counters.push(Counter::new().with_keybind(keybind));
         }
     }
 
@@ -135,8 +91,7 @@ impl SessionPage {
         self.session_timer.toggle_pause();
     }
 
-    fn start_session(&mut self, ksf: &Ksf) {
-        self.load_ksf(ksf);
+    fn start_session(&mut self) {
         self.session_timer.start();
         self.session_start = Local::now();
         self.keypresses.push((Key::Tab, 0.0));
@@ -157,6 +112,10 @@ impl SessionPage {
         self.reset();
         display_info.go_to_about();
     }
+
+    // fn write_json(&mut self, data: &mut Data) -> String {
+    //     todo!()
+    // }
 
     fn write_data(&mut self, data: &mut Data) -> String {
         let mut output = String::new();
@@ -227,6 +186,20 @@ impl SessionPage {
         writer.write_all(self.write_data(data).as_bytes())?;
         writer.flush()?;
 
+        // let file = File::create(&format!(
+        //     "{}{}{}.raw",
+        //     data.client
+        //         .name
+        //         .chars()
+        //         .filter(|c| c.is_ascii_uppercase())
+        //         .join(""),
+        //     data.client.session_number,
+        //     data.session.data_type
+        // ))?;
+        // let mut writer = BufWriter::new(file);
+        // writer.write_all(self.write_json(data).as_bytes())?;
+        // writer.flush()?;
+
         Ok(())
     }
 
@@ -257,7 +230,7 @@ impl SessionPage {
         // Starting is only allowed when session is Stopped.
         if self.clicked_keys.contains(&egui::Key::Tab) {
             if self.session_timer.status.is_stopped() {
-                self.start_session(&data.ksf);
+                self.start_session();
             }
         }
 
@@ -267,7 +240,7 @@ impl SessionPage {
                     ui.vertical(|ui| {
                         ui.label(format!("Client: {}", data.client.name));
                         ui.label(format!("Session Number: {}", data.client.session_number));
-                        ui.label(format!("KSF: {}", self.ksf_name))
+                        ui.label(format!("KSF: {}", data.ksf.name))
                     });
                 });
                 ui.group(|ui| {
@@ -280,7 +253,7 @@ impl SessionPage {
             });
             ui.add_space(10.0);
 
-            ui.label("TAB to start. ESC return to about page.");
+            ui.label("TAB to start. ESC return to about page. SPACE to pause/unpause.");
             match self.session_timer.status {
                 TimerStatus::Active => {
                     ui.label(RichText::new("ACTIVE").monospace().color(Color32::GREEN))
