@@ -19,8 +19,8 @@ use std::{
 };
 
 macro_rules! record_keypress {
-    ($self:ident, $key:expr) => {
-        $self.keypresses.push($key);
+    ($self:ident, $key:expr, $time:expr) => {
+        $self.keypresses.push(($key, $time));
         $self.keypresses_display.pop_front();
         $self.keypresses_display.push_back($key.name());
     };
@@ -32,7 +32,7 @@ pub struct SessionPage {
     counters: [Counter; 20],
     session_timer: Timer,
     session_start: DateTime<Local>,
-    keypresses: Vec<Key>,
+    keypresses: Vec<(Key, f32)>,
     keypresses_display: VecDeque<&'static str>,
     clicked_keys: ClickedKeys,
     save_discard_open: bool,
@@ -139,13 +139,14 @@ impl SessionPage {
         self.load_ksf(ksf);
         self.session_timer.start();
         self.session_start = Local::now();
-        self.keypresses.push(Key::Tab);
+        self.keypresses.push((Key::Tab, 0.0));
         self.keypresses_display.pop_front();
         self.keypresses_display.push_back("ST");
     }
 
     fn save_session(&mut self, data: &mut Data, client_data_path: &Option<String>) {
-        self.keypresses.push(Key::Escape);
+        self.keypresses
+            .push((Key::Escape, self.session_timer.total_time()));
         self.keypresses_display.pop_front();
         self.keypresses_display.push_back("END");
         self.save_output(data).unwrap();
@@ -186,7 +187,13 @@ impl SessionPage {
         }
 
         output.push_str("\n--Raw Inputs--\n");
-        output.push_str(&self.keypresses.iter().map(|k| k.name()).join(" "));
+        output.push_str(
+            &self
+                .keypresses
+                .iter()
+                .map(|(k, t)| format!("{} {:.1}", k.name(), t))
+                .join("\n"),
+        );
 
         output
     }
@@ -312,7 +319,11 @@ impl SessionPage {
                                                 && self.clicked_keys.contains(&key)
                                             {
                                                 counter.inc();
-                                                record_keypress!(self, key);
+                                                record_keypress!(
+                                                    self,
+                                                    key,
+                                                    self.session_timer.total_time()
+                                                );
                                             }
                                             counter.view(ui);
                                             ui.end_row();
@@ -342,7 +353,11 @@ impl SessionPage {
                                                 && self.clicked_keys.contains(&key)
                                             {
                                                 timer.toggle();
-                                                record_keypress!(self, key);
+                                                record_keypress!(
+                                                    self,
+                                                    key,
+                                                    self.session_timer.total_time()
+                                                );
                                             }
                                             timer.view(ui);
                                             ui.end_row();
