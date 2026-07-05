@@ -68,7 +68,7 @@ pub struct Timer {
     pub bouts: u32,
     pub status: TimerStatus,
     pub key: Option<Key>,
-    pub description: Option<String>,
+    pub description: String,
     pub show_bouts: bool,
     pub show_split: bool,
 }
@@ -81,7 +81,7 @@ impl Default for Timer {
             bouts: 0,
             status: TimerStatus::Stopped,
             key: None,
-            description: None,
+            description: String::new(),
             show_bouts: false,
             show_split: false,
         }
@@ -96,7 +96,7 @@ impl Timer {
             bouts: 0,
             status: TimerStatus::Stopped,
             key: None,
-            description: None,
+            description: String::new(),
             show_bouts: false,
             show_split: false,
         }
@@ -104,10 +104,10 @@ impl Timer {
 
     pub fn new_splits_and_bouts() -> Self {
         Self {
-            key: None,
-            description: None,
             start_time: Instant::now(),
             saved_time: Duration::ZERO,
+            key: None,
+            description: String::new(),
             bouts: 0,
             show_bouts: true,
             show_split: true,
@@ -118,7 +118,7 @@ impl Timer {
     /// Build a timer with an associated keybind.
     pub fn with_keybind(mut self, keybind: &Keybind) -> Self {
         self.key = Some(keybind.0);
-        self.description = Some(keybind.1.clone());
+        self.description = keybind.1.clone();
         self
     }
 
@@ -130,7 +130,7 @@ impl Timer {
 
     /// Build a timer with a description.
     pub fn with_description(mut self, description: String) -> Self {
-        self.description = Some(description);
+        self.description = description;
         self
     }
 
@@ -246,8 +246,8 @@ impl Timer {
     }
 
     pub fn view(&mut self, ui: &mut Ui) {
-        if let Some(description) = &self.description {
-            ui.label(description);
+        if !self.description.is_empty() {
+            ui.label(&self.description);
         }
         if let Some(key) = &self.key {
             ui.label(key.name());

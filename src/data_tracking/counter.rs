@@ -1,9 +1,11 @@
 use crate::data::Keybind;
 use egui::{Key, Ui};
+use serde::{Deserialize, Serialize};
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Counter {
     pub key: Option<Key>,
-    pub description: Option<String>,
+    pub description: String,
     pub counter: u32,
 }
 
@@ -11,7 +13,7 @@ impl Counter {
     pub fn new() -> Self {
         Self {
             key: None,
-            description: None,
+            description: String::new(),
             counter: 0,
         }
     }
@@ -19,7 +21,7 @@ impl Counter {
     /// Build a counter with an associated keybind.
     pub fn with_keybind(mut self, keybind: &Keybind) -> Self {
         self.key = Some(keybind.0);
-        self.description = Some(keybind.1.clone());
+        self.description = keybind.1.clone();
         self
     }
 
@@ -31,7 +33,7 @@ impl Counter {
 
     /// Build a counter with a description.
     pub fn with_description(mut self, description: String) -> Self {
-        self.description = Some(description);
+        self.description = description;
         self
     }
 
@@ -48,8 +50,8 @@ impl Counter {
     }
 
     pub fn view(&mut self, ui: &mut Ui) {
-        if let Some(des) = &self.description {
-            ui.label(des);
+        if !self.description.is_empty() {
+            ui.label(&self.description);
         }
         if let Some(k) = &self.key {
             ui.label(k.name());

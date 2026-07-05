@@ -133,16 +133,16 @@ impl SessionPage {
 
         output.push_str("\n\n--Duration--\n");
         for timer in self.timers.iter_mut() {
-            if let Some(description) = &timer.description {
-                output.push_str(&format!("{} {:.1}\n", description, timer.saved_time(),));
-            }
+            output.push_str(&format!(
+                "{} {:.1}\n",
+                timer.description,
+                timer.saved_time(),
+            ));
         }
 
         output.push_str("\n--Frequency--\n");
         for counter in self.counters.iter() {
-            if let Some(description) = &counter.description {
-                output.push_str(&format!("{} {}\n", description, counter.counter));
-            }
+            output.push_str(&format!("{} {}\n", counter.description, counter.counter));
         }
 
         output.push_str("\n--Raw Inputs--\n");
