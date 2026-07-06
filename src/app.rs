@@ -4,7 +4,7 @@ use crate::{
     utils::date_time_string,
 };
 use chrono::Local;
-use egui::{SurrenderFocusOn::Never, Visuals};
+use egui::Visuals;
 use egui_file_dialog::FileDialog;
 use std::path::PathBuf;
 
@@ -93,8 +93,6 @@ impl DataPro {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         cc.egui_ctx.set_pixels_per_point(1.5);
         cc.egui_ctx.set_visuals(Visuals::dark());
-        cc.egui_ctx
-            .options_mut(|options| options.input_options.surrender_focus_on = Never);
         Default::default()
     }
 
@@ -105,6 +103,7 @@ impl DataPro {
                 self.ksf_err.clear();
             }
             Err(e) => {
+                self.data.ksf = KsfData::default();
                 self.ksf_err = e.to_string();
             }
         };

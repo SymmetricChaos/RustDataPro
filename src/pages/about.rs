@@ -105,6 +105,7 @@ impl About {
             ui.add_space(10.0);
 
             if ui.large_green_button("BEGIN SESSION").clicked() {
+                app.session_page.load_ksf(&app.data);
                 app.display_info.go_to_session();
             }
         });

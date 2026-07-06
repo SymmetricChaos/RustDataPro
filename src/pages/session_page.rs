@@ -52,12 +52,8 @@ impl SessionPage {
     }
 
     fn reset(&mut self) {
-        for timer in self.timers.iter_mut() {
-            timer.reset();
-        }
-        for counter in self.counters.iter_mut() {
-            counter.reset();
-        }
+        self.timers.clear();
+        self.counters.clear();
         self.session_timer.reset();
         self.keypresses.clear();
         self.keypresses_display = VecDeque::from(["_"; 10]);
@@ -77,6 +73,16 @@ impl SessionPage {
             timer.toggle_pause();
         }
         self.session_timer.toggle_pause();
+    }
+
+    pub fn load_ksf(&mut self, data: &Data) {
+        for kb in data.ksf.duration.iter() {
+            self.timers
+                .push(Timer::new_splits_and_bouts().with_keybind(kb));
+        }
+        for kb in data.ksf.frequency.iter() {
+            self.counters.push(Counter::default().with_keybind(kb));
+        }
     }
 
     fn start_session(&mut self) {
