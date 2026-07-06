@@ -25,6 +25,8 @@ impl DisplayInfo {
     pub fn go_to_session(&mut self) {
         self.active_page = Page::Session;
         self.sidebar_open = false;
+        self.timers_open = false;
+        self.random_open = false;
     }
 
     pub fn go_to_reliability(&mut self) {
