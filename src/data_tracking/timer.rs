@@ -1,8 +1,7 @@
+use crate::data::Keybind;
 use egui::{Color32, Key, RichText, Ui};
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
-
-use crate::data::Keybind;
 
 macro_rules! timer_format {
     () => {
@@ -22,11 +21,9 @@ macro_rules! timer_display_off {
     };
 }
 
-macro_rules! bout_display {
-    ($ui:ident, $active:expr, $bouts:expr) => {
-        if $active {
-            $ui.centered_and_justified(|ui| ui.monospace(RichText::new(format!("{:>2}", $bouts))));
-        }
+macro_rules! timer_display_negative {
+    ($ui:ident, $timer:expr) => {
+        $ui.monospace(RichText::new(format!(timer_format!(), $timer)).color(Color32::RED))
     };
 }
 
@@ -65,12 +62,11 @@ impl TimerStatus {
 pub struct Timer {
     pub start_time: Instant,
     pub saved_time: Duration,
+    pub countdown_from: f32,
     pub bouts: u32,
     pub status: TimerStatus,
     pub key: Option<Key>,
     pub description: String,
-    pub show_bouts: bool,
-    pub show_split: bool,
 }
 
 impl Default for Timer {
@@ -78,30 +74,16 @@ impl Default for Timer {
         Self {
             start_time: Instant::now(),
             saved_time: Duration::ZERO,
+            countdown_from: 5.0, // DO NOT LEAVE AS DEFAULT
             bouts: 0,
             status: TimerStatus::Stopped,
             key: None,
             description: String::new(),
-            show_bouts: false,
-            show_split: false,
         }
     }
 }
 
 impl Timer {
-    pub fn new_splits_and_bouts() -> Self {
-        Self {
-            start_time: Instant::now(),
-            saved_time: Duration::ZERO,
-            key: None,
-            description: String::new(),
-            bouts: 0,
-            show_bouts: true,
-            show_split: true,
-            status: TimerStatus::Stopped,
-        }
-    }
-
     /// Build a timer with an associated keybind.
     pub fn with_keybind(mut self, keybind: &Keybind) -> Self {
         self.key = Some(keybind.0);
@@ -118,12 +100,6 @@ impl Timer {
     /// Build a timer with a description.
     pub fn with_description(mut self, description: String) -> Self {
         self.description = description;
-        self
-    }
-
-    /// Build a timer that shows how many time it has been started.
-    pub fn with_bouts(mut self) -> Self {
-        self.show_bouts = true;
         self
     }
 
@@ -150,6 +126,14 @@ impl Timer {
                 self.status = TimerStatus::Active;
                 self.start_time = Instant::now();
             }
+        }
+    }
+
+    /// If active set status to Paused. Does not update bouts.
+    pub fn pause(&mut self) {
+        if self.status.is_active() {
+            self.status = TimerStatus::Paused;
+            self.saved_time += self.start_time.elapsed();
         }
     }
 
@@ -190,29 +174,26 @@ impl Timer {
         self.saved_time.as_secs_f32()
     }
 
-    pub fn saved_time_raw(&self) -> Duration {
-        self.saved_time
-    }
-
     /// How long the timer has been running since it was last started in seconds.
     pub fn current_time(&self) -> f32 {
-        self.current_time_raw().as_secs_f32()
-    }
-
-    pub fn current_time_raw(&self) -> Duration {
-        Instant::now() - self.start_time
+        (Instant::now() - self.start_time).as_secs_f32()
     }
 
     /// The total time recorded in seconds. Sum of .saved_time() and .current_time().
     pub fn total_time(&self) -> f32 {
-        self.total_time_raw().as_secs_f32()
+        (self.start_time.elapsed() + self.saved_time).as_secs_f32()
     }
 
-    pub fn total_time_raw(&self) -> Duration {
-        self.start_time.elapsed() + self.saved_time
+    /// Time remaining in the countdown.
+    pub fn remaining_time(&self) -> f32 {
+        self.countdown_from - self.total_time()
     }
 
-    fn view_split(&mut self, ui: &mut Ui) {
+    pub fn view_split(&mut self, ui: &mut Ui) {
+        ui.monospace(&self.description);
+        if let Some(key) = self.key {
+            ui.monospace(key.name());
+        }
         if self.status.is_active() {
             ui.request_repaint();
             timer_display_on!(ui, self.saved_time());
@@ -221,9 +202,10 @@ impl Timer {
             timer_display_off!(ui, self.saved_time());
             timer_display_off!(ui, 0.0);
         }
+        ui.monospace(self.bouts.to_string());
     }
 
-    fn view_unsplit(&mut self, ui: &mut Ui) {
+    pub fn view_unsplit(&mut self, ui: &mut Ui) {
         if self.status.is_active() {
             ui.request_repaint();
             timer_display_on!(ui, self.total_time());
@@ -232,18 +214,18 @@ impl Timer {
         }
     }
 
-    pub fn view(&mut self, ui: &mut Ui) {
-        if !self.description.is_empty() {
-            ui.label(&self.description);
-        }
-        if let Some(key) = &self.key {
-            ui.label(key.symbol_or_name());
-        }
-        if self.show_split {
-            self.view_split(ui);
+    pub fn view_countdown(&mut self, ui: &mut Ui) {
+        ui.add(egui::DragValue::new(&mut self.countdown_from));
+        if self.status.is_active() {
+            ui.request_repaint();
+            let t = self.remaining_time();
+            if t.is_sign_positive() {
+                timer_display_on!(ui, self.remaining_time());
+            } else {
+                timer_display_negative!(ui, self.remaining_time());
+            }
         } else {
-            self.view_unsplit(ui);
+            timer_display_off!(ui, self.countdown_from - self.saved_time());
         }
-        bout_display!(ui, self.show_bouts, self.bouts);
     }
 }

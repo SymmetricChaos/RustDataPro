@@ -3,13 +3,13 @@ use egui::{Key, Ui};
 
 const NUM_TIMERS: usize = 5;
 
-pub struct Timers {
+pub struct CountdownTimers {
     timers: [Timer; NUM_TIMERS],
     linked_timers: [bool; NUM_TIMERS],
     clicked_keys: ClickedKeys,
 }
 
-impl Default for Timers {
+impl Default for CountdownTimers {
     fn default() -> Self {
         Self {
             timers: [
@@ -25,7 +25,7 @@ impl Default for Timers {
     }
 }
 
-impl Timers {
+impl CountdownTimers {
     pub fn pause_all_timers(&mut self) {
         for timer in self.timers.iter_mut() {
             timer.pause();
@@ -43,9 +43,10 @@ impl Timers {
     }
 
     pub fn view(&mut self, ui: &mut Ui, open: &mut bool) {
-        egui::Window::new("Timers").open(open).show(ui, |ui| {
-            ui.ctx().input_mut(|input| {
-                if input.focused {
+        egui::Window::new("Countdown Timers")
+            .open(open)
+            .show(ui, |ui| {
+                ui.ctx().input_mut(|input| {
                     self.clicked_keys.update(input);
 
                     // Detect toggle linked
@@ -66,38 +67,38 @@ impl Timers {
                             self.timers[idx].toggle()
                         }
                     }
-                }
-            });
-            ui.add_space(10.0);
-            ui.horizontal(|ui| {
-                if ui.button("Reset All").clicked() {
-                    self.reset_all_timers()
-                }
-                if ui.button("Pause All").clicked() {
-                    self.pause_all_timers()
-                }
-                // if ui.button("Start All").clicked() {
-                //     for timer in self.timers.iter_mut() {
-                //         timer.start();
-                //     }
-                // }
-            });
-            ui.add_space(10.0);
-            ui.label("Press 1-5 to toggle timers.\n\nPress 0 to toggle linked timers.");
-            ui.add_space(10.0);
-            egui::Grid::new("timers_page_grid")
-                .striped(true)
-                .show(ui, |ui| {
-                    for (n, (timer, linked)) in self.timers_and_links().enumerate() {
-                        ui.label(format!("{})", n + 1));
-                        timer.view_unsplit(ui);
-                        if ui.button("x").on_hover_text("reset").clicked() {
-                            timer.reset();
-                        }
-                        ui.checkbox(linked, "").on_disabled_hover_text("linked");
-                        ui.end_row();
-                    }
                 });
-        });
+
+                ui.add_space(10.0);
+                ui.horizontal(|ui| {
+                    if ui.button("Reset All").clicked() {
+                        self.reset_all_timers()
+                    }
+                    if ui.button("Pause All").clicked() {
+                        self.pause_all_timers()
+                    }
+                    // if ui.button("Start All").clicked() {
+                    //     for timer in self.timers.iter_mut() {
+                    //         timer.start();
+                    //     }
+                    // }
+                });
+                ui.add_space(10.0);
+                ui.label("Press 1-5 to toggle timers.\n\nPress 0 to toggle linked timers.");
+                ui.add_space(10.0);
+                egui::Grid::new("countdown_timers_page_grid")
+                    .striped(true)
+                    .show(ui, |ui| {
+                        for (n, (timer, linked)) in self.timers_and_links().enumerate() {
+                            ui.label(format!("{})", n + 1));
+                            timer.view_countdown(ui);
+                            if ui.button("x").on_hover_text("reset").clicked() {
+                                timer.reset();
+                            }
+                            ui.checkbox(linked, "").on_disabled_hover_text("linked");
+                            ui.end_row();
+                        }
+                    });
+            });
     }
 }
