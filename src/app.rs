@@ -13,6 +13,7 @@ pub struct DisplayInfo {
     pub timers_open: bool,
     pub random_open: bool,
     pub sidebar_open: bool,
+    pub zoom: f32,
 }
 
 impl DisplayInfo {
@@ -71,6 +72,7 @@ impl Default for DataPro {
                 timers_open: false,
                 random_open: false,
                 sidebar_open: true,
+                zoom: 1.0,
             },
 
             ksf_file_dialog: FileDialog::default(),

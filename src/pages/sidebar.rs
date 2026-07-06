@@ -25,6 +25,22 @@ impl Sidebar {
                 });
 
                 ui.add_space(20.0);
+                ui.horizontal(|ui| {
+                    ui.label("Visual Scaling");
+                    if ui
+                        .add(
+                            egui::DragValue::new(&mut app.display_info.zoom)
+                                .range(1.0..=2.0)
+                                .speed(0.1)
+                                .fixed_decimals(1),
+                        )
+                        .lost_focus()
+                    {
+                        ui.ctx().set_pixels_per_point(app.display_info.zoom);
+                    }
+                });
+
+                ui.add_space(20.0);
                 ui.label("Other Useful Functionality");
                 ui.add_space(5.0);
                 if ui.large_button("Randomness").clicked() {
