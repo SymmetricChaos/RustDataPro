@@ -91,7 +91,7 @@ impl Default for DataPro {
 
 impl DataPro {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        cc.egui_ctx.set_pixels_per_point(1.5);
+        cc.egui_ctx.set_pixels_per_point(1.0);
         cc.egui_ctx.set_visuals(Visuals::dark());
         Default::default()
     }
