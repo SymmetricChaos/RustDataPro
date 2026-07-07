@@ -74,7 +74,7 @@ impl Default for DataPro {
                 timers_open: false,
                 random_open: false,
                 sidebar_open: true,
-                zoom: 1.0,
+                zoom: 1.2,
             },
 
             ksf_file_dialog: FileDialog::default(),

@@ -77,8 +77,7 @@ impl SessionPage {
 
     pub fn load_ksf(&mut self, data: &Data) {
         for kb in data.ksf.duration.iter() {
-            self.timers
-                .push(Timer::new_splits_and_bouts().with_keybind(kb));
+            self.timers.push(Timer::default().with_keybind(kb));
         }
         for kb in data.ksf.frequency.iter() {
             self.counters.push(Counter::default().with_keybind(kb));
@@ -263,7 +262,7 @@ impl SessionPage {
 
             ui.horizontal(|ui| {
                 ui.label("Session Time:");
-                self.session_timer.view(ui);
+                self.session_timer.view_unsplit(ui);
             });
             ui.add_space(10.0);
 
@@ -326,7 +325,7 @@ impl SessionPage {
                                                     self.session_timer.total_time()
                                                 );
                                             }
-                                            timer.view(ui);
+                                            timer.view_split(ui);
                                             ui.end_row();
                                         }
                                     }
