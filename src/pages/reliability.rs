@@ -1,32 +1,43 @@
-use crate::{app::DisplayInfo, utils::DataProUiElements};
+use crate::{app::DisplayInfo, data::timeline::Moment, utils::DataProUiElements};
 use anyhow::Result;
 use egui::{Key, TextBuffer, Ui};
 use egui_file_dialog::FileDialog;
 use std::{ffi::OsStr, path::PathBuf};
 
-fn extract_times(v: Vec<(Key, f32)>, key: Key) -> Vec<f32> {
+fn extract_times(v: &Vec<Moment>, key: Key) -> Vec<f32> {
     v.iter().filter(|e| e.0 == key).map(|e| e.1).collect()
 }
 
-fn interval_reli(max_time: f32, interval: f32, primary: Vec<f32>, reli: Vec<f32>) -> Result<f32> {
+fn interval_reli(
+    max_time: f32,
+    interval: f32,
+    key: Key,
+    primary: &Vec<Moment>,
+    reli: &Vec<Moment>,
+) -> Result<f32> {
     let mut time = interval;
     let mut ratio: f32 = 1.0;
-    let mut primary = primary.clone();
-    primary.reverse();
-    let mut reli = reli.clone();
-    reli.reverse();
+    let primary = extract_times(primary, key);
+    let mut p_iter = primary.into_iter().peekable();
+    let reli = extract_times(reli, key);
+    let mut r_iter = reli.into_iter().peekable();
     while time <= max_time {
         let mut pctr = 0.0;
-        while let Some(time) = primary.last() {
-            primary.pop();
+        while p_iter.next_if(|x| x <= &time).is_some() {
             pctr += 1.0;
         }
         let mut rctr = 0.0;
-        while let Some(time) = reli.last() {
-            reli.pop();
+        while r_iter.next_if(|x| x <= &time).is_some() {
             rctr += 1.0;
         }
+        if pctr == 0.0 {
+            todo!("handle interval where primary count is zero")
+        }
+        if rctr == 0.0 {
+            todo!("handle interval where reli count is zero")
+        }
         let interval_ratio = pctr / rctr;
+        ratio *= interval_ratio;
         time += interval;
     }
     Ok(ratio)

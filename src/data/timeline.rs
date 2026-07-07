@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Context;
 use egui::Key;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
