@@ -1,10 +1,15 @@
 use crate::{app::DisplayInfo, utils::DataProUiElements};
-use egui::{TextBuffer, Ui};
+use egui::{TextBuffer, Ui, Key};
 use egui_file_dialog::FileDialog;
 use std::{ffi::OsStr, path::PathBuf};
+use anyhow::Result;
 
-fn ten_second_reli(max_time: f32, primary: Vec<f32>, reli: Vec<f32>) -> Result<f32> {
-    let mut time: f32 = 10.0;
+fn extract_times(v: Vec<(Key,f32), key: Key) -> Vec<f32> {
+    v.iter().filter(|e| e.0 == key).map(|e| e.1).collect()
+}
+
+fn interval_reli(max_time: f32, interval: f32, primary: Vec<f32>, reli: Vec<f32>) -> Result<f32> {
+    let mut time = interval;
     let mut ratio: f32 = 1.0;
     let mut primary = primary.clone();
     primary.reverse();
@@ -22,7 +27,7 @@ fn ten_second_reli(max_time: f32, primary: Vec<f32>, reli: Vec<f32>) -> Result<f
             rctr += 1.0;
         }
         let interval_ratio = pctr/rctr;
-        time += 10.0
+        time += interval;
     }
     Ok(ratio)
 }
