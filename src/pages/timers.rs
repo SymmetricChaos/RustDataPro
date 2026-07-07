@@ -1,5 +1,5 @@
 use crate::{data_tracking::timer::Timer, utils::ClickedKeys};
-use egui::{Key, Ui};
+use egui::{Color32, Key, RichText, Ui};
 
 const NUM_TIMERS: usize = 5;
 
@@ -50,30 +50,12 @@ impl Timers {
     }
 
     pub fn view(&mut self, ui: &mut Ui, open: &mut bool) {
-        ui.ctx().input_mut(|input| {
-            self.clicked_keys.update(input);
+        let countdown = self.countdown;
+        let mut allow_keys = true;
 
-            // Detect toggle linked
-            if self.clicked_keys.contains(&Key::Num0) {
-                for (timer, linked) in self.timers_and_links() {
-                    if *linked {
-                        timer.toggle();
-                    }
-                }
-            }
-
-            // Detect toggle each
-            for (idx, key) in [Key::Num1, Key::Num2, Key::Num3, Key::Num4, Key::Num5]
-                .iter()
-                .enumerate()
-            {
-                if self.clicked_keys.contains(key) {
-                    self.timers[idx].toggle()
-                }
-            }
-        });
         egui::Window::new("Timers").open(open).show(ui, |ui| {
             ui.add_space(10.0);
+
             ui.horizontal(|ui| {
                 if ui.button("Reset All").clicked() {
                     self.reset_all_timers()
@@ -93,9 +75,10 @@ impl Timers {
                 }
             });
             ui.add_space(10.0);
+
             ui.label("Press 1-5 to toggle timers.\n\nPress 0 to toggle linked timers.");
             ui.add_space(10.0);
-            let countdown = self.countdown;
+
             egui::Grid::new("timers_page_grid")
                 .striped(true)
                 .show(ui, |ui| {
@@ -103,7 +86,33 @@ impl Timers {
                         ui.label(format!("{})", n + 1));
 
                         if countdown {
-                            timer.view_countdown(ui);
+                            let draginfo = ui.add(egui::DragValue::new(&mut timer.countdown_from));
+                            if draginfo.has_focus() {
+                                allow_keys = false;
+                            }
+                            if draginfo.changed() {
+                                timer.reset();
+                            }
+                            if timer.status.is_active() {
+                                ui.request_repaint();
+                                let t = timer.remaining_time();
+                                if t.is_sign_positive() {
+                                    ui.monospace(
+                                        RichText::new(format!("{:6.2}", (timer.remaining_time())))
+                                            .color(Color32::YELLOW),
+                                    );
+                                } else {
+                                    ui.monospace(
+                                        RichText::new(format!("{:6.2}", (timer.remaining_time())))
+                                            .color(Color32::RED),
+                                    );
+                                }
+                            } else {
+                                ui.monospace(RichText::new(format!(
+                                    "{:6.2}",
+                                    (timer.countdown_from - timer.saved_time())
+                                )));
+                            }
                         } else {
                             timer.view_unsplit(ui);
                         }
@@ -122,5 +131,29 @@ impl Timers {
                 });
             ui.add_space(10.0);
         });
+        if allow_keys {
+            ui.ctx().input_mut(|input| {
+                self.clicked_keys.update(input);
+
+                // Detect toggle linked
+                if self.clicked_keys.contains(&Key::Num0) {
+                    for (timer, linked) in self.timers_and_links() {
+                        if *linked {
+                            timer.toggle();
+                        }
+                    }
+                }
+
+                // Detect toggle each
+                for (idx, key) in [Key::Num1, Key::Num2, Key::Num3, Key::Num4, Key::Num5]
+                    .iter()
+                    .enumerate()
+                {
+                    if self.clicked_keys.contains(key) {
+                        self.timers[idx].toggle()
+                    }
+                }
+            });
+        }
     }
 }
