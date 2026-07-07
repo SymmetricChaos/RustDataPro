@@ -1,5 +1,8 @@
-use serde::{Deserialize, Serialize};
+use anyhow::{Context, Result};
 use egui::Key;
+use serde::{Deserialize, Serialize};
+use std::fmt::Display;
+use std::str::FromStr;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(try_from = "(String,String)")]
@@ -15,7 +18,7 @@ impl TryFrom<(String, String)> for Moment {
     type Error = anyhow::Error;
 
     fn try_from(value: (String, String)) -> std::prelude::v1::Result<Self, Self::Error> {
-        Ok(Keybind(
+        Ok(Moment(
             egui::Key::from_name(&value.0).context("invalid key specification for keybind")?,
             f32::from_str(&value.1)?,
         ))
@@ -31,7 +34,7 @@ impl Timeline {
     pub fn example() -> Self {
         serde_json::from_str(
             r#"{
-                "data": [["a","1.0"],["b","1.1"],["c","1.5"],["d","12.0"],]
+                "data": [["a","1.0"],["b","1.1"],["c","1.5"],["Esc","12.0"]]
             }"#,
         )
         .unwrap()
@@ -40,5 +43,5 @@ impl Timeline {
 
 #[test]
 fn test_time() {
-    println!("{:?}",Timeline::example().data)
+    println!("{:?}", Timeline::example().data)
 }
