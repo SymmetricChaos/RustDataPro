@@ -11,7 +11,6 @@ use std::path::PathBuf;
 pub struct DisplayInfo {
     pub active_page: Page,
     pub timers_open: bool,
-    pub countdown_timers_open: bool,
     pub random_open: bool,
     pub sidebar_open: bool,
     pub zoom: f32,
@@ -28,7 +27,6 @@ impl DisplayInfo {
         self.sidebar_open = false;
         self.timers_open = false;
         self.random_open = false;
-        self.countdown_timers_open = false;
     }
 
     pub fn go_to_reliability(&mut self) {
@@ -38,10 +36,6 @@ impl DisplayInfo {
 
     pub fn toggle_timer_display(&mut self) {
         self.timers_open = !self.timers_open;
-    }
-
-    pub fn toggle_countdown_timer_display(&mut self) {
-        self.countdown_timers_open = !self.countdown_timers_open;
     }
 
     pub fn toggle_random_display(&mut self) {
@@ -62,7 +56,6 @@ pub struct DataPro {
 
     pub randomness_page: crate::pages::RandomServices,
     pub timers: crate::pages::Timers,
-    pub countdown_timers: crate::pages::CountdownTimers,
 
     pub session_page: crate::pages::SessionPage,
     pub reliability_page: crate::pages::ReliabilityPage,
@@ -79,7 +72,6 @@ impl Default for DataPro {
             display_info: DisplayInfo {
                 active_page: Page::About,
                 timers_open: false,
-                countdown_timers_open: false,
                 random_open: false,
                 sidebar_open: true,
                 zoom: 1.2,
@@ -94,7 +86,6 @@ impl Default for DataPro {
 
             randomness_page: crate::pages::RandomServices::default(),
             timers: crate::pages::Timers::default(),
-            countdown_timers: crate::pages::CountdownTimers::default(),
 
             session_page: crate::pages::SessionPage::new(),
             reliability_page: crate::pages::ReliabilityPage::default(),
@@ -155,8 +146,6 @@ impl eframe::App for DataPro {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         // ### Windows ###
         self.timers.view(ui, &mut self.display_info.timers_open);
-        self.countdown_timers
-            .view(ui, &mut self.display_info.countdown_timers_open);
         self.randomness_page
             .view(ui, &mut self.display_info.random_open);
 

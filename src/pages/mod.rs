@@ -1,5 +1,4 @@
 pub mod about;
-pub mod countdown_timers;
 pub mod random_services;
 pub mod reliability;
 pub mod session_page;
@@ -7,7 +6,6 @@ pub mod sidebar;
 pub mod timers;
 
 pub use about::*;
-pub use countdown_timers::*;
 pub use random_services::*;
 pub use reliability::*;
 pub use session_page::*;

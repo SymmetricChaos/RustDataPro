@@ -53,11 +53,6 @@ impl Sidebar {
                 }
 
                 ui.add_space(5.0);
-                if ui.large_button("Countdown Timers").clicked() {
-                    app.display_info.toggle_countdown_timer_display();
-                }
-
-                ui.add_space(5.0);
                 if ui.large_button("Reliability").clicked() {
                     app.display_info.go_to_reliability();
                 }
