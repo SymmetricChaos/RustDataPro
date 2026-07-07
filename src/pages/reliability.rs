@@ -3,6 +3,30 @@ use egui::{TextBuffer, Ui};
 use egui_file_dialog::FileDialog;
 use std::{ffi::OsStr, path::PathBuf};
 
+fn ten_second_reli(max_time: f32, primary: Vec<f32>, reli: Vec<f32>) -> Result<f32> {
+    let mut time: f32 = 10.0;
+    let mut ratio: f32 = 1.0;
+    let mut primary = primary.clone();
+    primary.reverse();
+    let mut reli = reli.clone();
+    reli.reverse();
+    while time <= max_time {
+        let mut pctr = 0.0;
+        while let Some(time) = primary.last() {
+            primary.pop();
+            pctr += 1.0;
+        }
+        let mut rctr = 0.0;
+        while let Some(time) = reli.last() {
+            reli.pop();
+            rctr += 1.0;
+        }
+        let interval_ratio = pctr/rctr;
+        time += 10.0
+    }
+    Ok(ratio)
+}
+
 pub struct ReliabilityPage {
     primary_file_dialog: FileDialog,
     primary_bufs: Vec<PathBuf>,
