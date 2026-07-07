@@ -1,12 +1,10 @@
 use crate::{app::DisplayInfo, utils::DataProUiElements};
-use egui::{TextBuffer, Ui, Key};
+use anyhow::Result;
+use egui::{Key, TextBuffer, Ui};
 use egui_file_dialog::FileDialog;
 use std::{ffi::OsStr, path::PathBuf};
-use anyhow::Result;
 
-
-
-fn extract_times(v: Vec<(Key,f32), key: Key) -> Vec<f32> {
+fn extract_times(v: Vec<(Key, f32)>, key: Key) -> Vec<f32> {
     v.iter().filter(|e| e.0 == key).map(|e| e.1).collect()
 }
 
@@ -28,7 +26,7 @@ fn interval_reli(max_time: f32, interval: f32, primary: Vec<f32>, reli: Vec<f32>
             reli.pop();
             rctr += 1.0;
         }
-        let interval_ratio = pctr/rctr;
+        let interval_ratio = pctr / rctr;
         time += interval;
     }
     Ok(ratio)
