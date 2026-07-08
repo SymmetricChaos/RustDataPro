@@ -1,4 +1,3 @@
-use crate::data::Keybind;
 use egui::{Key, Ui};
 use serde::{Deserialize, Serialize};
 
@@ -21,7 +20,7 @@ impl Default for Counter {
 
 impl Counter {
     /// Build a counter with an associated keybind.
-    pub fn with_keybind(mut self, keybind: &Keybind) -> Self {
+    pub fn with_keybind(mut self, keybind: &(Key, String)) -> Self {
         self.key = Some(keybind.0);
         self.description = keybind.1.clone();
         self

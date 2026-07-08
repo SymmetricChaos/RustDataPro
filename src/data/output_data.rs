@@ -1,0 +1,28 @@
+use crate::data::{ClientData, KsfData, SessionData, timeline::Timeline};
+use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
+use std::{fs::File, io::Read, path::Path};
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct OutputData {
+    pub client: ClientData,
+    pub session: SessionData,
+    pub session_duration: f32,
+    pub duration: Vec<(String, u32, f32)>,
+    pub frequency: Vec<(String, u32)>,
+    pub timeline: Timeline,
+    pub ksf: KsfData,
+}
+
+impl OutputData {
+    pub fn from_file(file_path: &Path) -> Result<Self> {
+        let mut file = File::open(&file_path)?;
+        let mut s = String::new();
+        file.read_to_string(&mut s)?;
+        Ok(serde_json::from_str(&s)?)
+    }
+
+    pub fn to_json(&self) -> Result<String> {
+        serde_json::to_string_pretty(&self).context("unable to convert session data to json")
+    }
+}

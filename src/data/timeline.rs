@@ -1,47 +1,58 @@
-use anyhow::Context;
-use egui::Key;
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
-use std::str::FromStr;
+use std::{
+    fs::File,
+    io::Read,
+    ops::{Deref, DerefMut},
+    path::Path,
+};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(try_from = "(String,String)")]
-pub struct Moment(pub Key, pub f32);
+pub struct Timeline(Vec<(String, f32)>);
 
-impl Display for Moment {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({}, {})", self.0.name(), self.1)
+impl Default for Timeline {
+    fn default() -> Self {
+        Self(Vec::new())
     }
 }
 
-impl TryFrom<(String, String)> for Moment {
-    type Error = anyhow::Error;
+impl Deref for Timeline {
+    type Target = Vec<(String, f32)>;
 
-    fn try_from(value: (String, String)) -> std::prelude::v1::Result<Self, Self::Error> {
-        Ok(Moment(
-            egui::Key::from_name(&value.0).context("invalid key specification for keybind")?,
-            f32::from_str(&value.1)?,
-        ))
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Timeline {
-    data: Vec<Moment>,
+impl DerefMut for Timeline {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
 }
 
 impl Timeline {
     pub fn example() -> Self {
         serde_json::from_str(
             r#"{
-                "data": [["a","1.0"],["b","1.1"],["c","1.5"],["Esc","12.0"]]
+                "timeline": [["Tab",0.0],["Num4",1.1079073],["Num4",3.5078146],["Num4",3.6745386],["V",6.391463]]
             }"#,
         )
         .unwrap()
+    }
+
+    pub fn from_file(file_path: &Path) -> Result<Self> {
+        let mut file = File::open(&file_path)?;
+        let mut s = String::new();
+        file.read_to_string(&mut s)?;
+        Ok(serde_json::from_str(&s)?)
+    }
+
+    pub fn to_json(&self) -> Result<String> {
+        serde_json::to_string(&self).context("unable to convert timeline data to json")
     }
 }
 
 #[test]
 fn test_time() {
-    println!("{:?}", Timeline::example().data)
+    println!("{:?}", Timeline::example().0)
 }

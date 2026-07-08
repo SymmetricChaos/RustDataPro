@@ -1,16 +1,12 @@
 use crate::{
     app::DisplayInfo,
-    data::{Data, DataType},
+    data::{Data, DataType, output_data::OutputData, timeline::Timeline},
     data_tracking::{TimerStatus, counter::Counter, timer::Timer},
     utils::{ClickedKeys, DataProUiElements, date_time_string},
 };
 use anyhow::Result;
 use chrono::{DateTime, Local};
-use egui::{
-    Color32,
-    Key::{self},
-    RichText, Ui,
-};
+use egui::{Color32, RichText, Ui};
 use itertools::Itertools;
 use std::{
     collections::VecDeque,
@@ -19,8 +15,8 @@ use std::{
 };
 
 macro_rules! record_keypress {
-    ($self:ident, $key:expr, $time:expr) => {
-        $self.keypresses.push(($key, $time));
+    ($self:ident, $key:expr, $decription:expr, $time:expr) => {
+        $self.timeline.push(($decription, $time));
         $self.keypresses_display.pop_front();
         $self.keypresses_display.push_back($key.name());
     };
@@ -31,7 +27,7 @@ pub struct SessionPage {
     counters: Vec<Counter>,
     session_timer: Timer,
     session_start: DateTime<Local>,
-    keypresses: Vec<(Key, f32)>,
+    timeline: Timeline,
     keypresses_display: VecDeque<&'static str>,
     clicked_keys: ClickedKeys,
     save_discard_open: bool,
@@ -44,7 +40,7 @@ impl SessionPage {
             session_start: Local::now(),
             timers: Vec::new(),
             counters: Vec::new(),
-            keypresses: Vec::new(),
+            timeline: Timeline::default(),
             keypresses_display: VecDeque::from(["_"; 10]),
             clicked_keys: ClickedKeys::new(),
             save_discard_open: false,
@@ -55,7 +51,7 @@ impl SessionPage {
         self.timers.clear();
         self.counters.clear();
         self.session_timer.reset();
-        self.keypresses.clear();
+        self.timeline.clear();
         self.keypresses_display = VecDeque::from(["_"; 10]);
         self.clicked_keys.clear();
         self.save_discard_open = false;
@@ -87,14 +83,14 @@ impl SessionPage {
     fn start_session(&mut self) {
         self.session_timer.start();
         self.session_start = Local::now();
-        self.keypresses.push((Key::Tab, 0.0));
+        self.timeline.push((String::from("Start"), 0.0));
         self.keypresses_display.pop_front();
         self.keypresses_display.push_back("ST");
     }
 
     fn save_session(&mut self, data: &mut Data, client_data_path: &Option<String>) {
-        self.keypresses
-            .push((Key::Escape, self.session_timer.total_time()));
+        self.timeline
+            .push((String::from("End"), self.session_timer.total_time()));
         self.keypresses_display.pop_front();
         self.keypresses_display.push_back("END");
         self.save_output(data).unwrap();
@@ -105,10 +101,6 @@ impl SessionPage {
         self.reset();
         display_info.go_to_about();
     }
-
-    // fn write_json(&mut self, data: &mut Data) -> String {
-    //     todo!()
-    // }
 
     fn write_data(&mut self, data: &mut Data) -> String {
         let mut output = String::new();
@@ -125,6 +117,7 @@ impl SessionPage {
         output.push_str(&data.session.to_string());
 
         output.push_str("\n\n--Duration--\n");
+
         for timer in self.timers.iter_mut() {
             output.push_str(&format!(
                 "{} {:.1}\n",
@@ -141,13 +134,34 @@ impl SessionPage {
         output.push_str("\n--Raw Inputs--\n");
         output.push_str(
             &self
-                .keypresses
+                .timeline
                 .iter()
-                .map(|(k, t)| format!("{} {:.1}", k.name(), t))
+                .map(|(d, t)| format!("{} {:.1}", d, t))
                 .join("\n"),
         );
 
         output
+    }
+
+    fn write_json(&self, data: &mut Data) -> String {
+        serde_json::to_string(&OutputData {
+            client: data.client.clone(),
+            session: data.session.clone(),
+            session_duration: self.session_timer.total_time(),
+            duration: self
+                .timers
+                .iter()
+                .map(|t| (t.description.clone(), t.bouts, t.total_time()))
+                .collect(),
+            frequency: self
+                .counters
+                .iter()
+                .map(|c| (c.description.clone(), c.counter))
+                .collect(),
+            timeline: self.timeline.clone(),
+            ksf: data.ksf.clone(),
+        })
+        .unwrap()
     }
 
     fn update_client_file(
@@ -179,19 +193,19 @@ impl SessionPage {
         writer.write_all(self.write_data(data).as_bytes())?;
         writer.flush()?;
 
-        // let file = File::create(&format!(
-        //     "{}{}{}.raw",
-        //     data.client
-        //         .name
-        //         .chars()
-        //         .filter(|c| c.is_ascii_uppercase())
-        //         .join(""),
-        //     data.client.session_number,
-        //     data.session.data_type
-        // ))?;
-        // let mut writer = BufWriter::new(file);
-        // writer.write_all(self.write_json(data).as_bytes())?;
-        // writer.flush()?;
+        let file = File::create(&format!(
+            "{}{}{}_raw.txt",
+            data.client
+                .name
+                .chars()
+                .filter(|c| c.is_ascii_uppercase())
+                .join(""),
+            data.client.session_number,
+            data.session.data_type
+        ))?;
+        let mut writer = BufWriter::new(file);
+        writer.write_all(self.write_json(data).as_bytes())?;
+        writer.flush()?;
 
         Ok(())
     }
@@ -288,6 +302,7 @@ impl SessionPage {
                                                 record_keypress!(
                                                     self,
                                                     key,
+                                                    counter.description.clone(),
                                                     self.session_timer.total_time()
                                                 );
                                             }
@@ -322,6 +337,7 @@ impl SessionPage {
                                                 record_keypress!(
                                                     self,
                                                     key,
+                                                    timer.description.clone(),
                                                     self.session_timer.total_time()
                                                 );
                                             }

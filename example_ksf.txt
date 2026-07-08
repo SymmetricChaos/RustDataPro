@@ -3,11 +3,14 @@
   "frequency": [
     ["V", "NegVoc"],
     ["A", "Aggression"],
-    ["M", "Mand"]
+    ["M", "Mand"],
+	["S", "SIB"],
+	["I", "Instruction"],
+	["C", "Compliance"]
   ],
   "duration": [
-    ["4", "ToyEngage"],
-    ["1", "Sr+"],
-    ["2", "Sdelta"]
+    ["Num4", "ToyEngage"],
+    ["Num1", "Sr+"],
+    ["Num2", "Sdelta"]
   ]
 }

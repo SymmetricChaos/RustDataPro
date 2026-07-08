@@ -1,4 +1,3 @@
-use crate::data::Keybind;
 use egui::{Color32, Key, RichText, Ui};
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
@@ -85,7 +84,7 @@ impl Default for Timer {
 
 impl Timer {
     /// Build a timer with an associated keybind.
-    pub fn with_keybind(mut self, keybind: &Keybind) -> Self {
+    pub fn with_keybind(mut self, keybind: &(Key, String)) -> Self {
         self.key = Some(keybind.0);
         self.description = keybind.1.clone();
         self

@@ -1,25 +1,32 @@
-use crate::{app::DisplayInfo, data::timeline::Moment, utils::DataProUiElements};
+use crate::{
+    app::DisplayInfo,
+    data::{OutputData, timeline::Timeline},
+    utils::DataProUiElements,
+};
 use anyhow::Result;
-use egui::{Key, TextBuffer, Ui};
+use egui::{TextBuffer, Ui};
 use egui_file_dialog::FileDialog;
 use std::{ffi::OsStr, path::PathBuf};
 
-fn extract_times(v: &Vec<Moment>, key: Key) -> Vec<f32> {
-    v.iter().filter(|e| e.0 == key).map(|e| e.1).collect()
+fn extract_times(v: &Timeline, description: &str) -> Vec<f32> {
+    v.iter()
+        .filter(|e| e.0 == description)
+        .map(|e| e.1)
+        .collect()
 }
 
 fn interval_reli(
     max_time: f32,
     interval: f32,
-    key: Key,
-    primary: &Vec<Moment>,
-    reli: &Vec<Moment>,
+    description: &str,
+    primary: &Timeline,
+    reli: &Timeline,
 ) -> Result<f32> {
     let mut time = interval;
     let mut ratio: f32 = 1.0;
-    let primary = extract_times(primary, key);
+    let primary = extract_times(primary, description);
     let mut p_iter = primary.into_iter().peekable();
-    let reli = extract_times(reli, key);
+    let reli = extract_times(reli, description);
     let mut r_iter = reli.into_iter().peekable();
     while time <= max_time {
         let mut pctr = 0.0;
@@ -46,8 +53,10 @@ fn interval_reli(
 pub struct ReliabilityPage {
     primary_file_dialog: FileDialog,
     primary_bufs: Vec<PathBuf>,
+    primary_data: Vec<OutputData>,
     reli_file_dialog: FileDialog,
     reli_bufs: Vec<PathBuf>,
+    reli_data: Vec<OutputData>,
 }
 
 impl Default for ReliabilityPage {
@@ -55,23 +64,42 @@ impl Default for ReliabilityPage {
         Self {
             primary_file_dialog: Default::default(),
             primary_bufs: Vec::new(),
+            primary_data: Vec::new(),
             reli_file_dialog: Default::default(),
             reli_bufs: Vec::new(),
+            reli_data: Vec::new(),
         }
     }
 }
 
 impl ReliabilityPage {
-    fn calculate_reli(&self) {}
+    fn calculate_reli(&self) {
+        for keybind in self.primary_data[0].ksf.frequency.iter() {
+            let description = &keybind.1;
+            let times = extract_times(&self.primary_data[0].timeline, description);
+            println!("{:?}", times);
+        }
+    }
 
     pub fn view(&mut self, ui: &mut Ui, display_info: &mut DisplayInfo) {
         self.primary_file_dialog.update(ui.ctx());
         self.reli_file_dialog.update(ui.ctx());
         if let Some(bufs) = self.primary_file_dialog.take_picked_multiple() {
             self.primary_bufs = bufs;
+            for buf in self.primary_bufs.iter() {
+                self.primary_data.push(
+                    OutputData::from_file(buf.as_path())
+                        .expect("failed to load primary output data"),
+                );
+            }
         }
         if let Some(bufs) = self.reli_file_dialog.take_picked_multiple() {
             self.reli_bufs = bufs;
+            for buf in self.primary_bufs.iter() {
+                self.reli_data.push(
+                    OutputData::from_file(buf.as_path()).expect("failed to load reli output data"),
+                );
+            }
         }
         egui::CentralPanel::default().show(ui, |ui| {
             ui.horizontal(|ui| {
