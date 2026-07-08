@@ -5,6 +5,7 @@ use std::{fs::File, io::Read, path::Path};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct OutputData {
+    pub datetime: String,
     pub client: ClientData,
     pub session: SessionData,
     pub session_duration: f32,

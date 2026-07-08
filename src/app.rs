@@ -155,7 +155,7 @@ impl eframe::App for DataPro {
         egui::Panel::top("top_panel").show(ui, |ui| {
             egui::MenuBar::new().ui(ui, |ui| {
                 ui.request_repaint_after_secs(5.0);
-                ui.label(format!("{}", date_time_string(Local::now())));
+                ui.label(format!("{}", date_time_string(&Local::now())));
             });
         });
 

@@ -24,7 +24,7 @@ impl Prng {
     }
 }
 
-pub fn date_time_string(dt: DateTime<Local>) -> String {
+pub fn date_time_string(dt: &DateTime<Local>) -> String {
     format!(
         "{} {}/{}/{} {:02}:{:02}",
         dt.weekday(),

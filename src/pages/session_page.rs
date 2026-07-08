@@ -102,6 +102,7 @@ impl SessionPage {
         display_info.go_to_about();
     }
 
+    /// Write the output data into a human readable format.
     fn write_data(&mut self, data: &mut Data) -> String {
         let mut output = String::new();
 
@@ -110,7 +111,7 @@ impl SessionPage {
         output.push('\n');
         output.push_str(&format!(
             "\nStart {}\nDuration {:.1}\n",
-            date_time_string(self.session_start),
+            date_time_string(&self.session_start),
             self.session_timer.total_time()
         ));
         output.push('\n');
@@ -143,11 +144,13 @@ impl SessionPage {
         output
     }
 
+    /// Write the output data into a JSON format. Not especially human readable.
     fn write_json(&self, data: &mut Data) -> String {
         serde_json::to_string(&OutputData {
+            datetime: date_time_string(&self.session_start),
+            session_duration: self.session_timer.total_time(),
             client: data.client.clone(),
             session: data.session.clone(),
-            session_duration: self.session_timer.total_time(),
             duration: self
                 .timers
                 .iter()
@@ -180,7 +183,7 @@ impl SessionPage {
 
     fn save_output(&mut self, data: &mut Data) -> Result<()> {
         let file = File::create(&format!(
-            "{}{}{}.txt",
+            "{}{}_{}.txt",
             data.client
                 .name
                 .chars()
@@ -194,7 +197,7 @@ impl SessionPage {
         writer.flush()?;
 
         let file = File::create(&format!(
-            "{}{}{}_raw.txt",
+            "{}{}_{}_raw.txt",
             data.client
                 .name
                 .chars()

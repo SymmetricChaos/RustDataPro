@@ -28,6 +28,8 @@ fn interval_reli(
     let mut p_iter = primary.into_iter().peekable();
     let reli = extract_times(reli, description);
     let mut r_iter = reli.into_iter().peekable();
+    let mut ctr = 1;
+    println!("{description}");
     while time <= max_time {
         let mut pctr = 0.0;
         while p_iter.next_if(|x| x <= &time).is_some() {
@@ -37,15 +39,17 @@ fn interval_reli(
         while r_iter.next_if(|x| x <= &time).is_some() {
             rctr += 1.0;
         }
-        if pctr == 0.0 {
-            todo!("handle interval where primary count is zero")
-        }
-        if rctr == 0.0 {
-            todo!("handle interval where reli count is zero")
-        }
-        let interval_ratio = pctr / rctr;
-        ratio *= interval_ratio;
+        println!("{ctr}: {pctr} {rctr}");
+        // if pctr == 0.0 {
+        //     todo!("handle interval where primary count is zero")
+        // }
+        // if rctr == 0.0 {
+        //     todo!("handle interval where reli count is zero")
+        // }
+        // let interval_ratio = pctr / rctr;
+        // ratio *= interval_ratio;
         time += interval;
+        ctr += 1;
     }
     Ok(ratio)
 }
@@ -74,10 +78,16 @@ impl Default for ReliabilityPage {
 
 impl ReliabilityPage {
     fn calculate_reli(&self) {
-        for keybind in self.primary_data[0].ksf.frequency.iter() {
-            let description = &keybind.1;
-            let times = extract_times(&self.primary_data[0].timeline, description);
-            println!("{:?}", times);
+        for (p, r) in self.primary_data.iter().zip(self.reli_data.iter()) {
+            for (_, description) in p.ksf.frequency.iter() {
+                let _ = interval_reli(
+                    p.session_duration,
+                    10.0,
+                    description,
+                    &p.timeline,
+                    &r.timeline,
+                );
+            }
         }
     }
 
