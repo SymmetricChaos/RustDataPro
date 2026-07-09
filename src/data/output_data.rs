@@ -1,7 +1,7 @@
 use crate::data::{ClientData, KsfData, SessionData, timeline::Timeline};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::{fs::File, io::Read, path::Path};
+use std::{collections::HashMap, fs::File, io::Read, path::Path};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct OutputData {
@@ -9,8 +9,8 @@ pub struct OutputData {
     pub client: ClientData,
     pub session: SessionData,
     pub session_duration: f32,
-    pub duration: Vec<(String, u32, f32)>,
-    pub frequency: Vec<(String, u32)>,
+    pub duration: HashMap<String, (u32, f32)>,
+    pub frequency: HashMap<String, u32>,
     pub timeline: Timeline,
     pub ksf: KsfData,
 }
@@ -24,6 +24,6 @@ impl OutputData {
     }
 
     pub fn to_json(&self) -> Result<String> {
-        serde_json::to_string_pretty(&self).context("unable to convert session data to json")
+        serde_json::to_string(&self).context("unable to convert session data to json")
     }
 }

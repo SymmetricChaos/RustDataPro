@@ -26,6 +26,6 @@ impl ReliData {
     }
 
     pub fn to_json(&self) -> Result<String> {
-        serde_json::to_string_pretty(&self).context("unable to convert session data to json")
+        serde_json::to_string(&self).context("unable to convert session data to json")
     }
 }

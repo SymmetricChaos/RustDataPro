@@ -11,7 +11,7 @@ use chrono::{DateTime, Local};
 use egui::{Color32, Key, RichText, Ui};
 use itertools::Itertools;
 use std::{
-    collections::VecDeque,
+    collections::{HashMap, VecDeque},
     fs::File,
     io::{BufWriter, Write},
 };
@@ -146,16 +146,17 @@ impl SessionPage {
 
     /// Write the output data into a JSON format. Not especially human readable.
     fn write_json(&self, data: &mut Data) -> String {
+        let mut dur_map: HashMap<String, (u32, f32)> = HashMap::new();
+        for (t, _, d) in self.timers.iter() {
+            dur_map.insert(d.clone(), (t.bouts, t.total_time()));
+        }
+
         serde_json::to_string(&OutputData {
             datetime: date_time_string(&self.session_start),
             session_duration: self.session_timer.total_time(),
             client: data.client.clone(),
             session: data.session.clone(),
-            duration: self
-                .timers
-                .iter()
-                .map(|(t, _, description)| (description.clone(), t.bouts, t.total_time()))
-                .collect(),
+            duration: dur_map,
             frequency: self
                 .counters
                 .iter()

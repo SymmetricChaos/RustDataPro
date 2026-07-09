@@ -3,7 +3,7 @@ use crate::{
     data::{OutputData, ReliData, timeline::Timeline},
     utils::DataProUiElements,
 };
-use anyhow::Result;
+use anyhow::{Context, Result};
 use egui::{TextBuffer, Ui};
 use egui_file_dialog::FileDialog;
 use std::{
@@ -18,6 +18,22 @@ fn extract_times(v: &Timeline, description: &str) -> Vec<f32> {
         .filter(|e| e.0 == description)
         .map(|e| e.1)
         .collect()
+}
+
+fn duration_reli(primary: f32, reli: f32) -> f32 {
+    if primary >= reli {
+        if primary == 0.0 {
+            return 0.0;
+        } else {
+            reli / primary
+        }
+    } else {
+        if reli == 0.0 {
+            return 0.0;
+        } else {
+            primary / reli
+        }
+    }
 }
 
 fn interval_reli(
@@ -45,10 +61,14 @@ fn interval_reli(
         while r_iter.next_if(|x| x <= &time).is_some() {
             rctr += 1.0;
         }
-        if rctr == pctr {
-            correct_intervals += 1.0;
+        if pctr == 0.0 && rctr == 0.0 {
+            // Ignore intervals when primary and reli both scored nothing
+        } else {
+            if pctr == rctr {
+                correct_intervals += 1.0;
+            }
+            total_intervals += 1.0;
         }
-        total_intervals += 1.0;
 
         time += interval;
     }
@@ -67,6 +87,7 @@ pub struct ReliabilityPage {
     reli_file_dialog: FileDialog,
     reli_bufs: Vec<PathBuf>,
     reli_data: Vec<OutputData>,
+    error: String,
 }
 
 impl Default for ReliabilityPage {
@@ -78,6 +99,7 @@ impl Default for ReliabilityPage {
             reli_file_dialog: Default::default(),
             reli_bufs: Vec::new(),
             reli_data: Vec::new(),
+            error: String::new(),
         }
     }
 }
@@ -87,30 +109,38 @@ impl ReliabilityPage {
         let mut reli_data = ReliData::new();
 
         for (p, r) in self.primary_data.iter().zip(self.reli_data.iter()) {
+            let max_time = if p.session_duration >= r.session_duration {
+                p.session_duration
+            } else {
+                r.session_duration
+            };
             for (_, description) in p.ksf.frequency.iter() {
                 // Calculate 10 second reli
-                let r10 = interval_reli(
-                    p.session_duration,
-                    10.0,
-                    description,
-                    &p.timeline,
-                    &r.timeline,
-                );
+                let r10 = interval_reli(max_time, 10.0, description, &p.timeline, &r.timeline);
                 reli_data.ten_sec_interval.push((description.clone(), r10));
 
                 // Calculate 60 second reli
-                let r60 = interval_reli(
-                    p.session_duration,
-                    60.0,
-                    description,
-                    &p.timeline,
-                    &r.timeline,
-                );
+                let r60 = interval_reli(max_time, 60.0, description, &p.timeline, &r.timeline);
                 reli_data
                     .sixty_sec_interval
                     .push((description.clone(), r60));
             }
             // compare duration ratios
+            for (_, description) in p.ksf.duration.iter() {
+                let primary_dur = p
+                    .duration
+                    .get(description)
+                    .context("missing primary duration")?
+                    .1;
+                let reli_dur = r
+                    .duration
+                    .get(description)
+                    .context("missing reli duration")?
+                    .1;
+                reli_data
+                    .duration_ratio
+                    .push((description.clone(), duration_reli(primary_dur, reli_dur)));
+            }
         }
 
         let file = File::create(&format!("reli_data_TEMPNAME.txt"))?;
@@ -126,18 +156,19 @@ impl ReliabilityPage {
         if let Some(bufs) = self.primary_file_dialog.take_picked_multiple() {
             self.primary_bufs = bufs;
             for buf in self.primary_bufs.iter() {
-                self.primary_data.push(
-                    OutputData::from_file(buf.as_path())
-                        .expect("failed to load primary output data"),
-                );
+                match OutputData::from_file(buf.as_path()) {
+                    Ok(data) => self.primary_data.push(data),
+                    Err(e) => self.error = e.to_string(),
+                }
             }
         }
         if let Some(bufs) = self.reli_file_dialog.take_picked_multiple() {
             self.reli_bufs = bufs;
             for buf in self.primary_bufs.iter() {
-                self.reli_data.push(
-                    OutputData::from_file(buf.as_path()).expect("failed to load reli output data"),
-                );
+                match OutputData::from_file(buf.as_path()) {
+                    Ok(data) => self.reli_data.push(data),
+                    Err(e) => self.error = e.to_string(),
+                }
             }
         }
         egui::CentralPanel::default().show(ui, |ui| {
@@ -172,14 +203,18 @@ impl ReliabilityPage {
             ui.add_space(20.0);
 
             if ui.large_green_button("Calculate Reli").clicked() {
-                self.calculate_reli()
-                    .expect("failure calculating reliability data");
+                match self.calculate_reli() {
+                    Ok(_) => self.error.clear(),
+                    Err(e) => self.error = e.to_string(),
+                }
             }
             if ui.large_red_button("Return").clicked() {
                 display_info.go_to_about();
                 self.primary_bufs.clear();
                 self.reli_bufs.clear();
             }
+
+            ui.strong(&self.error)
         });
     }
 }
