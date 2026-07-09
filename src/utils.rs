@@ -36,6 +36,19 @@ pub fn date_time_string(dt: &DateTime<Local>) -> String {
     )
 }
 
+/// Quick time stamp as Year_Month_Day_Hour_Minute
+pub fn time_stamp() -> String {
+    let dt = Local::now();
+    format!(
+        "{}_{}_{}_{:02}_{:02}",
+        dt.year(),
+        dt.month(),
+        dt.day(),
+        dt.hour(),
+        dt.minute(),
+    )
+}
+
 /// Detect keys that have been pressed and ignore repeated events.
 pub struct ClickedKeys(HashSet<Key>);
 

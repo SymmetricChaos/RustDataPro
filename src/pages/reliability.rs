@@ -1,7 +1,7 @@
 use crate::{
     app::DisplayInfo,
     data::{OutputData, ReliData, timeline::Timeline},
-    utils::DataProUiElements,
+    utils::{DataProUiElements, time_stamp},
 };
 use anyhow::{Context, Result};
 use egui::{TextBuffer, Ui};
@@ -42,6 +42,7 @@ fn interval_reli(
     description: &str,
     primary: &Timeline,
     reli: &Timeline,
+    strict: bool,
 ) -> f32 {
     let mut time = interval;
 
@@ -61,7 +62,7 @@ fn interval_reli(
         while r_iter.next_if(|x| x <= &time).is_some() {
             rctr += 1.0;
         }
-        if pctr == 0.0 && rctr == 0.0 {
+        if strict && pctr == 0.0 && rctr == 0.0 {
             // Ignore intervals when primary and reli both scored nothing
         } else {
             if pctr == rctr {
@@ -106,7 +107,7 @@ impl Default for ReliabilityPage {
 
 impl ReliabilityPage {
     fn calculate_reli(&self) -> Result<()> {
-        let mut reli_data = ReliData::new();
+        let mut reliability_output = ReliData::new();
 
         for (p, r) in self.primary_data.iter().zip(self.reli_data.iter()) {
             let max_time = if p.session_duration >= r.session_duration {
@@ -116,12 +117,16 @@ impl ReliabilityPage {
             };
             for (_, description) in p.ksf.frequency.iter() {
                 // Calculate 10 second reli
-                let r10 = interval_reli(max_time, 10.0, description, &p.timeline, &r.timeline);
-                reli_data.ten_sec_interval.push((description.clone(), r10));
+                let r10 =
+                    interval_reli(max_time, 10.0, description, &p.timeline, &r.timeline, false);
+                reliability_output
+                    .ten_sec_interval
+                    .push((description.clone(), r10));
 
                 // Calculate 60 second reli
-                let r60 = interval_reli(max_time, 60.0, description, &p.timeline, &r.timeline);
-                reli_data
+                let r60 =
+                    interval_reli(max_time, 60.0, description, &p.timeline, &r.timeline, false);
+                reliability_output
                     .sixty_sec_interval
                     .push((description.clone(), r60));
             }
@@ -137,22 +142,22 @@ impl ReliabilityPage {
                     .get(description)
                     .context("missing reli duration")?
                     .1;
-                reli_data
+                println!("{primary_dur}");
+                println!("{reli_dur}");
+                reliability_output
                     .duration_ratio
                     .push((description.clone(), duration_reli(primary_dur, reli_dur)));
             }
         }
 
-        let file = File::create(&format!("reli_data_TEMPNAME.txt"))?;
-        let mut writer = BufWriter::new(file);
-        writer.write_all(reli_data.to_json()?.as_bytes())?;
+        let mut writer = BufWriter::new(File::create(&format!("reli_data_{}.txt", time_stamp(),))?);
+        writer.write_all(reliability_output.to_json()?.as_bytes())?;
         writer.flush()?;
         Ok(())
     }
 
     pub fn view(&mut self, ui: &mut Ui, display_info: &mut DisplayInfo) {
         self.primary_file_dialog.update(ui.ctx());
-        self.reli_file_dialog.update(ui.ctx());
         if let Some(bufs) = self.primary_file_dialog.take_picked_multiple() {
             self.primary_bufs = bufs;
             for buf in self.primary_bufs.iter() {
@@ -162,9 +167,11 @@ impl ReliabilityPage {
                 }
             }
         }
+
+        self.reli_file_dialog.update(ui.ctx());
         if let Some(bufs) = self.reli_file_dialog.take_picked_multiple() {
             self.reli_bufs = bufs;
-            for buf in self.primary_bufs.iter() {
+            for buf in self.reli_bufs.iter() {
                 match OutputData::from_file(buf.as_path()) {
                     Ok(data) => self.reli_data.push(data),
                     Err(e) => self.error = e.to_string(),
@@ -211,7 +218,9 @@ impl ReliabilityPage {
             if ui.large_red_button("Return").clicked() {
                 display_info.go_to_about();
                 self.primary_bufs.clear();
+                self.primary_data.clear();
                 self.reli_bufs.clear();
+                self.reli_data.clear();
             }
 
             ui.strong(&self.error)
