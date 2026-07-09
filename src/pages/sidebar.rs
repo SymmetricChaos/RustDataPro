@@ -53,7 +53,7 @@ impl Sidebar {
                 }
 
                 ui.add_space(5.0);
-                if ui.large_button("Reliability").clicked() {
+                if ui.large_button("Calculate Reliability").clicked() {
                     app.display_info.go_to_reliability();
                 }
             });

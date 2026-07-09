@@ -59,6 +59,7 @@ impl SessionPage {
         self.save_discard_open = false;
     }
 
+    /// Stop all timers, including the session timer.
     fn stop_all_timers(&mut self) {
         for (timer, _, _) in self.timers.iter_mut() {
             timer.stop();
@@ -66,9 +67,10 @@ impl SessionPage {
         self.session_timer.stop();
     }
 
+    /// Pause all timers, including the session timer.
     fn toggle_pause_all_timers(&mut self) {
         for (timer, _, _) in self.timers.iter_mut() {
-            timer.toggle_pause();
+            timer.toggle_pause_partial();
         }
         self.session_timer.toggle_pause();
     }

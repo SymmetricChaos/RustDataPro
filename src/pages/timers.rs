@@ -31,7 +31,7 @@ impl Default for Timers {
 }
 
 impl Timers {
-    pub fn pause_all_timers(&mut self) {
+    pub fn stop_all_timers(&mut self) {
         for timer in self.timers.iter_mut() {
             timer.stop();
         }
@@ -63,10 +63,9 @@ impl Timers {
                 if ui.button("Reset All").clicked() {
                     self.reset_all_timers()
                 }
-                if ui.button("Pause All").clicked() {
-                    self.pause_all_timers()
+                if ui.button("Stop All").clicked() {
+                    self.stop_all_timers()
                 }
-
                 if self.countdown {
                     if ui.button("Switch to Countup").clicked() {
                         self.switch_countdown()
@@ -79,17 +78,19 @@ impl Timers {
             });
             ui.add_space(10.0);
 
-            ui.label("Press 1-5 to toggle timers.\n\nPress 0 to toggle linked timers.");
+            ui.label(
+                "Keyboard Controls:\n1-5 to toggle timers.\n0 to toggle linked timers.\nSpace to stop all timers.",
+            );
             ui.add_space(10.0);
 
             egui::Grid::new("timers_page_grid")
                 .striped(true)
                 .show(ui, |ui| {
                     for (n, (timer, linked)) in self.timers_and_links().enumerate() {
-                        ui.label(format!("{})", n + 1));
+                        ui.monospace(format!("{})", n + 1));
 
                         if countdown {
-                            let draginfo = ui.add(egui::DragValue::new(&mut timer.countdown_from));
+                            let draginfo = ui.add(egui::DragValue::new(&mut timer.countdown_from).range(0.0..=9999.0));
                             if draginfo.has_focus() {
                                 allow_keys = false;
                             }
@@ -118,6 +119,10 @@ impl Timers {
         if allow_keys {
             ui.ctx().input_mut(|input| {
                 self.clicked_keys.update(input);
+
+                if self.clicked_keys.contains(&Key::Space) {
+                    self.stop_all_timers();
+                }
 
                 // Detect toggle linked
                 if self.clicked_keys.contains(&Key::Num0) {
