@@ -63,7 +63,7 @@ fn interval_reli(
             rctr += 1.0;
         }
         if strict && pctr == 0.0 && rctr == 0.0 {
-            // Ignore intervals when primary and reli both scored nothing
+            // In strict mode ignore intervals when primary and reli both scored nothing
         } else {
             if pctr == rctr {
                 correct_intervals += 1.0;
@@ -142,8 +142,6 @@ impl ReliabilityPage {
                     .get(description)
                     .context("missing reli duration")?
                     .1;
-                println!("{primary_dur}");
-                println!("{reli_dur}");
                 reliability_output
                     .duration_ratio
                     .push((description.clone(), duration_reli(primary_dur, reli_dur)));
