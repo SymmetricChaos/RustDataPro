@@ -1,12 +1,14 @@
 use crate::{
     app::DisplayInfo,
     data::{Data, DataType, output_data::OutputData, timeline::Timeline},
-    data_tracking::{TimerStatus, counter::Counter, timer::Timer},
+    data_tracking::{
+        TimerStatus, counter::Counter, timer::Timer, view_session_page_timer, view_simple_timer,
+    },
     utils::{ClickedKeys, DataProUiElements, date_time_string},
 };
 use anyhow::Result;
 use chrono::{DateTime, Local};
-use egui::{Color32, RichText, Ui};
+use egui::{Color32, Key, RichText, Ui};
 use itertools::Itertools;
 use std::{
     collections::VecDeque,
@@ -23,7 +25,7 @@ macro_rules! record_keypress {
 }
 
 pub struct SessionPage {
-    timers: Vec<Timer>,
+    timers: Vec<(Timer, Key, String)>,
     counters: Vec<Counter>,
     session_timer: Timer,
     session_start: DateTime<Local>,
@@ -58,14 +60,14 @@ impl SessionPage {
     }
 
     fn stop_all_timers(&mut self) {
-        for timer in self.timers.iter_mut() {
+        for (timer, _, _) in self.timers.iter_mut() {
             timer.stop();
         }
         self.session_timer.stop();
     }
 
     fn toggle_pause_all_timers(&mut self) {
-        for timer in self.timers.iter_mut() {
+        for (timer, _, _) in self.timers.iter_mut() {
             timer.toggle_pause();
         }
         self.session_timer.toggle_pause();
@@ -73,7 +75,7 @@ impl SessionPage {
 
     pub fn load_ksf(&mut self, data: &Data) {
         for kb in data.ksf.duration.iter() {
-            self.timers.push(Timer::default().with_keybind(kb));
+            self.timers.push((Timer::default(), kb.0, kb.1.clone()));
         }
         for kb in data.ksf.frequency.iter() {
             self.counters.push(Counter::default().with_keybind(kb));
@@ -119,12 +121,8 @@ impl SessionPage {
 
         output.push_str("\n\n--Duration--\n");
 
-        for timer in self.timers.iter_mut() {
-            output.push_str(&format!(
-                "{} {:.1}\n",
-                timer.description,
-                timer.saved_time(),
-            ));
+        for (timer, _, desc) in self.timers.iter() {
+            output.push_str(&format!("{} {:.1}\n", desc, timer.saved_time(),));
         }
 
         output.push_str("\n--Frequency--\n");
@@ -154,7 +152,7 @@ impl SessionPage {
             duration: self
                 .timers
                 .iter()
-                .map(|t| (t.description.clone(), t.bouts, t.total_time()))
+                .map(|(t, _, description)| (description.clone(), t.bouts, t.total_time()))
                 .collect(),
             frequency: self
                 .counters
@@ -227,7 +225,6 @@ impl SessionPage {
         });
 
         // ### Permanent keys are tracked here ###
-        // ### KSF keys are tracked where the counters and timers are drawn ###
         // Toggle pausing as needed
         if self.clicked_keys.contains(&egui::Key::Space) {
             self.toggle_pause_all_timers();
@@ -241,6 +238,16 @@ impl SessionPage {
         if self.clicked_keys.contains(&egui::Key::Tab) {
             if self.session_timer.status.is_stopped() {
                 self.start_session();
+            }
+        }
+
+        // ### Duration Keys are Tracked Here ###
+        if self.session_timer.status.is_active() {
+            for (timer, key, desc) in self.timers.iter_mut() {
+                if self.clicked_keys.contains(key) {
+                    timer.toggle();
+                    record_keypress!(self, key, desc.clone(), self.session_timer.total_time());
+                }
             }
         }
 
@@ -279,7 +286,7 @@ impl SessionPage {
 
             ui.horizontal(|ui| {
                 ui.label("Session Time:");
-                self.session_timer.view_unsplit(ui);
+                view_simple_timer(ui, &mut self.session_timer);
             });
             ui.add_space(10.0);
 
@@ -331,22 +338,9 @@ impl SessionPage {
                                     ui.label("Bouts");
                                     ui.end_row();
 
-                                    for timer in self.timers.iter_mut() {
-                                        if let Some(key) = timer.key {
-                                            if self.session_timer.status.is_active()
-                                                && self.clicked_keys.contains(&key)
-                                            {
-                                                timer.toggle();
-                                                record_keypress!(
-                                                    self,
-                                                    key,
-                                                    timer.description.clone(),
-                                                    self.session_timer.total_time()
-                                                );
-                                            }
-                                            timer.view_split(ui);
-                                            ui.end_row();
-                                        }
+                                    for (timer, key, desc) in self.timers.iter_mut() {
+                                        view_session_page_timer(ui, timer, key, desc);
+                                        ui.end_row();
                                     }
                                 });
                         });
@@ -362,6 +356,7 @@ impl SessionPage {
                     }
                 });
             });
+
             if self.save_discard_open {
                 egui::Window::new("Save/Discard").show(ui, |ui| {
                     ui.horizontal(|ui| {

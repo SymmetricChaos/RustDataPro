@@ -1,5 +1,8 @@
-use crate::{data_tracking::timer::Timer, utils::ClickedKeys};
-use egui::{Color32, Key, RichText, Ui};
+use crate::{
+    data_tracking::{timer::Timer, view_simple_countdown_timer, view_simple_timer},
+    utils::ClickedKeys,
+};
+use egui::{Key, Ui};
 
 const NUM_TIMERS: usize = 5;
 
@@ -51,7 +54,7 @@ impl Timers {
 
     pub fn view(&mut self, ui: &mut Ui, open: &mut bool) {
         let countdown = self.countdown;
-        let mut allow_keys = true;
+        let mut allow_keys = *open;
 
         egui::Window::new("Timers").open(open).show(ui, |ui| {
             ui.add_space(10.0);
@@ -93,28 +96,9 @@ impl Timers {
                             if draginfo.changed() {
                                 timer.reset();
                             }
-                            if timer.status.is_active() {
-                                ui.request_repaint();
-                                let t = timer.remaining_time();
-                                if t.is_sign_positive() {
-                                    ui.monospace(
-                                        RichText::new(format!("{:6.2}", (timer.remaining_time())))
-                                            .color(Color32::YELLOW),
-                                    );
-                                } else {
-                                    ui.monospace(
-                                        RichText::new(format!("{:6.2}", (timer.remaining_time())))
-                                            .color(Color32::RED),
-                                    );
-                                }
-                            } else {
-                                ui.monospace(RichText::new(format!(
-                                    "{:6.2}",
-                                    (timer.countdown_from - timer.saved_time())
-                                )));
-                            }
+                            view_simple_countdown_timer(ui, timer);
                         } else {
-                            timer.view_unsplit(ui);
+                            view_simple_timer(ui, timer);
                         }
 
                         if ui.button("❌").on_hover_text("reset").clicked() {

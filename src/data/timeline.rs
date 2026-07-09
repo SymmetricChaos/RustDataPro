@@ -51,8 +51,3 @@ impl Timeline {
         serde_json::to_string(&self).context("unable to convert timeline data to json")
     }
 }
-
-#[test]
-fn test_time() {
-    println!("{:?}", Timeline::example().0)
-}
