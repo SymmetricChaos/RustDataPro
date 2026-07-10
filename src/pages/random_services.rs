@@ -72,15 +72,14 @@ impl RandomServices {
             ui.add(
                 TextEdit::multiline(&mut self.random_nums)
                     .desired_width(400.0)
-                    .desired_rows(2),
+                    .desired_rows(8),
             );
             ui.add_space(10.0);
 
             ui.heading("Shuffle a List");
             ui.label("Separate items with commas.");
             if ui.button("Shuffle").clicked() {
-                let substrs = self.shuffle_list.split(',');
-                let mut list: Vec<&str> = substrs.collect();
+                let mut list: Vec<&str> = self.shuffle_list.split(',').collect();
                 self.prng.shuffle(&mut list);
                 let rep = list
                     .iter()

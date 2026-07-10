@@ -1,10 +1,15 @@
 use anyhow::{Context, Result};
 use egui::Key;
 use serde::{Deserialize, Serialize};
-use std::{fs::File, io::Read, path::PathBuf};
+use std::{
+    fs::File,
+    hash::{DefaultHasher, Hash, Hasher},
+    io::Read,
+    path::PathBuf,
+};
 
 /// A list of keybinds divided into Duration and Frequency
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct KsfData {
     pub name: String,
     pub duration: Vec<(Key, String)>,

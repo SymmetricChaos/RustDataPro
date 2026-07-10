@@ -177,8 +177,8 @@ impl SessionPage {
             if let Some(path) = client_data_path {
                 std::fs::write(path, &data.client.to_json()?)?;
             }
-            data.client.session_number += 1;
         }
+        data.client.session_number += 1;
         Ok(())
     }
 
