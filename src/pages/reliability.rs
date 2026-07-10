@@ -193,14 +193,14 @@ impl ReliabilityPage {
         Ok(())
     }
 
-    fn frequency_ioa(&self, ioa_data: &mut IoaData) -> Result<()> {
+    fn interval_ioa(&self, ioa_data: &mut IoaData) {
         for (p, r) in self.pdata.iter().zip(self.rdata.iter()) {
             let max_time = if p.session_duration >= r.session_duration {
                 p.session_duration
             } else {
                 r.session_duration
             };
-            for (key, desc) in p.ksf.frequency.iter() {
+            for (key, _) in p.ksf.pairs() {
                 // 10 Second Interval-by-Interval IOA
                 let r10 = interval_ioa(max_time, 10.0, *key, &p.timeline, &r.timeline, self.strict)
                     .unwrap_or(self.none_val);
@@ -210,8 +210,14 @@ impl ReliabilityPage {
                 let r60 = interval_ioa(max_time, 60.0, *key, &p.timeline, &r.timeline, self.strict)
                     .unwrap_or(self.none_val);
                 ioa_data.sixty_sec_interval.push((*key, r60));
+            }
+        }
+    }
 
-                // Total duration is meaningless for frequency data but for alignment in potential output a NaN is pushed
+    fn frequency_ioa(&self, ioa_data: &mut IoaData) -> Result<()> {
+        for (p, r) in self.pdata.iter().zip(self.rdata.iter()) {
+            for (key, desc) in p.ksf.frequency.iter() {
+                // Total Duration IOA is meaningless for frequency data but for alignment in potential output a NaN is pushed
                 ioa_data.total_duration.push((*key, f32::NAN));
 
                 // Total Count IOA
@@ -229,23 +235,8 @@ impl ReliabilityPage {
 
     fn duration_ioa(&self, ioa_data: &mut IoaData) -> Result<()> {
         for (p, r) in self.pdata.iter().zip(self.rdata.iter()) {
-            let max_time = if p.session_duration >= r.session_duration {
-                p.session_duration
-            } else {
-                r.session_duration
-            };
             for (key, description) in p.ksf.duration.iter() {
-                // 10 Second Interval-by-Interval IOA
-                let r10 = interval_ioa(max_time, 10.0, *key, &p.timeline, &r.timeline, self.strict)
-                    .unwrap_or(self.none_val);
-                ioa_data.ten_sec_interval.push((*key, r10));
-
-                // 60 Second Interval-by-Interval IOA
-                let r60 = interval_ioa(max_time, 60.0, *key, &p.timeline, &r.timeline, self.strict)
-                    .unwrap_or(self.none_val);
-                ioa_data.sixty_sec_interval.push((*key, r60));
-
-                // Total Count IOA (onset and offset of duration keys)
+                // Total Duration IOA
                 let primary_dur = p
                     .duration
                     .get(description)
@@ -261,7 +252,7 @@ impl ReliabilityPage {
                     total_ratio_ioa(primary_dur, reli_dur).unwrap_or(self.none_val),
                 ));
 
-                // Total Duration IOA
+                // Total Count IOA (onset and offset of duration keys)
                 let primary_dur = p
                     .duration
                     .get(description)
@@ -283,6 +274,7 @@ impl ReliabilityPage {
 
     fn calculate_ioa(&mut self) -> Result<()> {
         let mut ioa_data = IoaData::new();
+        self.interval_ioa(&mut ioa_data);
         self.frequency_ioa(&mut ioa_data)?;
         self.duration_ioa(&mut ioa_data)?;
         excel_output(&ioa_data)?;

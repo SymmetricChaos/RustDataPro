@@ -1,5 +1,5 @@
 use crate::{
-    data_tracking::{timer::Timer, view_simple_countdown_timer, view_simple_timer},
+    data::{Timer, view_simple_countdown_timer, view_simple_timer},
     utils::ClickedKeys,
 };
 use egui::{Key, Ui};

@@ -1,8 +1,8 @@
 use crate::{
     app::DisplayInfo,
-    data::{Data, DataType, output_data::OutputData, timeline::Timeline},
-    data_tracking::{
-        TimerStatus, counter::Counter, timer::Timer, view_session_page_timer, view_simple_timer,
+    data::{
+        Data, DataType, Timer, TimerStatus, output_data::OutputData, timeline::Timeline,
+        view_session_page_timer, view_simple_timer,
     },
     utils::{ClickedKeys, DataProUiElements, date_time_string, rounded_f32},
 };
@@ -27,7 +27,7 @@ macro_rules! record_keypress {
 
 pub struct SessionPage {
     timers: Vec<(Timer, Key, String)>,
-    counters: Vec<Counter>,
+    counters: Vec<(u32, Key, String)>,
     session_timer: Timer,
     session_start: DateTime<Local>,
     timeline: Timeline,
@@ -81,7 +81,7 @@ impl SessionPage {
             self.timers.push((Timer::default(), kb.0, kb.1.clone()));
         }
         for kb in data.ksf.frequency.iter() {
-            self.counters.push(Counter::default().with_keybind(kb));
+            self.counters.push((0, kb.0, kb.1.clone()));
         }
     }
 
@@ -129,8 +129,8 @@ impl SessionPage {
         }
 
         output.push_str("\n--Frequency--\n");
-        for counter in self.counters.iter() {
-            output.push_str(&format!("{} {}\n", counter.description, counter.counter));
+        for (counter, _, desc) in self.counters.iter() {
+            output.push_str(&format!("{} {}\n", desc, counter));
         }
 
         output.push_str("\n--Raw Inputs--\n");
@@ -161,7 +161,7 @@ impl SessionPage {
             frequency: self
                 .counters
                 .iter()
-                .map(|c| (c.description.clone(), c.counter))
+                .map(|(counter, _, desc)| (desc.clone(), *counter))
                 .collect(),
             timeline: self.timeline.clone(),
             ksf: data.ksf.clone(),
@@ -253,6 +253,12 @@ impl SessionPage {
                     record_keypress!(self, *key, self.session_timer.total_time());
                 }
             }
+            for (counter, key, _) in self.counters.iter_mut() {
+                if self.clicked_keys.contains(key) {
+                    *counter += 1;
+                    record_keypress!(self, *key, self.session_timer.total_time());
+                }
+            }
         }
 
         egui::CentralPanel::default().show(ui, |ui| {
@@ -307,21 +313,11 @@ impl SessionPage {
                                     ui.label("Total");
                                     ui.end_row();
 
-                                    for counter in self.counters.iter_mut() {
-                                        if let Some(key) = counter.key {
-                                            if self.session_timer.status.is_active()
-                                                && self.clicked_keys.contains(&key)
-                                            {
-                                                counter.inc();
-                                                record_keypress!(
-                                                    self,
-                                                    key,
-                                                    self.session_timer.total_time()
-                                                );
-                                            }
-                                            counter.view(ui);
-                                            ui.end_row();
-                                        }
+                                    for (counter, key, desc) in self.counters.iter_mut() {
+                                        ui.monospace(desc);
+                                        ui.monospace(key.name());
+                                        ui.monospace(format!("{:>3}", counter));
+                                        ui.end_row();
                                     }
                                 });
                         });
