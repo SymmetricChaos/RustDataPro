@@ -1,6 +1,6 @@
 use crate::{
     app::DisplayInfo,
-    data::{OutputData, ReliData, timeline::Timeline},
+    data::{OutputData, ReliabilityData, timeline::Timeline},
     utils::{DataProUiElements, time_stamp},
 };
 use anyhow::{Context, Result};
@@ -20,19 +20,15 @@ fn extract_times(v: &Timeline, description: &str) -> Vec<f32> {
         .collect()
 }
 
-fn duration_reli(primary: f32, reli: f32) -> f32 {
+/// Used for Total Count and Total Duration IOA. Divides the smaller value by the larger value. If both values are zero returns None to be handled specially.
+fn total_ratio_ioa(primary: f32, reli: f32) -> Option<f32> {
+    if primary == 0.0 && reli == 0.0 {
+        return None;
+    }
     if primary >= reli {
-        if primary == 0.0 {
-            return 0.0;
-        } else {
-            reli / primary
-        }
+        Some(reli / primary)
     } else {
-        if reli == 0.0 {
-            return 0.0;
-        } else {
-            primary / reli
-        }
+        Some(primary / reli)
     }
 }
 
@@ -84,10 +80,10 @@ fn interval_reli(
 pub struct ReliabilityPage {
     primary_file_dialog: FileDialog,
     primary_bufs: Vec<PathBuf>,
-    primary_data: Vec<OutputData>,
+    pdata: Vec<OutputData>,
     reli_file_dialog: FileDialog,
     reli_bufs: Vec<PathBuf>,
-    reli_data: Vec<OutputData>,
+    rdata: Vec<OutputData>,
     error: String,
 }
 
@@ -96,41 +92,45 @@ impl Default for ReliabilityPage {
         Self {
             primary_file_dialog: Default::default(),
             primary_bufs: Vec::new(),
-            primary_data: Vec::new(),
+            pdata: Vec::new(),
             reli_file_dialog: Default::default(),
             reli_bufs: Vec::new(),
-            reli_data: Vec::new(),
+            rdata: Vec::new(),
             error: String::new(),
         }
     }
 }
 
 impl ReliabilityPage {
-    fn calculate_reli(&self) -> Result<()> {
-        let mut reliability_output = ReliData::new();
+    fn validate_file_selection(&self) -> bool {
+        todo!()
+    }
 
-        for (p, r) in self.primary_data.iter().zip(self.reli_data.iter()) {
+    fn calculate_reli(&self) -> Result<()> {
+        let mut reliability_file = ReliabilityData::new();
+
+        for (p, r) in self.pdata.iter().zip(self.rdata.iter()) {
             let max_time = if p.session_duration >= r.session_duration {
                 p.session_duration
             } else {
                 r.session_duration
             };
             for (_, description) in p.ksf.frequency.iter() {
-                // Calculate 10 second reli
+                // 10 Second Interval-by-Interval IOA
                 let r10 =
                     interval_reli(max_time, 10.0, description, &p.timeline, &r.timeline, false);
-                reliability_output
+                reliability_file
                     .ten_sec_interval
                     .push((description.clone(), r10));
 
-                // Calculate 60 second reli
+                // 60 Second Interval-by-Interval IOA
                 let r60 =
                     interval_reli(max_time, 60.0, description, &p.timeline, &r.timeline, false);
-                reliability_output
+                reliability_file
                     .sixty_sec_interval
                     .push((description.clone(), r60));
             }
-            // compare duration ratios
+            // Total Duration IOA
             for (_, description) in p.ksf.duration.iter() {
                 let primary_dur = p
                     .duration
@@ -142,14 +142,47 @@ impl ReliabilityPage {
                     .get(description)
                     .context("missing reli duration")?
                     .1;
-                reliability_output
-                    .duration_ratio
-                    .push((description.clone(), duration_reli(primary_dur, reli_dur)));
+                reliability_file.total_duration.push((
+                    description.clone(),
+                    total_ratio_ioa(primary_dur, reli_dur).unwrap_or(0.0), // TODO: currently treats None as zero, should be customizable
+                ));
+            }
+            // Total Count IOA
+            // Frequency counts first then Duration counts
+            for (_, description) in p.ksf.frequency.iter() {
+                let primary_dur = *p
+                    .frequency
+                    .get(description)
+                    .context("missing primary duration")? as f32; // conversion of u32 to f32 is valid so long as count is below about 16 million, so it is not checked
+                let reli_dur = *r
+                    .frequency
+                    .get(description)
+                    .context("missing reli duration")? as f32;
+                reliability_file.total_count.push((
+                    description.clone(),
+                    total_ratio_ioa(primary_dur, reli_dur).unwrap_or(0.0), // TODO: currently treats None as zero, should be customizable
+                ));
+            }
+            for (_, description) in p.ksf.duration.iter() {
+                let primary_dur = p
+                    .duration
+                    .get(description)
+                    .context("missing primary duration")?
+                    .0 as f32;
+                let reli_dur = r
+                    .duration
+                    .get(description)
+                    .context("missing reli duration")?
+                    .0 as f32;
+                reliability_file.total_count.push((
+                    description.clone(),
+                    total_ratio_ioa(primary_dur, reli_dur).unwrap_or(0.0), // TODO: currently treats None as zero, should be customizable
+                ));
             }
         }
 
         let mut writer = BufWriter::new(File::create(&format!("reli_data_{}.txt", time_stamp(),))?);
-        writer.write_all(reliability_output.to_json()?.as_bytes())?;
+        writer.write_all(reliability_file.to_json()?.as_bytes())?;
         writer.flush()?;
         Ok(())
     }
@@ -160,7 +193,7 @@ impl ReliabilityPage {
             self.primary_bufs = bufs;
             for buf in self.primary_bufs.iter() {
                 match OutputData::from_file(buf.as_path()) {
-                    Ok(data) => self.primary_data.push(data),
+                    Ok(data) => self.pdata.push(data),
                     Err(e) => self.error = e.to_string(),
                 }
             }
@@ -171,7 +204,7 @@ impl ReliabilityPage {
             self.reli_bufs = bufs;
             for buf in self.reli_bufs.iter() {
                 match OutputData::from_file(buf.as_path()) {
-                    Ok(data) => self.reli_data.push(data),
+                    Ok(data) => self.rdata.push(data),
                     Err(e) => self.error = e.to_string(),
                 }
             }
@@ -216,9 +249,9 @@ impl ReliabilityPage {
             if ui.large_red_button("Return").clicked() {
                 display_info.go_to_about();
                 self.primary_bufs.clear();
-                self.primary_data.clear();
+                self.pdata.clear();
                 self.reli_bufs.clear();
-                self.reli_data.clear();
+                self.rdata.clear();
             }
 
             ui.strong(&self.error)

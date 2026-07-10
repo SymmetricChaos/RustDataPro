@@ -3,18 +3,20 @@ use serde::{Deserialize, Serialize};
 use std::{fs::File, io::Read, path::Path};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ReliData {
+pub struct ReliabilityData {
     pub ten_sec_interval: Vec<(String, f32)>,
     pub sixty_sec_interval: Vec<(String, f32)>,
-    pub duration_ratio: Vec<(String, f32)>,
+    pub total_duration: Vec<(String, f32)>,
+    pub total_count: Vec<(String, f32)>,
 }
 
-impl ReliData {
+impl ReliabilityData {
     pub fn new() -> Self {
         Self {
             ten_sec_interval: Vec::new(),
             sixty_sec_interval: Vec::new(),
-            duration_ratio: Vec::new(),
+            total_duration: Vec::new(),
+            total_count: Vec::new(),
         }
     }
 
