@@ -1,5 +1,4 @@
 {
-  "name": "Example",
   "frequency": [
     ["V", "NegVoc"],
     ["A", "Aggression"],

@@ -178,7 +178,7 @@ impl SessionPage {
                 std::fs::write(path, &data.client.to_json()?)?;
             }
         }
-        data.client.session_number += 1;
+        data.client.current_session += 1;
         Ok(())
     }
 
@@ -190,7 +190,7 @@ impl SessionPage {
                 .chars()
                 .filter(|c| c.is_ascii_uppercase())
                 .join(""),
-            data.client.session_number,
+            data.client.current_session,
             data.session.data_type
         ))?;
         let mut writer = BufWriter::new(file);
@@ -204,7 +204,7 @@ impl SessionPage {
                 .chars()
                 .filter(|c| c.is_ascii_uppercase())
                 .join(""),
-            data.client.session_number,
+            data.client.current_session,
             data.session.data_type
         ))?;
         let mut writer = BufWriter::new(file);
@@ -259,8 +259,8 @@ impl SessionPage {
                 ui.group(|ui| {
                     ui.vertical(|ui| {
                         ui.label(format!("Client: {}", data.client.name));
-                        ui.label(format!("Session Number: {}", data.client.session_number));
-                        ui.label(format!("KSF: {}", data.ksf.name))
+                        ui.label(format!("Session Number: {}", data.client.current_session));
+                        ui.label(format!("KSF: {}", display_info.ksf_name))
                     });
                 });
                 ui.group(|ui| {
@@ -361,14 +361,17 @@ impl SessionPage {
             });
 
             if self.save_discard_open {
-                egui::Window::new("Save/Discard").show(ui, |ui| {
-                    ui.horizontal(|ui| {
-                        if ui.large_green_button("SAVE").clicked() {
-                            self.save_session(data, client_data_path);
-                            self.end_session(display_info);
-                        }
-                        ui.add_space(20.0);
-                        if ui.large_red_button("DISCARD").clicked() {
+                egui::Window::new("Confirm Exit").show(ui, |ui| {
+                    ui.columns(2, |columns| {
+                        columns[0].set_height(60.0);
+                        columns[0].add_enabled_ui(self.session_timer.was_started(), |ui| {
+                            if ui.large_green_button("SAVE").clicked() {
+                                self.save_session(data, client_data_path);
+                                self.end_session(display_info);
+                            }
+                        });
+                        columns[1].set_height(60.0);
+                        if columns[1].large_red_button("DISCARD").clicked() {
                             self.end_session(display_info);
                         }
                     });

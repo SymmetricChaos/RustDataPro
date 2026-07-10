@@ -10,7 +10,7 @@ pub struct ClientData {
     pub primary_therapist: String,
     pub assessments: Vec<String>,
     pub conditions: Vec<String>,
-    pub session_number: u32,
+    pub current_session: u32,
 }
 
 impl Default for ClientData {
@@ -27,7 +27,7 @@ impl Default for ClientData {
                 "conditions": [
                     "None"
                 ],
-                "session_number": 0
+                "current_session": 0
             }"#,
         )
         .unwrap()
@@ -43,7 +43,7 @@ impl Display for ClientData {
             self.client_id,
             self.case_manager,
             self.primary_therapist,
-            self.session_number
+            self.current_session
         )
     }
 }

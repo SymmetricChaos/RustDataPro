@@ -1,6 +1,11 @@
 use chrono::{DateTime, Datelike, Local, Timelike};
 use egui::{Color32, InputState, Key, Response, RichText, Ui};
-use std::collections::HashSet;
+use std::{
+    borrow::Cow,
+    collections::HashSet,
+    ffi::OsStr,
+    path::{Path, PathBuf},
+};
 
 pub struct Prng {
     pub state: u64,
@@ -88,41 +93,74 @@ impl ClickedKeys {
     }
 }
 
-const LARGE_BUTTON_WIDTH: f32 = 110.0;
-const LARGE_BUTTON_HEIGHT: f32 = 40.0;
+pub fn quick_file_name(pathbuf: &Path) -> Cow<'_, str> {
+    pathbuf
+        .file_name()
+        .unwrap_or(&OsStr::new("INVALID FILE NAME"))
+        .to_string_lossy()
+}
+
+const DEFAULT_LARGE_BUTTOM_DIMS: (f32, f32) = (120.0, 40.0);
 pub trait DataProUiElements {
     fn large_button(&mut self, text: &'static str) -> Response;
-    fn large_color_button(&mut self, text: &'static str, color: Color32) -> Response;
     fn large_green_button(&mut self, text: &'static str) -> Response;
+    fn green_button(&mut self, text: &'static str) -> Response;
     fn large_red_button(&mut self, text: &'static str) -> Response;
+    fn red_button(&mut self, text: &'static str) -> Response;
+    fn large_yellow_button(&mut self, text: &'static str) -> Response;
+    fn yellow_button(&mut self, text: &'static str) -> Response;
+    fn large_blue_button(&mut self, text: &'static str) -> Response;
+    fn blue_button(&mut self, text: &'static str) -> Response;
+}
+
+macro_rules! simple_custom_button {
+    ($ui:expr, $text:ident, $fill:expr) => {
+        $ui.add(
+            egui::Button::new(RichText::new($text).monospace().color(Color32::BLACK)).fill($fill),
+        )
+    };
+    (large, $ui:expr, $text:ident, $fill:expr) => {
+        $ui.add_sized(
+            DEFAULT_LARGE_BUTTOM_DIMS,
+            egui::Button::new(RichText::new($text).color(Color32::BLACK)).fill($fill),
+        )
+    };
 }
 
 impl DataProUiElements for Ui {
     fn large_button(&mut self, text: &'static str) -> Response {
-        self.add_sized(
-            [LARGE_BUTTON_WIDTH, LARGE_BUTTON_HEIGHT],
-            egui::Button::new(text),
-        )
-    }
-
-    fn large_color_button(&mut self, text: &'static str, color: Color32) -> Response {
-        self.add_sized(
-            [LARGE_BUTTON_WIDTH, LARGE_BUTTON_HEIGHT],
-            egui::Button::new(RichText::new(text).color(color)),
-        )
+        self.add_sized(DEFAULT_LARGE_BUTTOM_DIMS, egui::Button::new(text))
     }
 
     fn large_green_button(&mut self, text: &'static str) -> Response {
-        self.add_sized(
-            [LARGE_BUTTON_WIDTH, LARGE_BUTTON_HEIGHT],
-            egui::Button::new(RichText::new(text).color(Color32::GREEN)),
-        )
+        simple_custom_button!(large, self, text, Color32::LIGHT_GREEN)
+    }
+
+    fn green_button(&mut self, text: &'static str) -> Response {
+        simple_custom_button!(self, text, Color32::LIGHT_GREEN)
     }
 
     fn large_red_button(&mut self, text: &'static str) -> Response {
-        self.add_sized(
-            [LARGE_BUTTON_WIDTH, LARGE_BUTTON_HEIGHT],
-            egui::Button::new(RichText::new(text).color(Color32::RED)),
-        )
+        simple_custom_button!(large, self, text, Color32::LIGHT_RED)
+    }
+
+    fn red_button(&mut self, text: &'static str) -> Response {
+        simple_custom_button!(self, text, Color32::LIGHT_RED)
+    }
+
+    fn large_yellow_button(&mut self, text: &'static str) -> Response {
+        simple_custom_button!(large, self, text, Color32::LIGHT_YELLOW)
+    }
+
+    fn yellow_button(&mut self, text: &'static str) -> Response {
+        simple_custom_button!(self, text, Color32::LIGHT_YELLOW)
+    }
+
+    fn large_blue_button(&mut self, text: &'static str) -> Response {
+        simple_custom_button!(large, self, text, Color32::LIGHT_BLUE)
+    }
+
+    fn blue_button(&mut self, text: &'static str) -> Response {
+        simple_custom_button!(self, text, Color32::LIGHT_BLUE)
     }
 }

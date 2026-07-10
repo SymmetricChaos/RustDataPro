@@ -1,4 +1,8 @@
-use crate::{app::DataPro, data::DataType, utils::DataProUiElements};
+use crate::{
+    app::DataPro,
+    data::DataType,
+    utils::{DataProUiElements, quick_file_name},
+};
 
 pub struct About {}
 
@@ -19,7 +23,8 @@ impl About {
             if ui.large_button("Select KSF").clicked() {
                 app.ksf_file_dialog.pick_file();
             }
-            ui.label(format!("KSF: {}", app.data.ksf.name));
+
+            ui.label(format!("KSF: {}", app.display_info.ksf_name));
             ui.strong(&app.ksf_err);
 
             if ui.large_button("Select Client File").clicked() {
@@ -45,7 +50,7 @@ impl About {
                     ui.end_row();
 
                     ui.monospace("Session");
-                    ui.add(egui::DragValue::new(&mut app.data.client.session_number));
+                    ui.add(egui::DragValue::new(&mut app.data.client.current_session));
                     ui.end_row();
 
                     ui.monospace("Therapist");

@@ -1,15 +1,13 @@
 use crate::{
     app::DisplayInfo,
     data::{IoaData, OutputData, timeline::Timeline},
-    utils::{DataProUiElements, time_stamp},
+    utils::{DataProUiElements, quick_file_name, time_stamp},
 };
 use anyhow::{Context, Result};
-use egui::{TextBuffer, Ui};
+use egui::{Color32, RichText, Ui};
 use egui_file_dialog::FileDialog;
 use rust_xlsxwriter::*;
 use std::{
-    borrow::Cow,
-    ffi::OsStr,
     fs::File,
     io::{BufWriter, Write},
     path::PathBuf,
@@ -131,37 +129,28 @@ fn interval_ioa(
     }
 }
 
-fn quick_file_name(pathbuf: &PathBuf) -> Cow<'_, str> {
-    pathbuf
-        .file_name()
-        .unwrap_or(&OsStr::new("invalid"))
-        .to_string_lossy()
-}
-
 pub struct ReliabilityPage {
-    primary_file_dialog: FileDialog,
-    primary_bufs: Vec<PathBuf>,
+    file_dialog: FileDialog,
+    bufs: Vec<PathBuf>,
     pdata: Vec<OutputData>,
-    reli_file_dialog: FileDialog,
-    reli_bufs: Vec<PathBuf>,
     rdata: Vec<OutputData>,
     error: String,
     strict: bool,
     none_val: f32,
+    ioa_finished: bool,
 }
 
 impl Default for ReliabilityPage {
     fn default() -> Self {
         Self {
-            primary_file_dialog: Default::default(),
-            primary_bufs: Vec::new(),
+            file_dialog: Default::default(),
+            bufs: Vec::new(),
             pdata: Vec::new(),
-            reli_file_dialog: Default::default(),
-            reli_bufs: Vec::new(),
             rdata: Vec::new(),
             error: String::new(),
             strict: true,
             none_val: f32::NAN,
+            ioa_finished: false,
         }
     }
 }
@@ -174,37 +163,29 @@ impl ReliabilityPage {
         if self.rdata.is_empty() {
             return Err(anyhow::anyhow!("no reliability data files"));
         }
+        if self.pdata.len() != self.rdata.len() {
+            return Err(anyhow::anyhow!(
+                "unequal number of primary and reliability files"
+            ));
+        }
 
         let ksf = &self.pdata[0].ksf;
         let id = &self.pdata[0].client.client_id;
-        for (i, p) in self.pdata.iter().enumerate() {
+        for (i, p) in self.pdata.iter().chain(self.rdata.iter()).enumerate() {
             if &p.ksf != ksf {
                 return Err(anyhow::anyhow!(
-                    "primary file {} has an incorrect ksf",
-                    quick_file_name(&self.primary_bufs[i])
+                    "file {} has an incorrect ksf",
+                    quick_file_name(&self.bufs[i])
                 ));
             }
             if &p.client.client_id != id {
                 return Err(anyhow::anyhow!(
-                    "primary file {} has an incorrect client id",
-                    quick_file_name(&self.primary_bufs[i])
+                    "file {} has an incorrect client id",
+                    quick_file_name(&self.bufs[i])
                 ));
             }
         }
-        for (i, r) in self.rdata.iter().enumerate() {
-            if &r.ksf != ksf {
-                return Err(anyhow::anyhow!(
-                    "reli file {} has an incorrect ksf",
-                    quick_file_name(&self.reli_bufs[i])
-                ));
-            }
-            if &r.client.client_id != id {
-                return Err(anyhow::anyhow!(
-                    "reli file {} has an incorrect client id",
-                    quick_file_name(&self.reli_bufs[i])
-                ));
-            }
-        }
+
         Ok(())
     }
 
@@ -331,7 +312,7 @@ impl ReliabilityPage {
         Ok(())
     }
 
-    fn calculate_ioa(&self) -> Result<()> {
+    fn calculate_ioa(&mut self) -> Result<()> {
         let mut ioa_data = IoaData::new();
         self.frequency_ioa(&mut ioa_data)?;
         self.duration_ioa(&mut ioa_data)?;
@@ -340,80 +321,70 @@ impl ReliabilityPage {
         let mut writer = BufWriter::new(File::create(&format!("reli_data_{}.txt", time_stamp()))?);
         writer.write_all(ioa_data.to_json()?.as_bytes())?;
         writer.flush()?;
+
         Ok(())
     }
 
     pub fn view(&mut self, ui: &mut Ui, display_info: &mut DisplayInfo) {
-        self.primary_file_dialog.update(ui.ctx());
-        if let Some(bufs) = self.primary_file_dialog.take_picked_multiple() {
-            self.primary_bufs = bufs;
-            for buf in self.primary_bufs.iter() {
-                match OutputData::from_file(buf.as_path()) {
-                    Ok(data) => self.pdata.push(data),
-                    Err(e) => self.error = e.to_string(),
-                }
-            }
+        self.file_dialog.update(ui.ctx());
+        if let Some(bufs) = self.file_dialog.take_picked_multiple() {
+            self.bufs = bufs;
+            self.ioa_finished = false;
+            self.error.clear();
+            self.bufs
+                .retain(|buf| match OutputData::from_file(buf.as_path()) {
+                    Ok(data) => {
+                        self.pdata.push(data);
+                        true
+                    }
+                    Err(_) => false,
+                });
         }
 
-        self.reli_file_dialog.update(ui.ctx());
-        if let Some(bufs) = self.reli_file_dialog.take_picked_multiple() {
-            self.reli_bufs = bufs;
-            for buf in self.reli_bufs.iter() {
-                match OutputData::from_file(buf.as_path()) {
-                    Ok(data) => self.rdata.push(data),
-                    Err(e) => self.error = e.to_string(),
-                }
-            }
-        }
         egui::CentralPanel::default().show(ui, |ui| {
-            ui.horizontal(|ui| {
-                ui.vertical(|ui| {
-                    if ui.large_button("Select Primary").clicked() {
-                        self.primary_file_dialog.pick_multiple();
-                    }
-                    for buf in self.primary_bufs.iter() {
-                        ui.strong(
-                            buf.file_name()
-                                .unwrap_or(&OsStr::new("invalid"))
-                                .to_string_lossy()
-                                .as_str(),
-                        );
+            if ui.large_button("Select Data").clicked() {
+                self.file_dialog.pick_multiple();
+            }
+
+            egui::containers::ScrollArea::vertical()
+                .id_salt("file_name_area")
+                .show(ui, |ui| {
+                    for buf in self.bufs.iter() {
+                        ui.strong(quick_file_name(buf));
                     }
                 });
-                ui.vertical(|ui| {
-                    if ui.large_button("Select Reliability").clicked() {
-                        self.reli_file_dialog.pick_multiple();
-                    }
-                    for buf in self.reli_bufs.iter() {
-                        ui.strong(
-                            buf.file_name()
-                                .unwrap_or(&OsStr::new("invalid"))
-                                .to_string_lossy()
-                                .as_str(),
-                        );
-                    }
-                });
-            });
+
             ui.add_space(20.0);
 
             if ui.large_green_button("Calculate IOA").clicked() {
                 match self.validate_files() {
                     Ok(_) => match self.calculate_ioa() {
-                        Ok(_) => self.error.clear(),
+                        Ok(_) => {
+                            self.error.clear();
+                            self.ioa_finished = true;
+                        }
                         Err(e) => self.error = e.to_string(),
                     },
                     Err(e) => self.error = e.to_string(),
                 }
             }
             if ui.large_red_button("Return").clicked() {
-                display_info.go_to_about();
-                self.primary_bufs.clear();
+                self.bufs.clear();
                 self.pdata.clear();
-                self.reli_bufs.clear();
                 self.rdata.clear();
+                self.error.clear();
+                display_info.go_to_about();
             }
 
-            ui.strong(&self.error)
+            ui.strong(&self.error);
+
+            if self.ioa_finished {
+                ui.monospace(
+                    RichText::new("IOA Calculated and Saved!")
+                        .heading()
+                        .color(Color32::GREEN),
+                );
+            }
         });
     }
 }

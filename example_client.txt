@@ -11,5 +11,5 @@
     "FA",
     "DDTT"
   ],
-  "session_number": 20
+  "current_session": 20
 }

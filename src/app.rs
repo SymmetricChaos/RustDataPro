@@ -1,7 +1,7 @@
 use crate::{
     data::{ClientData, Data, KsfData, SessionData},
     pages::Page,
-    utils::date_time_string,
+    utils::{date_time_string, quick_file_name},
 };
 use chrono::Local;
 use egui::Visuals;
@@ -14,6 +14,7 @@ pub struct DisplayInfo {
     pub random_open: bool,
     pub sidebar_open: bool,
     pub zoom: f32,
+    pub ksf_name: String,
 }
 
 impl DisplayInfo {
@@ -42,6 +43,8 @@ impl DisplayInfo {
         self.random_open = !self.random_open;
     }
 }
+
+const STARTING_ZOOM: f32 = 1.5;
 
 pub struct DataPro {
     pub data: Data,
@@ -74,7 +77,8 @@ impl Default for DataPro {
                 timers_open: false,
                 random_open: false,
                 sidebar_open: true,
-                zoom: 1.2,
+                zoom: STARTING_ZOOM,
+                ksf_name: String::from("DEFAULT"),
             },
 
             ksf_file_dialog: FileDialog::default(),
@@ -95,19 +99,21 @@ impl Default for DataPro {
 
 impl DataPro {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        cc.egui_ctx.set_pixels_per_point(1.0);
+        cc.egui_ctx.set_pixels_per_point(STARTING_ZOOM);
         cc.egui_ctx.set_visuals(Visuals::dark());
         Default::default()
     }
 
     pub fn load_ksf_file(&mut self, path: PathBuf) {
-        match KsfData::from_file(path) {
+        match KsfData::from_file(&path) {
             Ok(ksf) => {
                 self.data.ksf = ksf;
+                self.display_info.ksf_name = quick_file_name(&path).to_string();
                 self.ksf_err.clear();
             }
             Err(e) => {
                 self.data.ksf = KsfData::default();
+                self.display_info.ksf_name = String::from("DEFAULT");
                 self.ksf_err = e.to_string();
             }
         };
@@ -118,7 +124,7 @@ impl DataPro {
             Ok(sess_data) => {
                 self.client_data_path = Some(path.as_path().to_str().unwrap().to_string());
                 self.data.client = sess_data;
-                self.data.client.session_number += 1;
+                self.data.client.current_session += 1; // We are always one session ahead of the last saved value
                 self.client_data_err.clear();
                 if self.data.client.assessments.is_empty() {
                     self.client_data_err.push_str("NO ASSESSMENTS");
@@ -151,7 +157,7 @@ impl eframe::App for DataPro {
 
         // ### Top Bar ###
         // To go fully across it must be specified before any other panel
-        // Nothing here can be a button
+        // Nothing here can be interactable because we use Tab and Space as controls on the Session Page
         egui::Panel::top("top_panel").show(ui, |ui| {
             egui::MenuBar::new().ui(ui, |ui| {
                 ui.request_repaint_after_secs(5.0);

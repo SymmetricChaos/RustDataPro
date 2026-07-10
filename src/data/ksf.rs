@@ -1,17 +1,11 @@
 use anyhow::{Context, Result};
 use egui::Key;
 use serde::{Deserialize, Serialize};
-use std::{
-    fs::File,
-    hash::{DefaultHasher, Hash, Hasher},
-    io::Read,
-    path::PathBuf,
-};
+use std::{fs::File, io::Read, path::Path};
 
 /// A list of keybinds divided into Duration and Frequency
-#[derive(Serialize, Deserialize, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct KsfData {
-    pub name: String,
     pub duration: Vec<(Key, String)>,
     pub frequency: Vec<(Key, String)>,
 }
@@ -20,7 +14,6 @@ impl Default for KsfData {
     fn default() -> Self {
         serde_json::from_str(
             r#"{
-                "name": "DEFAULT",
                 "frequency": [
                     ["V", "NegVoc"],
                     ["A", "Aggression"],
@@ -41,7 +34,7 @@ impl Default for KsfData {
 }
 
 impl KsfData {
-    pub fn from_file(file_path: PathBuf) -> Result<Self> {
+    pub fn from_file(file_path: &Path) -> Result<Self> {
         let mut file = File::open(&file_path)?;
         let mut s = String::new();
         file.read_to_string(&mut s)?;

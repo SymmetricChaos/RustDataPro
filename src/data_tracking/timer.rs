@@ -62,7 +62,7 @@ pub struct Timer {
     pub stashed_time: Duration,
     pub bouts: u32,
     pub status: TimerStatus,
-    pub started: bool,
+    started: bool,
 }
 
 impl Default for Timer {
@@ -164,8 +164,14 @@ impl Timer {
         };
     }
 
+    /// Is the timer currently in the Active state.
     pub fn is_active(&self) -> bool {
         self.status.is_active()
+    }
+
+    /// Has the timer been started at least once since it was last reset?
+    pub fn was_started(&self) -> bool {
+        self.started
     }
 
     /// Time since the timer was last started
