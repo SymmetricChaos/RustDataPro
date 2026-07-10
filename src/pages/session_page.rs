@@ -6,7 +6,7 @@ use crate::{
     },
     utils::{ClickedKeys, DataProUiElements, date_time_string, rounded_f32},
 };
-use anyhow::Result;
+use anyhow::{Context, Result};
 use chrono::{DateTime, Local};
 use egui::{Color32, Key, RichText, Ui};
 use indexmap::IndexMap;
@@ -108,7 +108,7 @@ impl SessionPage {
     }
 
     /// Write the output data into a human readable format.
-    fn write_data(&mut self, data: &mut Data) -> String {
+    fn write_output_pretty(&self, data: &mut Data) -> String {
         let mut output = String::new();
 
         output.push_str("---Session---\n");
@@ -146,7 +146,11 @@ impl SessionPage {
     }
 
     /// Write the output data into a JSON format. Not especially human readable.
-    fn write_json(&self, data: &mut Data) -> String {
+    fn write_output_json(&self, data: &mut Data) -> Result<String> {
+        let mut fre_map: IndexMap<String, u32> = IndexMap::new();
+        for (t, _, d) in self.counters.iter() {
+            fre_map.insert(d.clone(), *t);
+        }
         let mut dur_map: IndexMap<String, (u32, f32)> = IndexMap::new();
         for (t, _, d) in self.timers.iter() {
             dur_map.insert(d.clone(), (t.bouts, rounded_f32(t.total_time())));
@@ -158,15 +162,11 @@ impl SessionPage {
             client: data.client.clone(),
             session: data.session.clone(),
             duration: dur_map,
-            frequency: self
-                .counters
-                .iter()
-                .map(|(counter, _, desc)| (desc.clone(), *counter))
-                .collect(),
+            frequency: fre_map,
             timeline: self.timeline.clone(),
             ksf: data.ksf.clone(),
         })
-        .unwrap()
+        .context("failure to create json")
     }
 
     fn update_client_file(
@@ -195,7 +195,7 @@ impl SessionPage {
             data.session.data_type
         ))?;
         let mut writer = BufWriter::new(file);
-        writer.write_all(self.write_data(data).as_bytes())?;
+        writer.write_all(self.write_output_pretty(data).as_bytes())?;
         writer.flush()?;
 
         let file = File::create(&format!(
@@ -209,7 +209,7 @@ impl SessionPage {
             data.session.data_type
         ))?;
         let mut writer = BufWriter::new(file);
-        writer.write_all(self.write_json(data).as_bytes())?;
+        writer.write_all(self.write_output_json(data)?.as_bytes())?;
         writer.flush()?;
 
         Ok(())
@@ -361,7 +361,11 @@ impl SessionPage {
                     ui.columns(2, |columns| {
                         columns[0].set_height(60.0);
                         columns[0].add_enabled_ui(self.session_timer.was_started(), |ui| {
-                            if ui.large_green_button("SAVE").clicked() {
+                            if ui
+                                .large_green_button("SAVE")
+                                .on_disabled_hover_text("no data to save")
+                                .clicked()
+                            {
                                 self.save_session(data, client_data_path);
                                 self.end_session(display_info);
                             }

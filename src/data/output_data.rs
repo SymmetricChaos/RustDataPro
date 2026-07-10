@@ -10,8 +10,8 @@ pub struct OutputData {
     pub client: ClientData,
     pub session: SessionData,
     pub session_duration: f32,
-    pub duration: IndexMap<String, (u32, f32)>,
     pub frequency: IndexMap<String, u32>,
+    pub duration: IndexMap<String, (u32, f32)>,
     pub timeline: Timeline,
     pub ksf: KsfData,
 }
