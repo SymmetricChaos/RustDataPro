@@ -1,8 +1,4 @@
-use crate::{
-    app::DataPro,
-    data::DataType,
-    utils::{DataProUiElements, quick_file_name},
-};
+use crate::{app::DataPro, data::DataType, utils::DataProUiElements};
 
 pub struct About {}
 

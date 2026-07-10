@@ -1,7 +1,8 @@
 use crate::data::{ClientData, KsfData, SessionData, timeline::Timeline};
 use anyhow::{Context, Result};
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fs::File, io::Read, path::Path};
+use std::{fs::File, io::Read, path::Path};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct OutputData {
@@ -9,8 +10,8 @@ pub struct OutputData {
     pub client: ClientData,
     pub session: SessionData,
     pub session_duration: f32,
-    pub duration: HashMap<String, (u32, f32)>,
-    pub frequency: HashMap<String, u32>,
+    pub duration: IndexMap<String, (u32, f32)>,
+    pub frequency: IndexMap<String, u32>,
     pub timeline: Timeline,
     pub ksf: KsfData,
 }

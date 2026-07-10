@@ -1,13 +1,14 @@
 use anyhow::{Context, Result};
+use egui::Key;
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::Read, path::Path};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct IoaData {
-    pub ten_sec_interval: Vec<(String, f32)>,
-    pub sixty_sec_interval: Vec<(String, f32)>,
-    pub total_duration: Vec<(String, f32)>,
-    pub total_count: Vec<(String, f32)>,
+    pub ten_sec_interval: Vec<(Key, f32)>,
+    pub sixty_sec_interval: Vec<(Key, f32)>,
+    pub total_duration: Vec<(Key, f32)>,
+    pub total_count: Vec<(Key, f32)>,
 }
 
 impl IoaData {

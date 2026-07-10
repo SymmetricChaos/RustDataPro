@@ -845,6 +845,7 @@ dependencies = [
  "egui-file-dialog",
  "egui_extras",
  "env_logger",
+ "indexmap",
  "itertools 0.15.0",
  "log",
  "rust_xlsxwriter",
@@ -1886,6 +1887,8 @@ checksum = "d466e9454f08e4a911e14806c24e16fba1b4c121d1ea474396f396069cf949d9"
 dependencies = [
  "equivalent",
  "hashbrown 0.17.1",
+ "serde",
+ "serde_core",
 ]
 
 [[package]]
@@ -3292,6 +3295,7 @@ version = "1.0.150"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8014e44b4736ed0538adeecded0fce2a272f22dc9578a7eb6b2d9993c74cfb9"
 dependencies = [
+ "indexmap",
  "itoa",
  "memchr",
  "serde",

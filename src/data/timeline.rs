@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use egui::Key;
 use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
@@ -8,7 +9,7 @@ use std::{
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Timeline(Vec<(String, f32)>);
+pub struct Timeline(Vec<(Key, f32)>);
 
 impl Default for Timeline {
     fn default() -> Self {
@@ -17,7 +18,7 @@ impl Default for Timeline {
 }
 
 impl Deref for Timeline {
-    type Target = Vec<(String, f32)>;
+    type Target = Vec<(Key, f32)>;
 
     fn deref(&self) -> &Self::Target {
         &self.0

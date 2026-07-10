@@ -1,11 +1,6 @@
 use chrono::{DateTime, Datelike, Local, Timelike};
 use egui::{Color32, InputState, Key, Response, RichText, Ui};
-use std::{
-    borrow::Cow,
-    collections::HashSet,
-    ffi::OsStr,
-    path::{Path, PathBuf},
-};
+use std::{borrow::Cow, collections::HashSet, ffi::OsStr, path::Path};
 
 pub struct Prng {
     pub state: u64,
@@ -27,6 +22,11 @@ impl Prng {
             v.swap(i, swap_pos);
         }
     }
+}
+
+// Round an f32 to one decimal
+pub fn rounded_f32(n: f32) -> f32 {
+    (n * 10.0).trunc() / 10.0
 }
 
 pub fn date_time_string(dt: &DateTime<Local>) -> String {

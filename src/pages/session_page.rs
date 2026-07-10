@@ -4,21 +4,22 @@ use crate::{
     data_tracking::{
         TimerStatus, counter::Counter, timer::Timer, view_session_page_timer, view_simple_timer,
     },
-    utils::{ClickedKeys, DataProUiElements, date_time_string},
+    utils::{ClickedKeys, DataProUiElements, date_time_string, rounded_f32},
 };
 use anyhow::Result;
 use chrono::{DateTime, Local};
 use egui::{Color32, Key, RichText, Ui};
+use indexmap::IndexMap;
 use itertools::Itertools;
 use std::{
-    collections::{HashMap, VecDeque},
+    collections::VecDeque,
     fs::File,
     io::{BufWriter, Write},
 };
 
 macro_rules! record_keypress {
-    ($self:ident, $key:expr, $decription:expr, $time:expr) => {
-        $self.timeline.push(($decription, $time));
+    ($self:ident, $key:expr, $time:expr) => {
+        $self.timeline.push(($key, rounded_f32($time)));
         $self.keypresses_display.pop_front();
         $self.keypresses_display.push_back($key.name());
     };
@@ -87,14 +88,14 @@ impl SessionPage {
     fn start_session(&mut self) {
         self.session_timer.start();
         self.session_start = Local::now();
-        self.timeline.push((String::from("Start"), 0.0));
+        self.timeline.push((Key::Tab, 0.0));
         self.keypresses_display.pop_front();
         self.keypresses_display.push_back("ST");
     }
 
     fn save_session(&mut self, data: &mut Data, client_data_path: &Option<String>) {
         self.timeline
-            .push((String::from("End"), self.session_timer.total_time()));
+            .push((Key::Escape, rounded_f32(self.session_timer.total_time())));
         self.keypresses_display.pop_front();
         self.keypresses_display.push_back("END");
         self.save_output(data).unwrap();
@@ -124,7 +125,7 @@ impl SessionPage {
         output.push_str("\n\n--Duration--\n");
 
         for (timer, _, desc) in self.timers.iter() {
-            output.push_str(&format!("{} {:.1}\n", desc, timer.saved_time(),));
+            output.push_str(&format!("{} {:.1}\n", desc, timer.saved_time()));
         }
 
         output.push_str("\n--Frequency--\n");
@@ -137,7 +138,7 @@ impl SessionPage {
             &self
                 .timeline
                 .iter()
-                .map(|(d, t)| format!("{} {:.1}", d, t))
+                .map(|(k, t)| format!("{} {:.1}", k.name(), t))
                 .join("\n"),
         );
 
@@ -146,14 +147,14 @@ impl SessionPage {
 
     /// Write the output data into a JSON format. Not especially human readable.
     fn write_json(&self, data: &mut Data) -> String {
-        let mut dur_map: HashMap<String, (u32, f32)> = HashMap::new();
+        let mut dur_map: IndexMap<String, (u32, f32)> = IndexMap::new();
         for (t, _, d) in self.timers.iter() {
-            dur_map.insert(d.clone(), (t.bouts, t.total_time()));
+            dur_map.insert(d.clone(), (t.bouts, rounded_f32(t.total_time())));
         }
 
         serde_json::to_string(&OutputData {
             datetime: date_time_string(&self.session_start),
-            session_duration: self.session_timer.total_time(),
+            session_duration: rounded_f32(self.session_timer.total_time()),
             client: data.client.clone(),
             session: data.session.clone(),
             duration: dur_map,
@@ -246,10 +247,10 @@ impl SessionPage {
 
         // ### Duration Keys are Tracked Here ###
         if self.session_timer.status.is_active() {
-            for (timer, key, desc) in self.timers.iter_mut() {
+            for (timer, key, _) in self.timers.iter_mut() {
                 if self.clicked_keys.contains(key) {
                     timer.toggle();
-                    record_keypress!(self, key, desc.clone(), self.session_timer.total_time());
+                    record_keypress!(self, *key, self.session_timer.total_time());
                 }
             }
         }
@@ -315,7 +316,6 @@ impl SessionPage {
                                                 record_keypress!(
                                                     self,
                                                     key,
-                                                    counter.description.clone(),
                                                     self.session_timer.total_time()
                                                 );
                                             }

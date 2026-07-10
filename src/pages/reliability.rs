@@ -4,7 +4,7 @@ use crate::{
     utils::{DataProUiElements, quick_file_name, time_stamp},
 };
 use anyhow::{Context, Result};
-use egui::{Color32, RichText, Ui};
+use egui::{Color32, Key, RichText, Ui};
 use egui_file_dialog::FileDialog;
 use rust_xlsxwriter::*;
 use std::{
@@ -17,7 +17,7 @@ fn write_excel_line<'a>(
     worksheet: &'a mut Worksheet,
     row: u32,
     name: &'static str,
-    it: impl Iterator<Item = &'a (String, f32)>,
+    it: impl Iterator<Item = &'a (Key, f32)>,
 ) -> Result<()> {
     worksheet.write(row, 0, name)?;
     let mut col = 1;
@@ -35,8 +35,8 @@ fn excel_output(ioa_data: &IoaData) -> Result<()> {
     worksheet.set_column_range_width(1, 20, 10)?;
 
     let mut col = 1;
-    for (d, _) in ioa_data.sixty_sec_interval.iter() {
-        worksheet.write(0, col, d)?;
+    for (k, _) in ioa_data.sixty_sec_interval.iter() {
+        worksheet.write(0, col, k.name())?;
         col += 1;
     }
     write_excel_line(
@@ -63,11 +63,8 @@ fn excel_output(ioa_data: &IoaData) -> Result<()> {
     Ok(())
 }
 
-fn extract_times(v: &Timeline, description: &str) -> Vec<f32> {
-    v.iter()
-        .filter(|e| e.0 == description)
-        .map(|e| e.1)
-        .collect()
+fn extract_times(v: &Timeline, key: Key) -> Vec<f32> {
+    v.iter().filter(|e| e.0 == key).map(|e| e.1).collect()
 }
 
 /// Used for Total Count and Total Duration IOA. Divides the smaller value by the larger value. If both values are zero returns None to be handled specially.
@@ -87,16 +84,16 @@ fn total_ratio_ioa(primary: f32, reli: f32) -> Option<f32> {
 fn interval_ioa(
     max_time: f32,
     interval: f32,
-    description: &str,
+    key: Key,
     primary: &Timeline,
     reli: &Timeline,
     strict: bool,
 ) -> Option<f32> {
     let mut time = interval;
 
-    let primary = extract_times(primary, description);
+    let primary = extract_times(primary, key);
     let mut p_iter = primary.into_iter().peekable();
-    let reli = extract_times(reli, description);
+    let reli = extract_times(reli, key);
     let mut r_iter = reli.into_iter().peekable();
 
     let mut correct_intervals = 0.0;
@@ -134,6 +131,8 @@ pub struct ReliabilityPage {
     bufs: Vec<PathBuf>,
     pdata: Vec<OutputData>,
     rdata: Vec<OutputData>,
+    // ksf: KsfData,
+    // ksf_map: HashMap<Key, String>,
     error: String,
     strict: bool,
     none_val: f32,
@@ -147,6 +146,8 @@ impl Default for ReliabilityPage {
             bufs: Vec::new(),
             pdata: Vec::new(),
             rdata: Vec::new(),
+            // ksf: KsfData::default(),
+            // ksf_map: HashMap::new(),
             error: String::new(),
             strict: true,
             none_val: f32::NAN,
@@ -156,7 +157,7 @@ impl Default for ReliabilityPage {
 }
 
 impl ReliabilityPage {
-    fn validate_files(&self) -> Result<()> {
+    fn validate_files(&mut self) -> Result<()> {
         if self.pdata.is_empty() {
             return Err(anyhow::anyhow!("no primary data files"));
         }
@@ -168,6 +169,9 @@ impl ReliabilityPage {
                 "unequal number of primary and reliability files"
             ));
         }
+
+        // self.ksf = self.pdata[0].ksf.clone();
+        // self.ksf_map = self.pdata[0].ksf.create_map();
 
         let ksf = &self.pdata[0].ksf;
         let id = &self.pdata[0].client.client_id;
@@ -196,47 +200,26 @@ impl ReliabilityPage {
             } else {
                 r.session_duration
             };
-            for (_, description) in p.ksf.frequency.iter() {
+            for (key, desc) in p.ksf.frequency.iter() {
                 // 10 Second Interval-by-Interval IOA
-                let r10 = interval_ioa(
-                    max_time,
-                    10.0,
-                    description,
-                    &p.timeline,
-                    &r.timeline,
-                    self.strict,
-                )
-                .unwrap_or(self.none_val);
-                ioa_data.ten_sec_interval.push((description.clone(), r10));
+                let r10 = interval_ioa(max_time, 10.0, *key, &p.timeline, &r.timeline, self.strict)
+                    .unwrap_or(self.none_val);
+                ioa_data.ten_sec_interval.push((*key, r10));
 
                 // 60 Second Interval-by-Interval IOA
-                let r60 = interval_ioa(
-                    max_time,
-                    60.0,
-                    description,
-                    &p.timeline,
-                    &r.timeline,
-                    self.strict,
-                )
-                .unwrap_or(self.none_val);
-                ioa_data.sixty_sec_interval.push((description.clone(), r60));
+                let r60 = interval_ioa(max_time, 60.0, *key, &p.timeline, &r.timeline, self.strict)
+                    .unwrap_or(self.none_val);
+                ioa_data.sixty_sec_interval.push((*key, r60));
 
                 // Total duration is meaningless for frequency data but for alignment in potential output a NaN is pushed
-                ioa_data
-                    .total_duration
-                    .push((description.clone(), f32::NAN));
+                ioa_data.total_duration.push((*key, f32::NAN));
 
                 // Total Count IOA
-                let primary_dur = *p
-                    .frequency
-                    .get(description)
-                    .context("missing primary duration")? as f32; // conversion of u32 to f32 is valid so long as count is below about 16 million, so it is not checked
-                let reli_dur = *r
-                    .frequency
-                    .get(description)
-                    .context("missing reli duration")? as f32;
+                let primary_dur =
+                    *p.frequency.get(desc).context("missing primary duration")? as f32; // conversion of u32 to f32 is valid so long as count is below about 16 million, so it is not checked
+                let reli_dur = *r.frequency.get(desc).context("missing reli duration")? as f32;
                 ioa_data.total_count.push((
-                    description.clone(),
+                    *key,
                     total_ratio_ioa(primary_dur, reli_dur).unwrap_or(self.none_val),
                 ));
             }
@@ -251,30 +234,16 @@ impl ReliabilityPage {
             } else {
                 r.session_duration
             };
-            for (_, description) in p.ksf.duration.iter() {
+            for (key, description) in p.ksf.duration.iter() {
                 // 10 Second Interval-by-Interval IOA
-                let r10 = interval_ioa(
-                    max_time,
-                    10.0,
-                    description,
-                    &p.timeline,
-                    &r.timeline,
-                    self.strict,
-                )
-                .unwrap_or(self.none_val);
-                ioa_data.ten_sec_interval.push((description.clone(), r10));
+                let r10 = interval_ioa(max_time, 10.0, *key, &p.timeline, &r.timeline, self.strict)
+                    .unwrap_or(self.none_val);
+                ioa_data.ten_sec_interval.push((*key, r10));
 
                 // 60 Second Interval-by-Interval IOA
-                let r60 = interval_ioa(
-                    max_time,
-                    60.0,
-                    description,
-                    &p.timeline,
-                    &r.timeline,
-                    self.strict,
-                )
-                .unwrap_or(self.none_val);
-                ioa_data.sixty_sec_interval.push((description.clone(), r60));
+                let r60 = interval_ioa(max_time, 60.0, *key, &p.timeline, &r.timeline, self.strict)
+                    .unwrap_or(self.none_val);
+                ioa_data.sixty_sec_interval.push((*key, r60));
 
                 // Total Count IOA (onset and offset of duration keys)
                 let primary_dur = p
@@ -288,7 +257,7 @@ impl ReliabilityPage {
                     .context("missing reli duration")?
                     .1;
                 ioa_data.total_duration.push((
-                    description.clone(),
+                    *key,
                     total_ratio_ioa(primary_dur, reli_dur).unwrap_or(self.none_val),
                 ));
 
@@ -304,7 +273,7 @@ impl ReliabilityPage {
                     .context("missing reli duration")?
                     .0 as f32;
                 ioa_data.total_count.push((
-                    description.clone(),
+                    *key,
                     total_ratio_ioa(primary_dur, reli_dur).unwrap_or(self.none_val),
                 ));
             }
