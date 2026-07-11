@@ -81,9 +81,10 @@ macro_rules! timer_display {
 
 const DESCRIPTION_WIDTH: f32 = 100.0;
 const KEY_WIDTH: f32 = 40.0;
+const ROW_HEIGHT: f32 = 20.0;
 
 pub struct SessionPage {
-    timers: Vec<(Timer, Key, String)>,
+    timers: Vec<(Timer, u32, Key, String)>,
     counters: Vec<(u32, Key, String)>,
     session_timer: Timer,
     session_start: DateTime<Local>,
@@ -92,6 +93,8 @@ pub struct SessionPage {
     clicked_keys: ClickedKeys,
     save_discard_open: bool,
     unpress_available: bool,
+    pub limit_session_length: bool,
+    pub maximum_session_length: f32,
 }
 
 impl SessionPage {
@@ -106,6 +109,8 @@ impl SessionPage {
             clicked_keys: ClickedKeys::new(),
             save_discard_open: false,
             unpress_available: false,
+            limit_session_length: false,
+            maximum_session_length: 0.0,
         }
     }
 
@@ -119,20 +124,22 @@ impl SessionPage {
         self.save_discard_open = false;
     }
 
-    /// Stop all timers, including the session timer.
+    /// Stop all timers, including the session timer, and update their saved times.
     fn stop_all_timers(&mut self) {
-        for (timer, _, _) in self.timers.iter_mut() {
+        for (timer, _, _, _) in self.timers.iter_mut() {
             timer.stop();
         }
         self.session_timer.stop();
     }
 
-    /// Pause all timers, including the session timer.
-    fn toggle_pause_all_timers(&mut self) {
-        for (timer, _, _) in self.timers.iter_mut() {
-            timer.toggle_pause_partial();
+    /// Pause or unpause all timers, including the session timer.
+    fn toggle_all_timers(&mut self) {
+        for (timer, _, _, _) in self.timers.iter_mut() {
+            if timer.was_started() {
+                timer.toggle();
+            }
         }
-        self.session_timer.toggle_pause();
+        self.session_timer.toggle();
     }
 
     fn unpress_key(&mut self) {
@@ -140,12 +147,13 @@ impl SessionPage {
             self.keypresses_display.push_front("_");
             self.keypresses_display.pop_back();
             if let Some((removed_key, _time)) = self.timeline.pop() {
-                for (timer, key, _) in self.timers.iter_mut() {
+                for (timer, bouts, key, _) in self.timers.iter_mut() {
                     if key == &removed_key {
                         if timer.is_active() {
                             timer.unstart();
+                            *bouts = bouts.saturating_sub(1);
                         } else {
-                            timer.start_without_bout();
+                            timer.stop();
                         }
                     }
                 }
@@ -161,7 +169,7 @@ impl SessionPage {
 
     pub fn load_ksf(&mut self, data: &Data) {
         for kb in data.ksf.duration.iter() {
-            self.timers.push((Timer::default(), kb.0, kb.1.clone()));
+            self.timers.push((Timer::default(), 0, kb.0, kb.1.clone()));
         }
         for kb in data.ksf.frequency.iter() {
             self.counters.push((0, kb.0, kb.1.clone()));
@@ -207,8 +215,8 @@ impl SessionPage {
 
         output.push_str("\n\n--Duration--\n");
 
-        for (timer, _, desc) in self.timers.iter() {
-            output.push_str(&format!("{} {:.1}\n", desc, timer.saved_time()));
+        for (timer, bouts, _, desc) in self.timers.iter() {
+            output.push_str(&format!("{} {} {:.1}\n", desc, bouts, timer.saved_time()));
         }
 
         output.push_str("\n--Frequency--\n");
@@ -235,8 +243,8 @@ impl SessionPage {
             fre_map.insert(d.clone(), *t);
         }
         let mut dur_map: IndexMap<String, (u32, f32)> = IndexMap::new();
-        for (t, _, d) in self.timers.iter() {
-            dur_map.insert(d.clone(), (t.bouts, rounded_f32(t.total_time())));
+        for (t, bouts, _, d) in self.timers.iter() {
+            dur_map.insert(d.clone(), (*bouts, rounded_f32(t.total_time())));
         }
 
         serde_json::to_string(&OutputData {
@@ -305,6 +313,13 @@ impl SessionPage {
         data: &mut Data,
         client_data_path: &Option<String>,
     ) {
+        if self.limit_session_length && self.session_timer.is_active() {
+            if self.session_timer.current_time() >= self.maximum_session_length {
+                self.save_discard_open = true;
+                self.stop_all_timers();
+            }
+        }
+
         // Itercept key presses to detect clicks and then delete all of them to prevent egui from reusing them.
         ui.ctx().input_mut(|i| {
             self.clicked_keys.update(i);
@@ -314,7 +329,7 @@ impl SessionPage {
         // ### Permanent Keys ###
         // Starting is only allowed when session is Stopped.
         if self.clicked_keys.contains(&egui::Key::Tab) {
-            if self.session_timer.status.is_stopped() {
+            if !self.session_timer.was_started() {
                 self.start_session();
             }
         }
@@ -325,19 +340,24 @@ impl SessionPage {
         }
         // Pausing can be toggled. Definition of pause prevents this from being used when Stopped.
         if self.clicked_keys.contains(&egui::Key::Space) {
-            self.toggle_pause_all_timers();
+            if self.session_timer.was_started() {
+                self.toggle_all_timers();
+            }
         }
         if self.clicked_keys.contains(&egui::Key::Backspace) {
-            if self.session_timer.status.is_active() {
+            if self.session_timer.is_active() {
                 self.unpress_key();
             }
         }
 
-        // ### Duration Frequency Keys ###
-        if self.session_timer.status.is_active() {
-            for (timer, key, _) in self.timers.iter_mut() {
+        // ### Duration and Frequency Keys ###
+        if self.session_timer.is_active() {
+            for (timer, bouts, key, _) in self.timers.iter_mut() {
                 if self.clicked_keys.contains(key) {
-                    timer.toggle();
+                    timer.stop_start();
+                    if timer.is_active() {
+                        *bouts += 1;
+                    }
                     record_keypress!(self, *key, self.session_timer.total_time());
                 }
             }
@@ -369,7 +389,7 @@ impl SessionPage {
             ui.add_space(10.0);
 
             ui.label("TAB to start. ESC return to end session. SPACE to pause/unpause.");
-            match self.session_timer.status {
+            match self.session_timer.status() {
                 TimerStatus::Active => {
                     ui.label(RichText::new("ACTIVE").monospace().color(Color32::GREEN))
                 }
@@ -379,15 +399,21 @@ impl SessionPage {
                 TimerStatus::Paused => {
                     ui.label(RichText::new("PAUSED").monospace().color(Color32::YELLOW))
                 }
+                TimerStatus::NotStarted => {
+                    ui.label(RichText::new("NOT STARTED").monospace().color(Color32::RED))
+                }
             };
             ui.add_space(10.0);
 
             ui.horizontal(|ui| {
                 ui.label("Session Time:");
                 view_simple_timer(ui, &mut self.session_timer);
+                if self.limit_session_length {
+                    ui.monospace(format!("[{:.2}]", self.maximum_session_length));
+                }
             });
             ui.add_space(10.0);
-            ui.add_enabled_ui(self.session_timer.status.is_active(), |ui| {
+            ui.add_enabled_ui(self.session_timer.is_active(), |ui| {
                 ui.horizontal(|ui| {
                     ui.vertical(|ui| {
                         ui.group(|ui| {
@@ -398,9 +424,14 @@ impl SessionPage {
                                 .column(Column::exact(KEY_WIDTH))
                                 .column(Column::exact(40.0))
                                 .striped(true)
-                                .cell_layout(Layout::default().with_cross_align(egui::Align::RIGHT))
+                                .cell_layout(
+                                    Layout::default()
+                                        .with_cross_align(egui::Align::RIGHT)
+                                        .with_main_align(egui::Align::Center)
+                                        .with_main_justify(true),
+                                )
                                 .body(|mut body| {
-                                    body.row(20.0, |mut row| {
+                                    body.row(ROW_HEIGHT, |mut row| {
                                         row.col(|ui| {
                                             ui.strong("Description");
                                         });
@@ -412,7 +443,7 @@ impl SessionPage {
                                         });
                                     });
                                     for (counter, key, desc) in self.counters.iter() {
-                                        body.row(20.0, |mut row| {
+                                        body.row(ROW_HEIGHT, |mut row| {
                                             row.col(|ui| {
                                                 ui.monospace(desc);
                                             });
@@ -438,9 +469,14 @@ impl SessionPage {
                                 .column(Column::exact(60.0))
                                 .column(Column::exact(40.0))
                                 .striped(true)
-                                .cell_layout(Layout::default().with_cross_align(egui::Align::RIGHT))
+                                .cell_layout(
+                                    Layout::default()
+                                        .with_cross_align(egui::Align::RIGHT)
+                                        .with_main_align(egui::Align::Center)
+                                        .with_main_justify(true),
+                                )
                                 .body(|mut body| {
-                                    body.row(20.0, |mut row| {
+                                    body.row(ROW_HEIGHT, |mut row| {
                                         row.col(|ui| {
                                             ui.strong("Description");
                                         });
@@ -457,9 +493,9 @@ impl SessionPage {
                                             ui.strong("Bouts");
                                         });
                                     });
-                                    for (timer, key, desc) in self.timers.iter() {
-                                        body.row(20.0, |mut row| match timer.status {
-                                            TimerStatus::Active => {
+                                    for (timer, bouts, key, desc) in self.timers.iter() {
+                                        body.row(ROW_HEIGHT, |mut row| match timer.status() {
+                                            TimerStatus::Active | TimerStatus::Paused => {
                                                 timer_display!(
                                                     bright,
                                                     row,
@@ -467,29 +503,18 @@ impl SessionPage {
                                                     key,
                                                     timer.saved_time(),
                                                     timer.current_time(),
-                                                    timer.bouts
+                                                    bouts
                                                 );
                                             }
-                                            TimerStatus::Stopped => {
+                                            TimerStatus::Stopped | TimerStatus::NotStarted => {
                                                 timer_display!(
                                                     dim,
                                                     row,
                                                     desc,
                                                     key,
                                                     timer.saved_time(),
-                                                    0.0,
-                                                    timer.bouts
-                                                );
-                                            }
-                                            TimerStatus::Paused => {
-                                                timer_display!(
-                                                    bright,
-                                                    row,
-                                                    desc,
-                                                    key,
-                                                    timer.saved_time(),
-                                                    timer.stashed_time(),
-                                                    timer.bouts
+                                                    timer.current_time(),
+                                                    bouts
                                                 );
                                             }
                                         });
@@ -508,7 +533,7 @@ impl SessionPage {
                     }
                 });
             });
-            ui.label("BACKSPACE to delete last entry.");
+            ui.label("BACKSPACE to undo last entry.");
 
             if self.save_discard_open {
                 egui::Window::new("Confirm Exit").show(ui, |ui| {

@@ -105,10 +105,23 @@ impl About {
             });
             ui.add_space(10.0);
 
+            ui.horizontal(|ui| {
+                ui.add_enabled(
+                    app.session_page.limit_session_length,
+                    egui::DragValue::new(&mut app.session_page.maximum_session_length)
+                        .range(0.0..=100_000.0),
+                );
+                ui.checkbox(
+                    &mut app.session_page.limit_session_length,
+                    "Limit Session Length",
+                );
+            });
+            ui.add_space(10.0);
+
             if ui.large_green_button("BEGIN SESSION").clicked() {
                 app.session_page.load_ksf(&app.data);
                 app.display_info.go_to_session();
-                app.timers.stop_all_timers();
+                app.timers.pause_all_timers();
             }
         });
     }

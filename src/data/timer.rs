@@ -1,6 +1,9 @@
 use egui::{Color32, RichText, Ui};
 use serde::{Deserialize, Serialize};
-use std::time::{Duration, Instant};
+use std::{
+    fmt::Display,
+    time::{Duration, Instant},
+};
 
 /// Need to use a macro to pass around a string literal
 macro_rules! timer_format {
@@ -29,6 +32,7 @@ macro_rules! timer_display_red {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TimerStatus {
+    NotStarted,
     Active,
     Stopped,
     Paused,
@@ -36,11 +40,26 @@ pub enum TimerStatus {
 
 impl Default for TimerStatus {
     fn default() -> Self {
-        Self::Stopped
+        Self::NotStarted
+    }
+}
+
+impl Display for TimerStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TimerStatus::NotStarted => write!(f, "NotStarted"),
+            TimerStatus::Active => write!(f, "Active"),
+            TimerStatus::Stopped => write!(f, "Stopped"),
+            TimerStatus::Paused => write!(f, "Paused"),
+        }
     }
 }
 
 impl TimerStatus {
+    pub fn was_started(&self) -> bool {
+        *self != TimerStatus::NotStarted
+    }
+
     pub fn is_active(&self) -> bool {
         *self == TimerStatus::Active
     }
@@ -56,13 +75,11 @@ impl TimerStatus {
 
 #[derive(Debug, Clone, Copy)]
 pub struct Timer {
-    pub start_time: Instant,
+    start_time: Instant,
     saved_time: Duration,
-    pub countdown_from: f32,
     stashed_time: Duration,
-    pub bouts: u32,
-    pub status: TimerStatus,
-    started: bool,
+    pub countdown_from: f32,
+    status: TimerStatus,
 }
 
 impl Default for Timer {
@@ -70,98 +87,62 @@ impl Default for Timer {
         Self {
             start_time: Instant::now(),
             saved_time: Duration::ZERO,
-            countdown_from: 30.0,
             stashed_time: Duration::ZERO,
-            bouts: 0,
-            status: TimerStatus::Stopped,
-            started: false,
+            countdown_from: 30.0,
+            status: TimerStatus::NotStarted,
         }
     }
 }
 
 impl Timer {
-    /// Stop or start. Does nothing if the timer is Paused.
-    pub fn toggle(&mut self) {
-        match self.status {
-            TimerStatus::Active => self.stop(),
-            TimerStatus::Stopped => self.start(),
-            TimerStatus::Paused => (),
-        }
-    }
-
-    /// Pause or unpause. Does nothing is the timer is Stopped. Does not update bouts.
-    pub fn toggle_pause(&mut self) {
-        match self.status {
-            TimerStatus::Active => self.pause(),
-            TimerStatus::Paused => self.unpause(),
-            TimerStatus::Stopped => (),
-        }
-    }
-
-    /// This is needed for session page so that both the saved time and current time can be paused at once.
-    pub fn toggle_pause_partial(&mut self) {
-        match self.status {
-            TimerStatus::Active => {
-                self.status = TimerStatus::Paused;
-                self.stashed_time += Instant::now() - self.start_time;
-            }
-            TimerStatus::Paused => {
-                self.status = TimerStatus::Active;
-                self.start_time = Instant::now();
-            }
-            TimerStatus::Stopped => (),
-        }
-    }
-
-    /// If Active set status to Paused. Does not update bouts.
-    pub fn pause(&mut self) {
-        if self.status.is_active() {
-            self.status = TimerStatus::Paused;
-            self.saved_time += self.start_time.elapsed();
-        }
-    }
-
-    /// If Paused set status to Active.
-    pub fn unpause(&mut self) {
-        if self.status.is_paused() {
-            self.status = TimerStatus::Active;
-            self.start_time = Instant::now();
-        }
-    }
-
-    /// If inactive set status to Active, set the start_time to to Local::now(), and increment bouts by 1. Otherwise do nothing.
+    /// Set status to Active and set the start_time to to Local::now().
     pub fn start(&mut self) {
         if !self.status.is_active() {
             self.status = TimerStatus::Active;
             self.start_time = Instant::now();
-            self.bouts += 1;
-            self.started = true;
         }
     }
 
-    /// If inactive set status to Active and set the start_time to to Local::now(). Otherwise do nothing.
-    pub fn start_without_bout(&mut self) {
-        if !self.status.is_active() {
-            self.status = TimerStatus::Active;
-            self.start_time = Instant::now();
-            self.started = true;
+    /// Set status to Paused and update the stashed time.
+    pub fn pause(&mut self) {
+        if self.is_active() {
+            self.status = TimerStatus::Paused;
+            self.stashed_time += self.start_time.elapsed();
         }
     }
 
-    /// If Active, decrement bouts by 1 and Stop without updating the saved time. Otherwise do nothing.
+    /// In Active or Paused, set status to Stopped, update the saved time, and clear the stashed time.
+    pub fn stop(&mut self) {
+        if self.is_active() || self.is_paused() {
+            self.status = TimerStatus::Stopped;
+            self.stashed_time += self.start_time.elapsed();
+            self.saved_time += self.stashed_time;
+            self.stashed_time = Duration::ZERO;
+        }
+    }
+
+    /// Set status to Stopped without updating the stashed time.
     pub fn unstart(&mut self) {
         if self.status.is_active() {
             self.status = TimerStatus::Stopped;
-            self.bouts = self.bouts.saturating_sub(1); // prevents potential overflow
         }
     }
 
-    /// If Active or Paused, Stop and update the saved time. Otherwise do nothing.
-    pub fn stop(&mut self) {
-        if !self.status.is_stopped() {
-            self.status = TimerStatus::Stopped;
-            self.saved_time += self.start_time.elapsed() + self.stashed_time;
-            self.stashed_time = Duration::ZERO;
+    /// Pause or unpause. Does nothing if the timer is Stopped.
+    pub fn toggle(&mut self) {
+        match self.status {
+            TimerStatus::Active => self.pause(),
+            TimerStatus::Paused | TimerStatus::NotStarted => self.start(),
+            TimerStatus::Stopped => (),
+        }
+    }
+
+    /// Stop or start. Does nothing if the timer is Paused.
+    pub fn stop_start(&mut self) {
+        match self.status {
+            TimerStatus::Active => self.stop(),
+            TimerStatus::Stopped | TimerStatus::NotStarted => self.start(),
+            TimerStatus::Paused => (),
         }
     }
 
@@ -173,39 +154,58 @@ impl Timer {
         };
     }
 
+    pub fn status(&self) -> TimerStatus {
+        self.status
+    }
+
     /// Is the timer currently in the Active state.
     pub fn is_active(&self) -> bool {
         self.status.is_active()
     }
 
-    /// Has the timer been started at least once since it was last reset?
-    pub fn was_started(&self) -> bool {
-        self.started
+    /// Is the timer currently in the Paused state.
+    pub fn is_paused(&self) -> bool {
+        self.status.is_paused()
     }
 
-    /// Time since the timer was last started
-    pub fn elapsed_time(&self) -> f32 {
-        self.start_time.elapsed().as_secs_f32()
+    /// Is the timer currently in the Stopped state.
+    pub fn is_stopped(&self) -> bool {
+        self.status.is_stopped()
     }
+
+    /// Has the timer been started at least once since it was last reset?
+    pub fn was_started(&self) -> bool {
+        self.status.was_started()
+    }
+
+    // /// Time since the timer was last started in seconds.
+    // pub fn elapsed_time(&self) -> f32 {
+    //     self.start_time.elapsed().as_secs_f32()
+    // }
 
     /// The amount of time currently saved in seconds.
     pub fn saved_time(&self) -> f32 {
         self.saved_time.as_secs_f32()
     }
 
-    /// How long the timer has been running since it was last started in seconds. Ignores time spent paused.
+    /// How long the timer has been running since it was last started, ignoring time paused.
     pub fn current_time(&self) -> f32 {
-        (Instant::now() - self.start_time + self.stashed_time).as_secs_f32()
+        match self.status {
+            TimerStatus::Active => (self.start_time.elapsed() + self.stashed_time).as_secs_f32(),
+            TimerStatus::Stopped => self.stashed_time(),
+            TimerStatus::Paused => self.stashed_time(),
+            TimerStatus::NotStarted => 0.0,
+        }
     }
 
-    /// Amount of time stashed during pauses in seconds.
+    /// Amount of time stashed during the current pause in seconds.
     pub fn stashed_time(&self) -> f32 {
         self.stashed_time.as_secs_f32()
     }
 
     /// The total time recorded in seconds. Sum of .saved_time() and .current_time().
     pub fn total_time(&self) -> f32 {
-        (self.start_time.elapsed() + self.saved_time).as_secs_f32()
+        self.saved_time() + self.current_time()
     }
 
     /// Time remaining in the countdown. May be negative.
@@ -221,10 +221,13 @@ pub fn view_simple_timer(ui: &mut Ui, timer: &Timer) {
             timer_display_yellow!(ui, timer.total_time());
         }
         TimerStatus::Stopped => {
-            timer_display_default!(ui, timer.saved_time());
+            timer_display_yellow!(ui, timer.saved_time());
         }
         TimerStatus::Paused => {
-            timer_display_yellow!(ui, timer.saved_time());
+            timer_display_yellow!(ui, timer.stashed_time());
+        }
+        TimerStatus::NotStarted => {
+            timer_display_default!(ui, 0.0);
         }
     }
 }
@@ -240,41 +243,24 @@ pub fn view_simple_countdown_timer(ui: &mut Ui, timer: &Timer) {
                 timer_display_red!(ui, -t);
             }
         }
-        TimerStatus::Stopped | TimerStatus::Paused => {
+        TimerStatus::Stopped => {
             let t = timer.countdown_from - timer.saved_time();
-            if timer.started {
-                if t.is_sign_positive() {
-                    timer_display_yellow!(ui, t);
-                } else {
-                    timer_display_red!(ui, -t);
-                }
+            if t.is_sign_positive() {
+                timer_display_yellow!(ui, t);
             } else {
-                timer_display_default!(ui, t.abs());
+                timer_display_red!(ui, -t);
             }
+        }
+        TimerStatus::Paused => {
+            let t = timer.countdown_from - timer.stashed_time();
+            if t.is_sign_positive() {
+                timer_display_yellow!(ui, t);
+            } else {
+                timer_display_red!(ui, -t);
+            }
+        }
+        TimerStatus::NotStarted => {
+            timer_display_default!(ui, timer.countdown_from);
         }
     }
 }
-
-// pub fn view_session_page_timer(ui: &mut Ui, timer: &Timer, key: &Key, description: &String) {
-//     ui.monospace(description);
-//     ui.monospace(key.name());
-
-//     match timer.status {
-//         TimerStatus::Active => {
-//             ui.request_repaint();
-//             timer_display_yellow!(ui, timer.saved_time());
-//             timer_display_yellow!(ui, timer.current_time());
-//             ui.monospace(RichText::new(timer.bouts.to_string()).color(Color32::YELLOW));
-//         }
-//         TimerStatus::Stopped => {
-//             timer_display_default!(ui, timer.saved_time());
-//             timer_display_default!(ui, 0.0);
-//             ui.monospace(timer.bouts.to_string());
-//         }
-//         TimerStatus::Paused => {
-//             timer_display_yellow!(ui, timer.saved_time());
-//             timer_display_yellow!(ui, timer.stashed_time());
-//             ui.monospace(RichText::new(timer.bouts.to_string()).color(Color32::YELLOW));
-//         }
-//     }
-// }

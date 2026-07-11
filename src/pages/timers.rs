@@ -44,9 +44,11 @@ impl Default for Timers {
 }
 
 impl Timers {
-    pub fn stop_all_timers(&mut self) {
+    pub fn pause_all_timers(&mut self) {
         for timer in self.timers.iter_mut() {
-            timer.stop();
+            if timer.was_started() {
+                timer.pause();
+            }
         }
     }
 
@@ -71,8 +73,8 @@ impl Timers {
                 if ui.button("Reset All").clicked() {
                     self.reset_all_timers()
                 }
-                if ui.button("Stop All").clicked() {
-                    self.stop_all_timers()
+                if ui.button("Pause All").clicked() {
+                    self.pause_all_timers()
                 }
                 egui::ComboBox::from_id_salt("timer_type_selector")
                     .selected_text(self.timer_type.to_string())
@@ -158,7 +160,7 @@ impl Timers {
                 self.clicked_keys.update(input);
 
                 if self.clicked_keys.contains(&Key::Space) {
-                    self.stop_all_timers();
+                    self.pause_all_timers();
                 }
 
                 // Detect toggle linked
