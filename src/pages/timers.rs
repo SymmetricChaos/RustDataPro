@@ -2,30 +2,43 @@ use crate::{
     data::{Timer, view_simple_countdown_timer, view_simple_timer},
     utils::ClickedKeys,
 };
-use egui::{Key, Ui};
+use egui::{
+    Key::{self},
+    Ui,
+};
+use std::fmt::Display;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TimerType {
+    Countdown,
+    Stopwatch,
+}
+
+impl Display for TimerType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TimerType::Countdown => write!(f, "Countdown"),
+            TimerType::Stopwatch => write!(f, "Stopwatch"),
+        }
+    }
+}
 
 const NUM_TIMERS: usize = 5;
 
 pub struct Timers {
     timers: [Timer; NUM_TIMERS],
     linked_timers: [bool; NUM_TIMERS],
-    countdown: bool,
     clicked_keys: ClickedKeys,
+    timer_type: TimerType,
 }
 
 impl Default for Timers {
     fn default() -> Self {
         Self {
-            timers: [
-                Timer::default(),
-                Timer::default(),
-                Timer::default(),
-                Timer::default(),
-                Timer::default(),
-            ],
+            timers: [Timer::default(); NUM_TIMERS],
             linked_timers: [true, true, false, false, false],
-            countdown: false,
             clicked_keys: ClickedKeys::new(),
+            timer_type: TimerType::Stopwatch,
         }
     }
 }
@@ -43,17 +56,12 @@ impl Timers {
         }
     }
 
-    pub fn switch_countdown(&mut self) {
-        self.reset_all_timers();
-        self.countdown = !self.countdown;
-    }
-
     fn timers_and_links(&mut self) -> impl Iterator<Item = (&mut Timer, &mut bool)> {
         self.timers.iter_mut().zip(self.linked_timers.iter_mut())
     }
 
     pub fn view(&mut self, ui: &mut Ui, open: &mut bool) {
-        let countdown = self.countdown;
+        let timer_type = self.timer_type;
         let mut allow_keys = *open;
 
         egui::Window::new("Timers").open(open).show(ui, |ui| {
@@ -66,20 +74,36 @@ impl Timers {
                 if ui.button("Stop All").clicked() {
                     self.stop_all_timers()
                 }
-                if self.countdown {
-                    if ui.button("Switch to Countup").clicked() {
-                        self.switch_countdown()
-                    }
-                } else {
-                    if ui.button("Switch to Countdown").clicked() {
-                        self.switch_countdown()
-                    }
-                }
+                egui::ComboBox::from_id_salt("timer_type_selector")
+                    .selected_text(self.timer_type.to_string())
+                    .show_ui(ui, |ui| {
+                        if ui
+                            .selectable_value(
+                                &mut self.timer_type,
+                                TimerType::Stopwatch,
+                                "Stopwatch",
+                            )
+                            .clicked()
+                        {
+                            self.reset_all_timers();
+                        }
+                        if ui
+                            .selectable_value(
+                                &mut self.timer_type,
+                                TimerType::Countdown,
+                                "Countdown",
+                            )
+                            .clicked()
+                        {
+                            self.reset_all_timers();
+                        };
+                    });
             });
             ui.add_space(10.0);
 
+            ui.strong("Keyboard Controls:");
             ui.label(
-                "Keyboard Controls:\n1-5 to toggle timers.\n0 to toggle linked timers.\nSpace to stop all timers.",
+                "1-5 to toggle timers.\n0 to toggle linked timers.\nSpace to stop all timers.",
             );
             ui.add_space(10.0);
 
@@ -87,29 +111,42 @@ impl Timers {
                 .striped(true)
                 .show(ui, |ui| {
                     for (n, (timer, linked)) in self.timers_and_links().enumerate() {
-                        ui.monospace(format!("{})", n + 1));
-
-                        if countdown {
-                            let draginfo = ui.add(egui::DragValue::new(&mut timer.countdown_from).range(0.0..=9999.0));
-                            if draginfo.has_focus() {
-                                allow_keys = false;
+                        ui.horizontal(|ui| {
+                            ui.monospace(format!("{})", n + 1));
+                            ui.add_space(10.0);
+                            if timer_type == TimerType::Countdown {
+                                view_simple_countdown_timer(ui, timer);
+                            } else {
+                                view_simple_timer(ui, timer);
                             }
-                            if draginfo.changed() {
+                            ui.add_space(5.0);
+                            if ui.button("❌").on_hover_text("reset").clicked() {
                                 timer.reset();
                             }
-                            view_simple_countdown_timer(ui, timer);
-                        } else {
-                            view_simple_timer(ui, timer);
-                        }
-
-                        if ui.button("❌").on_hover_text("reset").clicked() {
-                            timer.reset();
-                        }
-                        if *linked {
-                            ui.checkbox(linked, "").on_hover_text("linked");
-                        } else {
-                            ui.checkbox(linked, "").on_hover_text("unlinked");
-                        }
+                            ui.add_space(5.0);
+                            if *linked {
+                                if ui.button("☑").on_hover_text("linked").clicked() {
+                                    *linked = !*linked;
+                                }
+                            } else {
+                                if ui.button("☐").on_hover_text("unlinked").clicked() {
+                                    *linked = !*linked;
+                                }
+                            }
+                            ui.add_space(5.0);
+                            if timer_type == TimerType::Countdown {
+                                let draginfo = ui.add(
+                                    egui::DragValue::new(&mut timer.countdown_from)
+                                        .range(0.0..=9999.0),
+                                );
+                                if draginfo.has_focus() {
+                                    allow_keys = false;
+                                }
+                                if draginfo.changed() {
+                                    timer.reset();
+                                }
+                            }
+                        });
 
                         ui.end_row();
                     }

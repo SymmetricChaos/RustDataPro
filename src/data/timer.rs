@@ -54,7 +54,7 @@ impl TimerStatus {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Timer {
     pub start_time: Instant,
     pub saved_time: Duration,
@@ -70,7 +70,7 @@ impl Default for Timer {
         Self {
             start_time: Instant::now(),
             saved_time: Duration::ZERO,
-            countdown_from: 5.0, // DO NOT LEAVE AS DEFAULT
+            countdown_from: 30.0,
             stashed_time: Duration::ZERO,
             bouts: 0,
             status: TimerStatus::Stopped,
