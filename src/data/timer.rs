@@ -139,6 +139,15 @@ impl Timer {
         }
     }
 
+    /// If inactive set status to Active and set the start_time to to Local::now(). Otherwise do nothing.
+    pub fn start_without_bout(&mut self) {
+        if !self.status.is_active() {
+            self.status = TimerStatus::Active;
+            self.start_time = Instant::now();
+            self.started = true;
+        }
+    }
+
     /// If Active, decrement bouts by 1 and Stop without updating the saved time. Otherwise do nothing.
     pub fn unstart(&mut self) {
         if self.status.is_active() {

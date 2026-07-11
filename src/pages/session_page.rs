@@ -23,6 +23,7 @@ macro_rules! record_keypress {
         $self.timeline.push(($key, rounded_f32($time)));
         $self.keypresses_display.pop_front();
         $self.keypresses_display.push_back($key.name());
+        $self.unpress_available = true;
     };
 }
 
@@ -78,6 +79,9 @@ macro_rules! timer_display {
     };
 }
 
+const DESCRIPTION_WIDTH: f32 = 100.0;
+const KEY_WIDTH: f32 = 40.0;
+
 pub struct SessionPage {
     timers: Vec<(Timer, Key, String)>,
     counters: Vec<(u32, Key, String)>,
@@ -87,6 +91,7 @@ pub struct SessionPage {
     keypresses_display: VecDeque<&'static str>,
     clicked_keys: ClickedKeys,
     save_discard_open: bool,
+    unpress_available: bool,
 }
 
 impl SessionPage {
@@ -97,9 +102,10 @@ impl SessionPage {
             timers: Vec::new(),
             counters: Vec::new(),
             timeline: Timeline::default(),
-            keypresses_display: VecDeque::from(["_"; 10]),
+            keypresses_display: VecDeque::from(["_"; 11]),
             clicked_keys: ClickedKeys::new(),
             save_discard_open: false,
+            unpress_available: false,
         }
     }
 
@@ -108,7 +114,7 @@ impl SessionPage {
         self.counters.clear();
         self.session_timer.reset();
         self.timeline.clear();
-        self.keypresses_display = VecDeque::from(["_"; 10]);
+        self.keypresses_display = VecDeque::from(["_"; 11]);
         self.clicked_keys.clear();
         self.save_discard_open = false;
     }
@@ -127,6 +133,30 @@ impl SessionPage {
             timer.toggle_pause_partial();
         }
         self.session_timer.toggle_pause();
+    }
+
+    fn unpress_key(&mut self) {
+        if self.unpress_available {
+            self.keypresses_display.push_front("_");
+            self.keypresses_display.pop_back();
+            if let Some((removed_key, _time)) = self.timeline.pop() {
+                for (timer, key, _) in self.timers.iter_mut() {
+                    if key == &removed_key {
+                        if timer.is_active() {
+                            timer.unstart();
+                        } else {
+                            timer.start_without_bout();
+                        }
+                    }
+                }
+                for (counter, key, _) in self.counters.iter_mut() {
+                    if key == &removed_key {
+                        *counter = counter.saturating_sub(1);
+                    }
+                }
+            };
+            self.unpress_available = false;
+        }
     }
 
     pub fn load_ksf(&mut self, data: &Data) {
@@ -297,6 +327,11 @@ impl SessionPage {
         if self.clicked_keys.contains(&egui::Key::Space) {
             self.toggle_pause_all_timers();
         }
+        if self.clicked_keys.contains(&egui::Key::Backspace) {
+            if self.session_timer.status.is_active() {
+                self.unpress_key();
+            }
+        }
 
         // ### Duration Frequency Keys ###
         if self.session_timer.status.is_active() {
@@ -333,7 +368,7 @@ impl SessionPage {
             });
             ui.add_space(10.0);
 
-            ui.label("TAB to start. ESC return to about page. SPACE to pause/unpause.");
+            ui.label("TAB to start. ESC return to end session. SPACE to pause/unpause.");
             match self.session_timer.status {
                 TimerStatus::Active => {
                     ui.label(RichText::new("ACTIVE").monospace().color(Color32::GREEN))
@@ -356,30 +391,49 @@ impl SessionPage {
                 ui.horizontal(|ui| {
                     ui.vertical(|ui| {
                         ui.group(|ui| {
-                            ui.label("Frequency Keys");
-                            egui::Grid::new("frequency_grid")
+                            ui.heading("Frequency Keys");
+                            egui_extras::TableBuilder::new(ui)
+                                .id_salt("frequency")
+                                .column(Column::exact(DESCRIPTION_WIDTH))
+                                .column(Column::exact(KEY_WIDTH))
+                                .column(Column::exact(40.0))
                                 .striped(true)
-                                .show(ui, |ui| {
-                                    ui.strong("Description");
-                                    ui.strong("Key");
-                                    ui.strong("Total");
-                                    ui.end_row();
-
-                                    for (counter, key, desc) in self.counters.iter_mut() {
-                                        ui.monospace(desc);
-                                        ui.monospace(key.name());
-                                        ui.monospace(format!("{:>3}", counter));
-                                        ui.end_row();
+                                .cell_layout(Layout::default().with_cross_align(egui::Align::RIGHT))
+                                .body(|mut body| {
+                                    body.row(20.0, |mut row| {
+                                        row.col(|ui| {
+                                            ui.strong("Description");
+                                        });
+                                        row.col(|ui| {
+                                            ui.strong("Key");
+                                        });
+                                        row.col(|ui| {
+                                            ui.strong("Count");
+                                        });
+                                    });
+                                    for (counter, key, desc) in self.counters.iter() {
+                                        body.row(20.0, |mut row| {
+                                            row.col(|ui| {
+                                                ui.monospace(desc);
+                                            });
+                                            row.col(|ui| {
+                                                ui.monospace(key.name());
+                                            });
+                                            row.col(|ui| {
+                                                ui.monospace(counter.to_string());
+                                            });
+                                        });
                                     }
                                 });
                         })
                     });
                     ui.vertical(|ui| {
                         ui.group(|ui| {
-                            ui.label("Duration Keys");
+                            ui.heading("Duration Keys");
                             egui_extras::TableBuilder::new(ui)
-                                .column(Column::exact(70.0))
-                                .column(Column::exact(35.0))
+                                .id_salt("durationkeys")
+                                .column(Column::exact(DESCRIPTION_WIDTH))
+                                .column(Column::exact(KEY_WIDTH))
                                 .column(Column::exact(60.0))
                                 .column(Column::exact(60.0))
                                 .column(Column::exact(40.0))
@@ -449,11 +503,12 @@ impl SessionPage {
 
             ui.group(|ui| {
                 ui.horizontal(|ui| {
-                    for k in self.keypresses_display.iter() {
+                    for k in self.keypresses_display.make_contiguous()[1..11].iter() {
                         ui.monospace(*k);
                     }
                 });
             });
+            ui.label("BACKSPACE to delete last entry.");
 
             if self.save_discard_open {
                 egui::Window::new("Confirm Exit").show(ui, |ui| {
