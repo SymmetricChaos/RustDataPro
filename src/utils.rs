@@ -41,11 +41,11 @@ pub fn date_time_string(dt: &DateTime<Local>) -> String {
     )
 }
 
-/// Quick time stamp as Year_Month_Day_Hour_Minute
+/// Quick time stamp as YearMonthDayHourMinute
 pub fn time_stamp() -> String {
     let dt = Local::now();
     format!(
-        "{}_{}_{}_{:02}_{:02}",
+        "{}{:02}{:02}{:02}{:02}",
         dt.year(),
         dt.month(),
         dt.day(),
@@ -149,11 +149,11 @@ impl DataProUiElements for Ui {
     }
 
     fn large_yellow_button(&mut self, text: &'static str) -> Response {
-        simple_custom_button!(large, self, text, Color32::LIGHT_YELLOW)
+        simple_custom_button!(large, self, text, Color32::GOLD)
     }
 
     fn yellow_button(&mut self, text: &'static str) -> Response {
-        simple_custom_button!(self, text, Color32::LIGHT_YELLOW)
+        simple_custom_button!(self, text, Color32::GOLD)
     }
 
     fn large_blue_button(&mut self, text: &'static str) -> Response {

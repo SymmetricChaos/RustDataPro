@@ -1,6 +1,6 @@
 use crate::{
     app::DisplayInfo,
-    data::{IoaData, OutputData, timeline::Timeline},
+    data::{DataType, IoaData, OutputData, timeline::Timeline},
     utils::{DataProUiElements, quick_file_name, time_stamp},
 };
 use anyhow::{Context, Result};
@@ -12,6 +12,8 @@ use std::{
     io::{BufWriter, Write},
     path::PathBuf,
 };
+
+const RELI_FILE_START: &'static str = "reli_data_";
 
 fn write_excel_line<'a>(
     worksheet: &'a mut Worksheet,
@@ -59,7 +61,7 @@ fn excel_output(ioa_data: &IoaData) -> Result<()> {
         ioa_data.total_duration.iter(),
     )?;
 
-    workbook.save(&format!("reli_data_{}.xlsx", time_stamp()))?;
+    workbook.save(&format!("{}{}.xlsx", RELI_FILE_START, time_stamp()))?;
     Ok(())
 }
 
@@ -129,10 +131,8 @@ fn interval_ioa(
 pub struct ReliabilityPage {
     file_dialog: FileDialog,
     bufs: Vec<PathBuf>,
-    pdata: Vec<OutputData>,
-    rdata: Vec<OutputData>,
-    // ksf: KsfData,
-    // ksf_map: HashMap<Key, String>,
+    prim_data: Vec<OutputData>,
+    reli_data: Vec<OutputData>,
     error: String,
     strict: bool,
     none_val: f32,
@@ -144,10 +144,8 @@ impl Default for ReliabilityPage {
         Self {
             file_dialog: Default::default(),
             bufs: Vec::new(),
-            pdata: Vec::new(),
-            rdata: Vec::new(),
-            // ksf: KsfData::default(),
-            // ksf_map: HashMap::new(),
+            prim_data: Vec::new(),
+            reli_data: Vec::new(),
             error: String::new(),
             strict: true,
             none_val: f32::NAN,
@@ -158,31 +156,38 @@ impl Default for ReliabilityPage {
 
 impl ReliabilityPage {
     fn validate_files(&mut self) -> Result<()> {
-        if self.pdata.is_empty() {
-            return Err(anyhow::anyhow!("no primary data files"));
+        // Are there any files?
+        match (self.prim_data.is_empty(), self.reli_data.is_empty()) {
+            (true, true) => return Err(anyhow::anyhow!("no data files selected")),
+            (true, false) => return Err(anyhow::anyhow!("no primary data files")),
+            (false, true) => return Err(anyhow::anyhow!("no reliability data files")),
+            _ => (),
         }
-        if self.rdata.is_empty() {
-            return Err(anyhow::anyhow!("no reliability data files"));
-        }
-        if self.pdata.len() != self.rdata.len() {
+
+        // Is there a reliability file to go with each primary file?
+        if self.prim_data.len() != self.reli_data.len() {
             return Err(anyhow::anyhow!(
                 "unequal number of primary and reliability files"
             ));
         }
 
-        // self.ksf = self.pdata[0].ksf.clone();
-        // self.ksf_map = self.pdata[0].ksf.create_map();
-
-        let ksf = &self.pdata[0].ksf;
-        let id = &self.pdata[0].client.client_id;
-        for (i, p) in self.pdata.iter().chain(self.rdata.iter()).enumerate() {
-            if &p.ksf != ksf {
+        // Assume the first primary file is correct and check that all files use the save KSF and have the same client ID
+        let ksf = &self.prim_data[0].ksf;
+        let id = &self.prim_data[0].client.client_id;
+        for (i, o) in self
+            .prim_data
+            .iter()
+            .chain(self.reli_data.iter())
+            .enumerate()
+            .skip(1)
+        {
+            if &o.ksf != ksf {
                 return Err(anyhow::anyhow!(
                     "file {} has an incorrect ksf",
                     quick_file_name(&self.bufs[i])
                 ));
             }
-            if &p.client.client_id != id {
+            if &o.client.client_id != id {
                 return Err(anyhow::anyhow!(
                     "file {} has an incorrect client id",
                     quick_file_name(&self.bufs[i])
@@ -194,7 +199,7 @@ impl ReliabilityPage {
     }
 
     fn interval_ioa(&self, ioa_data: &mut IoaData) {
-        for (p, r) in self.pdata.iter().zip(self.rdata.iter()) {
+        for (p, r) in self.prim_data.iter().zip(self.reli_data.iter()) {
             let max_time = if p.session_duration >= r.session_duration {
                 p.session_duration
             } else {
@@ -215,7 +220,7 @@ impl ReliabilityPage {
     }
 
     fn frequency_ioa(&self, ioa_data: &mut IoaData) -> Result<()> {
-        for (p, r) in self.pdata.iter().zip(self.rdata.iter()) {
+        for (p, r) in self.prim_data.iter().zip(self.reli_data.iter()) {
             for (key, desc) in p.ksf.frequency.iter() {
                 // Total Duration IOA is meaningless for frequency data but for alignment in potential output a NaN is pushed
                 ioa_data.total_duration.push((*key, f32::NAN));
@@ -234,7 +239,7 @@ impl ReliabilityPage {
     }
 
     fn duration_ioa(&self, ioa_data: &mut IoaData) -> Result<()> {
-        for (p, r) in self.pdata.iter().zip(self.rdata.iter()) {
+        for (p, r) in self.prim_data.iter().zip(self.reli_data.iter()) {
             for (key, description) in p.ksf.duration.iter() {
                 // Total Duration IOA
                 let primary_dur = p
@@ -279,7 +284,11 @@ impl ReliabilityPage {
         self.duration_ioa(&mut ioa_data)?;
         excel_output(&ioa_data)?;
 
-        let mut writer = BufWriter::new(File::create(&format!("reli_data_{}.txt", time_stamp()))?);
+        let mut writer = BufWriter::new(File::create(&format!(
+            "{}{}.txt",
+            RELI_FILE_START,
+            time_stamp()
+        ))?);
         writer.write_all(ioa_data.to_json()?.as_bytes())?;
         writer.flush()?;
 
@@ -292,10 +301,14 @@ impl ReliabilityPage {
             self.bufs = bufs;
             self.ioa_finished = false;
             self.error.clear();
+            // Simultaneously parse and filter the input files.
             self.bufs
                 .retain(|buf| match OutputData::from_file(buf.as_path()) {
                     Ok(data) => {
-                        self.pdata.push(data);
+                        match data.session.data_type {
+                            DataType::Primary => self.prim_data.push(data),
+                            DataType::Reliability => self.reli_data.push(data),
+                        }
                         true
                     }
                     Err(_) => false,
@@ -331,8 +344,8 @@ impl ReliabilityPage {
             }
             if ui.large_red_button("Return").clicked() {
                 self.bufs.clear();
-                self.pdata.clear();
-                self.rdata.clear();
+                self.prim_data.clear();
+                self.reli_data.clear();
                 self.error.clear();
                 display_info.go_to_about();
             }

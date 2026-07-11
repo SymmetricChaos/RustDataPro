@@ -1,4 +1,4 @@
-use egui::{Color32, Key, RichText, Ui};
+use egui::{Color32, RichText, Ui};
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
 
@@ -57,9 +57,9 @@ impl TimerStatus {
 #[derive(Debug, Clone, Copy)]
 pub struct Timer {
     pub start_time: Instant,
-    pub saved_time: Duration,
+    saved_time: Duration,
     pub countdown_from: f32,
-    pub stashed_time: Duration,
+    stashed_time: Duration,
     pub bouts: u32,
     pub status: TimerStatus,
     started: bool,
@@ -205,7 +205,7 @@ impl Timer {
     }
 }
 
-pub fn view_simple_timer(ui: &mut Ui, timer: &mut Timer) {
+pub fn view_simple_timer(ui: &mut Ui, timer: &Timer) {
     match timer.status {
         TimerStatus::Active => {
             ui.request_repaint();
@@ -220,7 +220,7 @@ pub fn view_simple_timer(ui: &mut Ui, timer: &mut Timer) {
     }
 }
 
-pub fn view_simple_countdown_timer(ui: &mut Ui, timer: &mut Timer) {
+pub fn view_simple_countdown_timer(ui: &mut Ui, timer: &Timer) {
     match timer.status {
         TimerStatus::Active => {
             ui.request_repaint();
@@ -246,26 +246,26 @@ pub fn view_simple_countdown_timer(ui: &mut Ui, timer: &mut Timer) {
     }
 }
 
-pub fn view_session_page_timer(ui: &mut Ui, timer: &mut Timer, key: &Key, description: &String) {
-    ui.monospace(description);
-    ui.monospace(key.name());
+// pub fn view_session_page_timer(ui: &mut Ui, timer: &Timer, key: &Key, description: &String) {
+//     ui.monospace(description);
+//     ui.monospace(key.name());
 
-    match timer.status {
-        TimerStatus::Active => {
-            ui.request_repaint();
-            timer_display_yellow!(ui, timer.saved_time());
-            timer_display_yellow!(ui, timer.current_time());
-            ui.monospace(RichText::new(timer.bouts.to_string()).color(Color32::YELLOW));
-        }
-        TimerStatus::Stopped => {
-            timer_display_default!(ui, timer.saved_time());
-            timer_display_default!(ui, 0.0);
-            ui.monospace(timer.bouts.to_string());
-        }
-        TimerStatus::Paused => {
-            timer_display_yellow!(ui, timer.saved_time());
-            timer_display_yellow!(ui, timer.stashed_time());
-            ui.monospace(RichText::new(timer.bouts.to_string()).color(Color32::YELLOW));
-        }
-    }
-}
+//     match timer.status {
+//         TimerStatus::Active => {
+//             ui.request_repaint();
+//             timer_display_yellow!(ui, timer.saved_time());
+//             timer_display_yellow!(ui, timer.current_time());
+//             ui.monospace(RichText::new(timer.bouts.to_string()).color(Color32::YELLOW));
+//         }
+//         TimerStatus::Stopped => {
+//             timer_display_default!(ui, timer.saved_time());
+//             timer_display_default!(ui, 0.0);
+//             ui.monospace(timer.bouts.to_string());
+//         }
+//         TimerStatus::Paused => {
+//             timer_display_yellow!(ui, timer.saved_time());
+//             timer_display_yellow!(ui, timer.stashed_time());
+//             ui.monospace(RichText::new(timer.bouts.to_string()).color(Color32::YELLOW));
+//         }
+//     }
+// }

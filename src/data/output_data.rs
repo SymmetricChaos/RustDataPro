@@ -1,4 +1,4 @@
-use crate::data::{ClientData, KsfData, SessionData, timeline::Timeline};
+use crate::data::{ClientData, DataType, KsfData, SessionData, timeline::Timeline};
 use anyhow::{Context, Result};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -17,6 +17,14 @@ pub struct OutputData {
 }
 
 impl OutputData {
+    pub fn session_number(&self) -> u32 {
+        self.client.current_session
+    }
+
+    pub fn data_type(&self) -> DataType {
+        self.session.data_type
+    }
+
     pub fn from_file(file_path: &Path) -> Result<Self> {
         let mut file = File::open(&file_path)?;
         let mut s = String::new();

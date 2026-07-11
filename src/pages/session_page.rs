@@ -2,13 +2,14 @@ use crate::{
     app::DisplayInfo,
     data::{
         Data, DataType, Timer, TimerStatus, output_data::OutputData, timeline::Timeline,
-        view_session_page_timer, view_simple_timer,
+        view_simple_timer,
     },
     utils::{ClickedKeys, DataProUiElements, date_time_string, rounded_f32},
 };
 use anyhow::{Context, Result};
 use chrono::{DateTime, Local};
-use egui::{Color32, Key, RichText, Ui};
+use egui::{Color32, Key, Layout, RichText, Ui};
+use egui_extras::Column;
 use indexmap::IndexMap;
 use itertools::Itertools;
 use std::{
@@ -22,6 +23,58 @@ macro_rules! record_keypress {
         $self.timeline.push(($key, rounded_f32($time)));
         $self.keypresses_display.pop_front();
         $self.keypresses_display.push_back($key.name());
+    };
+}
+
+/// Need to use a macro to pass around a string literal
+macro_rules! timer_format {
+    () => {
+        "{:7.2}"
+    };
+}
+
+macro_rules! yellow_timer {
+    ($ui:ident, $timer:expr) => {
+        $ui.col(|ui| {
+            ui.monospace(RichText::new(format!(timer_format!(), $timer)).color(Color32::YELLOW));
+        });
+    };
+}
+
+macro_rules! default_timer {
+    ($ui:ident, $timer:expr) => {
+        $ui.col(|ui| {
+            ui.monospace(RichText::new(format!(timer_format!(), $timer)));
+        });
+    };
+}
+
+macro_rules! timer_display {
+    (bright, $row:ident, $desc:ident, $key:ident, $time1:expr, $time2:expr, $bouts:expr) => {
+        $row.col(|ui| {
+            ui.monospace(RichText::new($desc).color(Color32::YELLOW));
+        });
+        $row.col(|ui| {
+            ui.monospace(RichText::new($key.name()).color(Color32::YELLOW));
+        });
+        yellow_timer!($row, $time1);
+        yellow_timer!($row, $time2);
+        $row.col(|ui| {
+            ui.monospace(RichText::new($bouts.to_string()).color(Color32::YELLOW));
+        });
+    };
+    (dim, $row:ident, $desc:ident, $key:ident, $time1:expr, $time2:expr, $bouts:expr) => {
+        $row.col(|ui| {
+            ui.monospace(RichText::new($desc));
+        });
+        $row.col(|ui| {
+            ui.monospace(RichText::new($key.name()));
+        });
+        default_timer!($row, $time1);
+        default_timer!($row, $time2);
+        $row.col(|ui| {
+            ui.monospace(RichText::new($bouts.to_string()));
+        });
     };
 }
 
@@ -228,24 +281,24 @@ impl SessionPage {
             i.events.clear();
         });
 
-        // ### Permanent keys are tracked here ###
-        // Toggle pausing as needed
-        if self.clicked_keys.contains(&egui::Key::Space) {
-            self.toggle_pause_all_timers();
-        }
-        // Allowed at any time in order to close Session in opened incorrectly
-        if self.clicked_keys.contains(&egui::Key::Escape) {
-            self.save_discard_open = true;
-            self.stop_all_timers();
-        }
+        // ### Permanent Keys ###
         // Starting is only allowed when session is Stopped.
         if self.clicked_keys.contains(&egui::Key::Tab) {
             if self.session_timer.status.is_stopped() {
                 self.start_session();
             }
         }
+        // Stop and quit at any time.
+        if self.clicked_keys.contains(&egui::Key::Escape) {
+            self.save_discard_open = true;
+            self.stop_all_timers();
+        }
+        // Pausing can be toggled. Definition of pause prevents this from being used when Stopped.
+        if self.clicked_keys.contains(&egui::Key::Space) {
+            self.toggle_pause_all_timers();
+        }
 
-        // ### Duration Keys are Tracked Here ###
+        // ### Duration Frequency Keys ###
         if self.session_timer.status.is_active() {
             for (timer, key, _) in self.timers.iter_mut() {
                 if self.clicked_keys.contains(key) {
@@ -299,18 +352,17 @@ impl SessionPage {
                 view_simple_timer(ui, &mut self.session_timer);
             });
             ui.add_space(10.0);
-
-            ui.horizontal(|ui| {
-                ui.vertical(|ui| {
-                    ui.group(|ui| {
-                        ui.label("Frequency Keys");
-                        ui.add_enabled_ui(self.session_timer.status.is_active(), |ui| {
+            ui.add_enabled_ui(self.session_timer.status.is_active(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.vertical(|ui| {
+                        ui.group(|ui| {
+                            ui.label("Frequency Keys");
                             egui::Grid::new("frequency_grid")
                                 .striped(true)
                                 .show(ui, |ui| {
-                                    ui.label("Description");
-                                    ui.label("Key");
-                                    ui.label("Total");
+                                    ui.strong("Description");
+                                    ui.strong("Key");
+                                    ui.strong("Total");
                                     ui.end_row();
 
                                     for (counter, key, desc) in self.counters.iter_mut() {
@@ -320,30 +372,77 @@ impl SessionPage {
                                         ui.end_row();
                                     }
                                 });
-                        });
-                    })
-                });
-                ui.vertical(|ui| {
-                    ui.group(|ui| {
-                        ui.label("Duration Keys");
-                        ui.add_enabled_ui(self.session_timer.status.is_active(), |ui| {
-                            egui::Grid::new("duration_grid")
+                        })
+                    });
+                    ui.vertical(|ui| {
+                        ui.group(|ui| {
+                            ui.label("Duration Keys");
+                            egui_extras::TableBuilder::new(ui)
+                                .column(Column::exact(70.0))
+                                .column(Column::exact(35.0))
+                                .column(Column::exact(60.0))
+                                .column(Column::exact(60.0))
+                                .column(Column::exact(40.0))
                                 .striped(true)
-                                .show(ui, |ui| {
-                                    ui.label("Description");
-                                    ui.label("Key");
-                                    ui.label("Total");
-                                    ui.label("Current");
-                                    ui.label("Bouts");
-                                    ui.end_row();
-
-                                    for (timer, key, desc) in self.timers.iter_mut() {
-                                        view_session_page_timer(ui, timer, key, desc);
-                                        ui.end_row();
+                                .cell_layout(Layout::default().with_cross_align(egui::Align::RIGHT))
+                                .body(|mut body| {
+                                    body.row(20.0, |mut row| {
+                                        row.col(|ui| {
+                                            ui.strong("Description");
+                                        });
+                                        row.col(|ui| {
+                                            ui.strong("Key");
+                                        });
+                                        row.col(|ui| {
+                                            ui.strong("Total");
+                                        });
+                                        row.col(|ui| {
+                                            ui.strong("Current");
+                                        });
+                                        row.col(|ui| {
+                                            ui.strong("Bouts");
+                                        });
+                                    });
+                                    for (timer, key, desc) in self.timers.iter() {
+                                        body.row(20.0, |mut row| match timer.status {
+                                            TimerStatus::Active => {
+                                                timer_display!(
+                                                    bright,
+                                                    row,
+                                                    desc,
+                                                    key,
+                                                    timer.saved_time(),
+                                                    timer.current_time(),
+                                                    timer.bouts
+                                                );
+                                            }
+                                            TimerStatus::Stopped => {
+                                                timer_display!(
+                                                    dim,
+                                                    row,
+                                                    desc,
+                                                    key,
+                                                    timer.saved_time(),
+                                                    0.0,
+                                                    timer.bouts
+                                                );
+                                            }
+                                            TimerStatus::Paused => {
+                                                timer_display!(
+                                                    bright,
+                                                    row,
+                                                    desc,
+                                                    key,
+                                                    timer.saved_time(),
+                                                    timer.stashed_time(),
+                                                    timer.bouts
+                                                );
+                                            }
+                                        });
                                     }
                                 });
-                        });
-                    })
+                        })
+                    });
                 });
             });
             ui.add_space(10.0);
@@ -359,7 +458,7 @@ impl SessionPage {
             if self.save_discard_open {
                 egui::Window::new("Confirm Exit").show(ui, |ui| {
                     ui.columns(2, |columns| {
-                        columns[0].set_height(60.0);
+                        columns[0].set_height(50.0);
                         columns[0].add_enabled_ui(self.session_timer.was_started(), |ui| {
                             if ui
                                 .large_green_button("SAVE")
@@ -370,7 +469,7 @@ impl SessionPage {
                                 self.end_session(display_info);
                             }
                         });
-                        columns[1].set_height(60.0);
+                        columns[1].set_height(50.0);
                         if columns[1].large_red_button("DISCARD").clicked() {
                             self.end_session(display_info);
                         }

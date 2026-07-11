@@ -21,9 +21,9 @@ impl Display for DataType {
 pub struct SessionData {
     pub assessment: String,
     pub condition: String,
-    pub data_type: DataType,
     pub therapist: String,
     pub data_collector: String,
+    pub data_type: DataType,
 }
 
 impl Default for SessionData {
