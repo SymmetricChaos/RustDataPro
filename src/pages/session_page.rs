@@ -63,7 +63,7 @@ macro_rules! passive_text {
         RichText::new(format!($format, $text)).monospace()
     };
     ($text:expr) => {
-        active_text!("{}", $text)
+        passive_text!("{}", $text)
     };
 }
 
@@ -84,21 +84,21 @@ macro_rules! timer_display {
     (bright, $row:ident, $desc:ident, $key:ident, $time1:expr, $time2:expr, $bouts:expr) => {
         active_row!($row, $desc);
         active_row!($row, $key.name());
+        active_row!($row, $bouts);
         active_row!($row, timer_format!(), $time1);
         active_row!($row, timer_format!(), $time2);
-        active_row!($row, $bouts);
     };
     (dim, $row:ident, $desc:ident, $key:ident, $time1:expr, $time2:expr, $bouts:expr) => {
         passive_row!($row, $desc);
         passive_row!($row, $key.name());
+        passive_row!($row, $bouts);
         passive_row!($row, timer_format!(), $time1);
         passive_row!($row, timer_format!(), $time2);
-        passive_row!($row, $bouts);
     };
 }
 
 const DESCRIPTION_WIDTH: f32 = 100.0;
-const KEY_WIDTH: f32 = 40.0;
+const KEY_WIDTH: f32 = 30.0;
 const ROW_HEIGHT: f32 = 20.0;
 
 pub struct SessionPage {
@@ -483,9 +483,9 @@ impl SessionPage {
                                 .id_salt("durationkeys")
                                 .column(Column::exact(DESCRIPTION_WIDTH))
                                 .column(Column::exact(KEY_WIDTH))
-                                .column(Column::exact(60.0))
-                                .column(Column::exact(60.0))
                                 .column(Column::exact(40.0))
+                                .column(Column::exact(60.0))
+                                .column(Column::exact(60.0))
                                 .striped(true)
                                 .cell_layout(
                                     Layout::default()
@@ -502,13 +502,13 @@ impl SessionPage {
                                             ui.strong("Key");
                                         });
                                         row.col(|ui| {
+                                            ui.strong("Bouts");
+                                        });
+                                        row.col(|ui| {
                                             ui.strong("Total");
                                         });
                                         row.col(|ui| {
                                             ui.strong("Current");
-                                        });
-                                        row.col(|ui| {
-                                            ui.strong("Bouts");
                                         });
                                     });
                                     for (timer, bouts, key, desc) in self.timers.iter() {

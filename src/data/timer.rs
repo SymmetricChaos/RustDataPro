@@ -109,6 +109,7 @@ impl Timer {
     }
 
     /// In Active or Paused, set status to Stopped, update the saved time, and clear the stashed time.
+    /// Prefer .pause() for expected behavior. This method is used for finalization on the session page.
     pub fn stop(&mut self) {
         if self.is_active() || self.is_paused() {
             self.status = TimerStatus::Stopped;
@@ -118,14 +119,17 @@ impl Timer {
         }
     }
 
-    /// Set status to Stopped without updating the stashed time.
+    /// Set status to Stopped and clear the stashed time.
+    /// Specific to use on the session page for undoing a key press.
     pub fn unstart(&mut self) {
         if self.status.is_active() {
             self.status = TimerStatus::Stopped;
+            self.stashed_time = Duration::ZERO;
         }
     }
 
     /// Pause or unpause. Does nothing if the timer is Stopped.
+    /// Preferred interfact for a Timer.
     pub fn toggle(&mut self) {
         match self.status {
             TimerStatus::Active => self.pause(),
@@ -135,6 +139,7 @@ impl Timer {
     }
 
     /// Stop or start. Does nothing if the timer is Paused.
+    /// Specific to use on the session page.
     pub fn stop_start(&mut self) {
         match self.status {
             TimerStatus::Active => self.stop(),
