@@ -34,7 +34,7 @@ impl About {
                     ui.end_row();
 
                     ui.monospace("ID");
-                    ui.monospace(&app.data.client.client_id);
+                    ui.monospace(&app.data.client.id);
                     ui.end_row();
 
                     ui.monospace("Case Manager");

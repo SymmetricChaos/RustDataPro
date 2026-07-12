@@ -1,12 +1,19 @@
 use crate::{
     data::{ClientData, Data, KsfData, SessionData},
-    pages::Page,
+    reliability::ReliabilityPage,
     utils::{date_time_string, quick_file_name},
 };
 use chrono::Local;
 use egui::Visuals;
 use egui_file_dialog::FileDialog;
 use std::path::PathBuf;
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum Page {
+    About,
+    Session,
+    Reliability,
+}
 
 pub struct DisplayInfo {
     pub active_page: Page,
@@ -61,7 +68,7 @@ pub struct DataPro {
     pub timers: crate::pages::Timers,
 
     pub session_page: crate::pages::SessionPage,
-    pub reliability_page: crate::pages::ReliabilityPage,
+    pub reliability_page: ReliabilityPage,
 }
 
 impl Default for DataPro {
@@ -92,7 +99,7 @@ impl Default for DataPro {
             timers: crate::pages::Timers::default(),
 
             session_page: crate::pages::SessionPage::new(),
-            reliability_page: crate::pages::ReliabilityPage::default(),
+            reliability_page: ReliabilityPage::default(),
         }
     }
 }

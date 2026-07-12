@@ -105,7 +105,7 @@ impl Timers {
 
             ui.strong("Keyboard Controls:");
             ui.label(
-                "1-5 to toggle timers.\n0 to toggle linked timers.\nSpace to stop all timers.",
+                "1-5 to toggle timers.\n0 to toggle linked timers.\nSpace to pause all timers.",
             );
             ui.add_space(10.0);
 

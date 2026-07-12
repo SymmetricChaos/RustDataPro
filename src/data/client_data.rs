@@ -1,11 +1,12 @@
 use anyhow::{Context, Result};
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, fs::File, io::Read, path::PathBuf};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ClientData {
     pub name: String,
-    pub client_id: String,
+    pub id: String,
     pub case_manager: String,
     pub primary_therapist: String,
     pub assessments: Vec<String>,
@@ -18,7 +19,7 @@ impl Default for ClientData {
         serde_json::from_str(
             r#"{
                 "name": "None None",
-                "client_id": "0000000000000000",
+                "client_id": "00000000",
                 "case_manager": "None None",
                 "primary_therapist": "None None",
                 "assessments": [
@@ -39,16 +40,20 @@ impl Display for ClientData {
         write!(
             f,
             "Client: {}\nID: {}\nCase Manager: {}\nPrimary Therapist: {}\nSession Number: {}", // NOTICE: assessments and conditions are exluded from this display
-            self.name,
-            self.client_id,
-            self.case_manager,
-            self.primary_therapist,
-            self.current_session
+            self.name, self.id, self.case_manager, self.primary_therapist, self.current_session
         )
     }
 }
 
 impl ClientData {
+    /// String containing only capital letters from client name.
+    pub fn initials(&self) -> String {
+        self.name
+            .chars()
+            .filter(|c| c.is_ascii_uppercase())
+            .join("")
+    }
+
     pub fn from_file(file_path: &PathBuf) -> Result<Self> {
         let mut file = File::open(&file_path)?;
         let mut s = String::new();

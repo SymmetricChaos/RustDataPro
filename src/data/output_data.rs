@@ -25,6 +25,10 @@ impl OutputData {
         self.session.data_type
     }
 
+    pub fn client_initials(&self) -> String {
+        self.client.initials()
+    }
+
     pub fn from_file(file_path: &Path) -> Result<Self> {
         let mut file = File::open(&file_path)?;
         let mut s = String::new();
