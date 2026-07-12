@@ -12,23 +12,20 @@ macro_rules! timer_format {
     };
 }
 
-macro_rules! timer_display_yellow {
+macro_rules! timer_display {
+    ($timer:expr) => {
+        RichText::new(format!(timer_format!(), $timer)).monospace()
+    };
     ($ui:ident, $timer:expr) => {
-        $ui.monospace(RichText::new(format!(timer_format!(), $timer)).color(Color32::YELLOW))
+        $ui.label(timer_display!($timer))
+    };
+    ($ui:ident, $timer:expr, $color:expr) => {
+        $ui.label(timer_display!($timer).color($color))
     };
 }
 
-macro_rules! timer_display_default {
-    ($ui:ident, $timer:expr) => {
-        $ui.monospace(RichText::new(format!(timer_format!(), $timer)))
-    };
-}
-
-macro_rules! timer_display_red {
-    ($ui:ident, $timer:expr) => {
-        $ui.monospace(RichText::new(format!(timer_format!(), $timer)).color(Color32::RED))
-    };
-}
+const ACTIVE_COLOR: Color32 = Color32::YELLOW;
+const NEGATIVE_COLOR: Color32 = Color32::RED;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TimerStatus {
@@ -218,16 +215,16 @@ pub fn view_simple_timer(ui: &mut Ui, timer: &Timer) {
     match timer.status {
         TimerStatus::Active => {
             ui.request_repaint();
-            timer_display_yellow!(ui, timer.total_time());
+            timer_display!(ui, timer.total_time(), ACTIVE_COLOR);
         }
         TimerStatus::Stopped => {
-            timer_display_yellow!(ui, timer.saved_time());
+            timer_display!(ui, timer.saved_time());
         }
         TimerStatus::Paused => {
-            timer_display_yellow!(ui, timer.stashed_time());
+            timer_display!(ui, timer.stashed_time(), ACTIVE_COLOR);
         }
         TimerStatus::NotStarted => {
-            timer_display_default!(ui, 0.0);
+            timer_display!(ui, 0.0);
         }
     }
 }
@@ -238,29 +235,29 @@ pub fn view_simple_countdown_timer(ui: &mut Ui, timer: &Timer) {
             ui.request_repaint();
             let t = timer.remaining_time();
             if t.is_sign_positive() {
-                timer_display_yellow!(ui, t);
+                timer_display!(ui, t, ACTIVE_COLOR);
             } else {
-                timer_display_red!(ui, -t);
+                timer_display!(ui, -t, NEGATIVE_COLOR);
             }
         }
         TimerStatus::Stopped => {
             let t = timer.countdown_from - timer.saved_time();
             if t.is_sign_positive() {
-                timer_display_yellow!(ui, t);
+                timer_display!(ui, t, ACTIVE_COLOR);
             } else {
-                timer_display_red!(ui, -t);
+                timer_display!(ui, -t, NEGATIVE_COLOR);
             }
         }
         TimerStatus::Paused => {
             let t = timer.countdown_from - timer.stashed_time();
             if t.is_sign_positive() {
-                timer_display_yellow!(ui, t);
+                timer_display!(ui, t, ACTIVE_COLOR);
             } else {
-                timer_display_red!(ui, -t);
+                timer_display!(ui, -t, NEGATIVE_COLOR);
             }
         }
         TimerStatus::NotStarted => {
-            timer_display_default!(ui, timer.countdown_from);
+            timer_display!(ui, timer.countdown_from);
         }
     }
 }

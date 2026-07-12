@@ -34,48 +34,66 @@ macro_rules! timer_format {
     };
 }
 
-macro_rules! yellow_timer {
-    ($ui:ident, $timer:expr) => {
-        $ui.col(|ui| {
-            ui.monospace(RichText::new(format!(timer_format!(), $timer)).color(Color32::YELLOW));
+macro_rules! active_text {
+    ($format:expr, $text:expr) => {
+        RichText::new(format!($format, $text))
+            .monospace()
+            .color(Color32::YELLOW)
+    };
+    ($text:expr) => {
+        active_text!("{}", $text)
+    };
+}
+
+macro_rules! active_row {
+    ($row:ident, $format:expr, $text:expr) => {
+        $row.col(|ui| {
+            ui.label(active_text!($format, $text));
+        });
+    };
+    ($row:ident, $text:expr) => {
+        $row.col(|ui| {
+            ui.label(active_text!($text));
         });
     };
 }
 
-macro_rules! default_timer {
-    ($ui:ident, $timer:expr) => {
-        $ui.col(|ui| {
-            ui.monospace(RichText::new(format!(timer_format!(), $timer)));
+macro_rules! passive_text {
+    ($format:expr, $text:expr) => {
+        RichText::new(format!($format, $text)).monospace()
+    };
+    ($text:expr) => {
+        active_text!("{}", $text)
+    };
+}
+
+macro_rules! passive_row {
+    ($row:ident,$format:expr, $text:expr) => {
+        $row.col(|ui| {
+            ui.label(passive_text!($format, $text));
+        });
+    };
+    ($row:ident, $text:expr) => {
+        $row.col(|ui| {
+            ui.label(passive_text!($text));
         });
     };
 }
 
 macro_rules! timer_display {
     (bright, $row:ident, $desc:ident, $key:ident, $time1:expr, $time2:expr, $bouts:expr) => {
-        $row.col(|ui| {
-            ui.monospace(RichText::new($desc).color(Color32::YELLOW));
-        });
-        $row.col(|ui| {
-            ui.monospace(RichText::new($key.name()).color(Color32::YELLOW));
-        });
-        yellow_timer!($row, $time1);
-        yellow_timer!($row, $time2);
-        $row.col(|ui| {
-            ui.monospace(RichText::new($bouts.to_string()).color(Color32::YELLOW));
-        });
+        active_row!($row, $desc);
+        active_row!($row, $key.name());
+        active_row!($row, timer_format!(), $time1);
+        active_row!($row, timer_format!(), $time2);
+        active_row!($row, $bouts);
     };
     (dim, $row:ident, $desc:ident, $key:ident, $time1:expr, $time2:expr, $bouts:expr) => {
-        $row.col(|ui| {
-            ui.monospace(RichText::new($desc));
-        });
-        $row.col(|ui| {
-            ui.monospace(RichText::new($key.name()));
-        });
-        default_timer!($row, $time1);
-        default_timer!($row, $time2);
-        $row.col(|ui| {
-            ui.monospace(RichText::new($bouts.to_string()));
-        });
+        passive_row!($row, $desc);
+        passive_row!($row, $key.name());
+        passive_row!($row, timer_format!(), $time1);
+        passive_row!($row, timer_format!(), $time2);
+        passive_row!($row, $bouts);
     };
 }
 
