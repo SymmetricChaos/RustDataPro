@@ -295,11 +295,7 @@ impl SessionPage {
     fn save_output(&mut self, data: &mut Data) -> Result<()> {
         let file = File::create(&format!(
             "{}{}_{}.txt",
-            data.client
-                .name
-                .chars()
-                .filter(|c| c.is_ascii_uppercase())
-                .join(""),
+            data.client.initials(),
             data.client.current_session,
             data.session.data_type
         ))?;
@@ -309,11 +305,7 @@ impl SessionPage {
 
         let file = File::create(&format!(
             "{}{}_{}_raw.txt",
-            data.client
-                .name
-                .chars()
-                .filter(|c| c.is_ascii_uppercase())
-                .join(""),
+            data.client.initials(),
             data.client.current_session,
             data.session.data_type
         ))?;

@@ -1,10 +1,16 @@
-use crate::utils::Prng;
-use chrono::Local;
 use egui::{DragValue, TextEdit, Ui};
 use itertools::Itertools;
+use rand::{Rng, make_rng, rngs::StdRng};
+
+fn shuffle<T>(rng: &mut StdRng, v: &mut Vec<T>) {
+    for i in 0..v.len() {
+        let swap_pos = rng.next_u64() as usize % v.len();
+        v.swap(i, swap_pos);
+    }
+}
 
 pub struct RandomServices {
-    prng: Prng,
+    prng: StdRng,
     min_rand: usize,
     max_rand: usize,
     random_nums: String,
@@ -14,7 +20,7 @@ pub struct RandomServices {
 impl Default for RandomServices {
     fn default() -> Self {
         Self {
-            prng: Prng::new(Local::now().timestamp_micros() as u64),
+            prng: make_rng(),
             min_rand: 1,
             max_rand: 5,
             random_nums: String::new(),
@@ -59,7 +65,7 @@ impl RandomServices {
                     v.push(i);
                 }
 
-                self.prng.shuffle(&mut v);
+                shuffle(&mut self.prng, &mut v);
 
                 let list = v.iter().map(|n| n.to_string()).join(", ");
 
@@ -80,7 +86,7 @@ impl RandomServices {
             ui.label("Separate items with commas.");
             if ui.button("Shuffle").clicked() {
                 let mut list: Vec<&str> = self.shuffle_list.split(',').collect();
-                self.prng.shuffle(&mut list);
+                shuffle(&mut self.prng, &mut list);
                 let rep = list
                     .iter()
                     .map(|s| s.trim())
