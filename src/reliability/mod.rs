@@ -1,8 +1,6 @@
 pub mod calculations;
 pub mod excel_output;
-pub mod reliability;
+pub mod reliability_page;
 pub mod validate_files;
 
-pub use reliability::ReliabilityPage;
-
-pub const RELI_FILE_START: &'static str = "reli_data_";
+pub use reliability_page::ReliabilityPage;

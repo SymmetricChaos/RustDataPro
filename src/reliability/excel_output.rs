@@ -1,4 +1,9 @@
-use crate::{data::IoaData, reliability::RELI_FILE_START, utils::time_stamp};
+use std::path::PathBuf;
+
+use crate::{
+    data::{IoaData, OutputData},
+    utils::quick_file_name,
+};
 use anyhow::Result;
 use egui::Key;
 use rust_xlsxwriter::*;
@@ -18,7 +23,12 @@ fn write_excel_line<'a>(
     Ok(())
 }
 
-pub fn excel_output(ioa_data: &IoaData) -> Result<()> {
+pub fn save_excel_workbook(
+    ioa_data: &IoaData,
+    file_stem: &str,
+    prim_data: &Vec<(OutputData, PathBuf)>,
+    reli_data: &Vec<(OutputData, PathBuf)>,
+) -> Result<()> {
     let mut workbook = Workbook::new();
     let worksheet = workbook.add_worksheet();
     worksheet.set_column_width(0, 22)?;
@@ -49,6 +59,15 @@ pub fn excel_output(ioa_data: &IoaData) -> Result<()> {
         ioa_data.total_duration.iter(),
     )?;
 
-    workbook.save(&format!("{}{}.xlsx", RELI_FILE_START, time_stamp()))?;
+    let worksheet2 = workbook.add_worksheet();
+    worksheet2.write(0, 0, "Data Taken from")?;
+    let mut ctr = 0;
+    for (p, r) in prim_data.iter().zip(reli_data.iter()) {
+        worksheet2.write(ctr, 3, quick_file_name(&p.1))?;
+        worksheet2.write(ctr, 4, quick_file_name(&r.1))?;
+        ctr += 1;
+    }
+
+    workbook.save(&format!("{}.xlsx", file_stem))?;
     Ok(())
 }
