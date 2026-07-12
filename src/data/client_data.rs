@@ -19,7 +19,7 @@ impl Default for ClientData {
         serde_json::from_str(
             r#"{
                 "name": "None None",
-                "client_id": "00000000",
+                "id": "00000000",
                 "case_manager": "None None",
                 "primary_therapist": "None None",
                 "assessments": [
