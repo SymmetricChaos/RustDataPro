@@ -5,4 +5,5 @@ build_instructions.txt
 BW*.txt
 NN*.txt
 test*.txt
-reliability*.*
+reliability*.txt
+reliability*.xlsx
