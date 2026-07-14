@@ -26,6 +26,7 @@ impl IoaData {
 
     pub fn from_ksf(ksf: &KsfData) -> Self {
         let mut ioa = IoaData::new();
+        // Total duration is meaningless for frequency keys but we need this for alignment
         for (k, _) in ksf.frequency.iter() {
             ioa.total_duration.insert(*k, f32::NAN);
         }

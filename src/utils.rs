@@ -19,11 +19,11 @@ pub fn date_time_string(dt: &DateTime<Local>) -> String {
     )
 }
 
-/// Quick time stamp as YearMonthDayHourMinute
+/// Quick time stamp as YYYYMMDDhhmm
 pub fn time_stamp() -> String {
     let dt = Local::now();
     format!(
-        "{}{:02}{:02}{:02}{:02}",
+        "{:04}{:02}{:02}{:02}{:02}",
         dt.year(),
         dt.month(),
         dt.day(),
