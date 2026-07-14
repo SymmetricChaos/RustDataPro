@@ -26,8 +26,7 @@ impl Display for TimerType {
 const NUM_TIMERS: usize = 5;
 
 pub struct Timers {
-    timers: [Timer; NUM_TIMERS],
-    linked_timers: [bool; NUM_TIMERS],
+    timers: [(Timer, bool); NUM_TIMERS],
     clicked_keys: ClickedKeys,
     timer_type: TimerType,
 }
@@ -35,8 +34,7 @@ pub struct Timers {
 impl Default for Timers {
     fn default() -> Self {
         Self {
-            timers: [Timer::default(); NUM_TIMERS],
-            linked_timers: [true, true, false, false, false],
+            timers: [(Timer::default(),false); NUM_TIMERS],
             clicked_keys: ClickedKeys::new(),
             timer_type: TimerType::Stopwatch,
         }
@@ -45,7 +43,7 @@ impl Default for Timers {
 
 impl Timers {
     pub fn pause_all_timers(&mut self) {
-        for timer in self.timers.iter_mut() {
+        for (timer,_) in self.timers.iter_mut() {
             if timer.was_started() {
                 timer.pause();
             }
@@ -53,14 +51,11 @@ impl Timers {
     }
 
     pub fn reset_all_timers(&mut self) {
-        for timer in self.timers.iter_mut() {
+        for (timer,_) in self.timers.iter_mut() {
             timer.reset();
         }
     }
 
-    fn timers_and_links(&mut self) -> impl Iterator<Item = (&mut Timer, &mut bool)> {
-        self.timers.iter_mut().zip(self.linked_timers.iter_mut())
-    }
 
     pub fn view(&mut self, ui: &mut Ui, open: &mut bool) {
         let timer_type = self.timer_type;
@@ -112,7 +107,7 @@ impl Timers {
             egui::Grid::new("timers_page_grid")
                 .striped(true)
                 .show(ui, |ui| {
-                    for (n, (timer, linked)) in self.timers_and_links().enumerate() {
+                    for (n, (timer, linked)) in self.timers.iter_mut().enumerate() {
                         ui.horizontal(|ui| {
                             ui.monospace(format!("{})", n + 1));
                             ui.add_space(10.0);
@@ -165,7 +160,7 @@ impl Timers {
 
                 // Detect toggle linked
                 if self.clicked_keys.contains(&Key::Num0) {
-                    for (timer, linked) in self.timers_and_links() {
+                    for (timer, linked) in self.timers.iter_mut() {
                         if *linked {
                             timer.toggle();
                         }
@@ -178,7 +173,7 @@ impl Timers {
                     .enumerate()
                 {
                     if self.clicked_keys.contains(key) {
-                        self.timers[idx].toggle()
+                        self.timers[idx].0.toggle()
                     }
                 }
             });
