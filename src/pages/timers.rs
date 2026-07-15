@@ -4,7 +4,7 @@ use crate::{
 };
 use egui::{
     Key::{self},
-    Ui,
+    TextStyle, Ui,
 };
 use std::fmt::Display;
 
@@ -34,8 +34,8 @@ pub struct Timers {
 impl Default for Timers {
     fn default() -> Self {
         let mut timers = Vec::new();
-        for i in 0..NUM_TIMERS {
-            timers.push((Timer::default(), false, format!("{})", i + 1)));
+        for _ in 0..NUM_TIMERS {
+            timers.push((Timer::default(), false, String::new()));
         }
         Self {
             timers,
@@ -107,12 +107,15 @@ impl Timers {
             egui::Grid::new("timers_page_grid")
                 .striped(true)
                 .show(ui, |ui| {
-                    for (timer, linked, name) in self.timers.iter_mut() {
+                    for (n, (timer, linked, name)) in self.timers.iter_mut().enumerate() {
                         ui.horizontal(|ui| {
                             if ui
                                 .add_sized(
-                                    (95.0, 20.0),
-                                    egui::TextEdit::singleline(name).char_limit(12),
+                                    (110.0, 20.0),
+                                    egui::TextEdit::singleline(name)
+                                        .prefix(format!("{})", n + 1))
+                                        .char_limit(11)
+                                        .font(TextStyle::Monospace),
                                 )
                                 .has_focus()
                             {
