@@ -256,13 +256,13 @@ impl SessionPage {
 
     /// Write the output data into a JSON format. Not especially human readable.
     fn write_output_json(&self, data: &mut Data) -> Result<String> {
-        let mut fre_map: IndexMap<String, u32> = IndexMap::new();
-        for (t, _, d) in self.counters.iter() {
-            fre_map.insert(d.clone(), *t);
+        let mut fre_map: IndexMap<Key, u32> = IndexMap::new();
+        for (t, k, _d) in self.counters.iter() {
+            fre_map.insert(*k, *t);
         }
-        let mut dur_map: IndexMap<String, (u32, f32)> = IndexMap::new();
-        for (t, bouts, _, d) in self.timers.iter() {
-            dur_map.insert(d.clone(), (*bouts, rounded_f32(t.total_time())));
+        let mut dur_map: IndexMap<Key, (u32, f32)> = IndexMap::new();
+        for (t, bouts, k, _d) in self.timers.iter() {
+            dur_map.insert(*k, (*bouts, rounded_f32(t.total_time())));
         }
 
         serde_json::to_string(&OutputData {

@@ -5,6 +5,7 @@ use crate::data::{
     timeline::Timeline,
 };
 use anyhow::{Context, Result};
+use egui::Key;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::Read, path::Path};
@@ -15,8 +16,8 @@ pub struct OutputData {
     pub client: ClientData,
     pub session: SessionData,
     pub session_duration: f32,
-    pub frequency: IndexMap<String, u32>,
-    pub duration: IndexMap<String, (u32, f32)>,
+    pub frequency: IndexMap<Key, u32>,
+    pub duration: IndexMap<Key, (u32, f32)>,
     pub timeline: Timeline,
     pub ksf: KsfData,
 }
@@ -49,10 +50,12 @@ impl OutputData {
 #[test]
 fn create_test_data() {
     use egui::Key;
+    use rand::seq::IndexedRandom;
     use rand::{RngExt, make_rng, rngs::StdRng};
+
     let mut rng: StdRng = make_rng();
 
-    for session in 11..15 {
+    for session in 11..16 {
         let mut client_data = ClientData::default();
         client_data.current_session = session;
 
@@ -60,26 +63,36 @@ fn create_test_data() {
         session_data.data_type = DataType::Primary;
 
         let ksf = KsfData::default();
-        let mut frequency: IndexMap<String, u32> = IndexMap::new();
-        for (_k, desc) in ksf.frequency.iter() {
+        let mut fkeys = Vec::new();
+
+        let mut frequency: IndexMap<Key, u32> = IndexMap::new();
+        for (k, _desc) in ksf.frequency.iter() {
             let n: u32 = rng.random_range(0..50);
-            frequency.insert(desc.clone(), n);
+            frequency.insert(*k, n);
+            fkeys.push(*k);
         }
-        let mut duration: IndexMap<String, (u32, f32)> = IndexMap::new();
-        for (_k, desc) in ksf.duration.iter() {
+        let mut duration: IndexMap<Key, (u32, f32)> = IndexMap::new();
+        let mut dkeys = Vec::new();
+        for (k, _desc) in ksf.duration.iter() {
             let n: u32 = rng.random_range(..50);
             let f: f32 = rng.random::<f32>() * 50.0;
-            duration.insert(desc.clone(), (n, f));
+            duration.insert(*k, (n, f));
+            dkeys.push(*k);
         }
 
         let mut timeline = Timeline::default();
         let mut session_time = 0.0;
         timeline.push((Key::Tab, session_time));
 
-        for _ in 0..100 {
+        for _ in 0..200 {
             session_time = session_time + rng.random::<f32>() * 2.0;
             if rng.random_bool(0.9) {
-                timeline.push((Key::M, session_time));
+                let k = if rng.random_bool(0.5) {
+                    *fkeys.choose(&mut rng).unwrap()
+                } else {
+                    *dkeys.choose(&mut rng).unwrap()
+                };
+                timeline.push((k, session_time));
             }
         }
 
@@ -109,42 +122,44 @@ fn create_test_data() {
         // Jitter the timing for the keypresses
         session_data.data_type = DataType::Reliability;
         for (_k, t) in timeline.iter_mut() {
-            *t += (rng.random::<f32>() - 0.5) * 0.1;
+            *t += (rng.random::<f32>() - 0.5) * 0.7;
         }
         // Jitter the durations
-        for (_k, desc) in ksf.duration.iter() {
+        for (k, _desc) in ksf.duration.iter() {
             let f: f32 = (rng.random::<f32>() - 0.5) * 5.0;
-            duration.get_mut(desc).unwrap().1 += f;
-        }
-        // Jitter the jitter the counds
-        for (_k, desc) in ksf.frequency.iter() {
-            let f: u32 = rng.random_range(..5);
-            if rng.random_bool(0.5) {
-                *frequency.get_mut(desc).unwrap() += f;
-            } else {
-                *frequency.get_mut(desc).unwrap() =
-                    frequency.get_mut(desc).unwrap().saturating_sub(f);
+            let d = duration.get_mut(k).unwrap();
+            d.1 += f;
+            if d.1.is_sign_negative() {
+                d.1 = 0.0;
             }
         }
-        for (_k, desc) in ksf.duration.iter() {
+        // Jitter the jitter the counts
+        for (k, _desc) in ksf.frequency.iter() {
             let f: u32 = rng.random_range(..5);
             if rng.random_bool(0.5) {
-                duration.get_mut(desc).unwrap().0 += f;
+                *frequency.get_mut(k).unwrap() += f;
             } else {
-                duration.get_mut(desc).unwrap().0 =
-                    duration.get_mut(desc).unwrap().0.saturating_sub(f);
+                *frequency.get_mut(k).unwrap() = frequency.get_mut(k).unwrap().saturating_sub(f);
+            }
+        }
+        for (k, _desc) in ksf.duration.iter() {
+            let f: u32 = rng.random_range(..5);
+            if rng.random_bool(0.5) {
+                duration.get_mut(k).unwrap().0 += f;
+            } else {
+                duration.get_mut(k).unwrap().0 = duration.get_mut(k).unwrap().0.saturating_sub(f);
             }
         }
 
         let prim = OutputData {
             datetime: String::from("TEST FILE"),
-            client: client_data.clone(),
-            session: session_data.clone(),
+            client: client_data,
+            session: session_data,
             session_duration: session_time,
-            frequency: frequency.clone(),
-            duration: duration.clone(),
+            frequency: frequency,
+            duration: duration,
             timeline: timeline,
-            ksf: ksf.clone(),
+            ksf: ksf,
         };
 
         let file = File::create(&format!(

@@ -62,7 +62,7 @@ impl Timers {
 
     pub fn view(&mut self, ui: &mut Ui, open: &mut bool) {
         let timer_type = self.timer_type;
-        let mut listen_for_toggle = *open;
+        let mut accept_keyboard_controls = *open;
 
         egui::Window::new("Timers").open(open).show(ui, |ui| {
             ui.add_space(10.0);
@@ -119,7 +119,7 @@ impl Timers {
                                 )
                                 .has_focus()
                             {
-                                listen_for_toggle = false;
+                                accept_keyboard_controls = false;
                             };
                             ui.add_space(10.0);
                             if timer_type == TimerType::Countdown {
@@ -144,7 +144,7 @@ impl Timers {
                                         .range(0.0..=9999.0),
                                 );
                                 if draginfo.has_focus() {
-                                    listen_for_toggle = false;
+                                    accept_keyboard_controls = false;
                                 }
                                 if draginfo.changed() {
                                     timer.reset();
@@ -158,7 +158,7 @@ impl Timers {
                 });
             ui.add_space(10.0);
         });
-        if listen_for_toggle {
+        if accept_keyboard_controls {
             ui.ctx().input_mut(|input| {
                 self.clicked_keys.update(input);
 

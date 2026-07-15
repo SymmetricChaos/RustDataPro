@@ -42,6 +42,15 @@ impl Default for ReliabilityPage {
 }
 
 impl ReliabilityPage {
+    fn push_error(&mut self, text: &str) {
+        if self.error.is_empty() {
+            self.error.push_str(text);
+        } else {
+            self.error.push('\n');
+            self.error.push_str(text);
+        }
+    }
+
     fn clear(&mut self) {
         self.prim_data.clear();
         self.reli_data.clear();
@@ -86,11 +95,11 @@ impl ReliabilityPage {
 
     fn frequency_ioa(&self, ioa_data: &mut IoaData) -> Result<()> {
         for ((p, _), (r, _)) in self.prim_data.iter().zip(self.reli_data.iter()) {
-            for (key, desc) in p.ksf.frequency.iter() {
+            for (key, _desc) in p.ksf.frequency.iter() {
                 // Total Count IOA
                 let primary_count =
-                    *p.frequency.get(desc).context("missing primary duration")? as f32; // conversion of u32 to f32 is valid so long as count is below about 16 million, so it is not checked
-                let reli_count = *r.frequency.get(desc).context("missing reli duration")? as f32;
+                    *p.frequency.get(key).context("missing primary duration")? as f32; // conversion of u32 to f32 is valid so long as count is below about 16 million, so it is not checked
+                let reli_count = *r.frequency.get(key).context("missing reli duration")? as f32;
                 ioa_data.total_count[key] +=
                     single_pair_total_ratio_ioa(primary_count, reli_count).unwrap_or(self.none_val);
             }
@@ -100,32 +109,17 @@ impl ReliabilityPage {
 
     fn duration_ioa(&self, ioa_data: &mut IoaData) -> Result<()> {
         for ((p, _), (r, _)) in self.prim_data.iter().zip(self.reli_data.iter()) {
-            for (key, description) in p.ksf.duration.iter() {
+            for (key, _desc) in p.ksf.duration.iter() {
                 // Total Duration IOA
-                let primary_dur = p
-                    .duration
-                    .get(description)
-                    .context("missing primary duration")?
-                    .1;
-                let reli_dur = r
-                    .duration
-                    .get(description)
-                    .context("missing reli duration")?
-                    .1;
+                let primary_dur = p.duration.get(key).context("missing primary duration")?.1;
+                let reli_dur = r.duration.get(key).context("missing reli duration")?.1;
                 ioa_data.total_duration[key] +=
                     single_pair_total_ratio_ioa(primary_dur, reli_dur).unwrap_or(self.none_val);
 
                 // Total Count IOA (onset and offset of duration keys)
-                let primary_count = p
-                    .duration
-                    .get(description)
-                    .context("missing primary duration")?
-                    .0 as f32;
-                let reli_count = r
-                    .duration
-                    .get(description)
-                    .context("missing reli duration")?
-                    .0 as f32;
+                let primary_count =
+                    p.duration.get(key).context("missing primary duration")?.0 as f32;
+                let reli_count = r.duration.get(key).context("missing reli duration")?.0 as f32;
                 ioa_data.total_count[key] +=
                     single_pair_total_ratio_ioa(primary_count, reli_count).unwrap_or(self.none_val);
             }
@@ -158,11 +152,12 @@ impl ReliabilityPage {
             self.clear();
             // Simultaneously parse and filter the input files.
             for buf in bufs {
-                if let Ok(data) = OutputData::from_file(buf.as_path()) {
-                    match data.session.data_type {
+                match OutputData::from_file(buf.as_path()) {
+                    Ok(data) => match data.session.data_type {
                         DataType::Primary => self.prim_data.push((data, buf)),
                         DataType::Reliability => self.reli_data.push((data, buf)),
-                    }
+                    },
+                    Err(e) => self.push_error(&e.to_string()),
                 }
             }
         }
@@ -208,9 +203,9 @@ impl ReliabilityPage {
                                 self.error.clear();
                                 self.ioa_finished = true;
                             }
-                            Err(e) => self.error = e.to_string(),
+                            Err(e) => self.push_error(&e.to_string()),
                         },
-                        Err(e) => self.error = e.to_string(),
+                        Err(e) => self.push_error(&e.to_string()),
                     }
                 }
             }

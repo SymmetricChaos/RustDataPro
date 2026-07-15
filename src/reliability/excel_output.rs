@@ -31,6 +31,7 @@ pub fn save_excel_workbook(
 ) -> Result<()> {
     let mut workbook = Workbook::new();
     let data_summary = workbook.add_worksheet();
+    data_summary.set_name("Summary")?;
     data_summary.set_column_width(0, 22)?;
     data_summary.set_column_range_width(1, 20, 10)?;
 
@@ -61,6 +62,7 @@ pub fn save_excel_workbook(
     )?;
 
     let data_sources = workbook.add_worksheet();
+    data_sources.set_name("Sources")?;
     data_sources.set_column_width(0, 16)?;
     data_sources.set_column_width(2, 22)?;
     data_sources.set_column_width(3, 22)?;

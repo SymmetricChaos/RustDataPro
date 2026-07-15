@@ -1,10 +1,9 @@
+use crate::data::KsfData;
 use anyhow::{Context, Result};
 use egui::Key;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::Read, path::Path};
-
-use crate::data::KsfData;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct IoaData {
