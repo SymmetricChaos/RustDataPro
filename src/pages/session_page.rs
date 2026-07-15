@@ -199,14 +199,10 @@ impl SessionPage {
         self.session_start = Local::now();
         self.timeline.push((Key::Tab, 0.0));
         self.keypresses_display.pop_front();
-        self.keypresses_display.push_back("ST");
+        self.keypresses_display.push_back("t");
     }
 
     fn save_session(&mut self, data: &mut Data, client_data_path: &Option<String>) {
-        self.timeline
-            .push((Key::Escape, rounded_f32(self.session_timer.total_time())));
-        self.keypresses_display.pop_front();
-        self.keypresses_display.push_back("END");
         self.save_output(data).unwrap();
         self.update_client_file(data, client_data_path).unwrap()
     }
@@ -345,6 +341,10 @@ impl SessionPage {
         }
         // Stop and quit at any time.
         if self.clicked_keys.contains(&egui::Key::Escape) {
+            self.timeline
+                .push((Key::Escape, rounded_f32(self.session_timer.total_time())));
+            self.keypresses_display.pop_front();
+            self.keypresses_display.push_back("e");
             self.save_discard_open = true;
             self.stop_all_timers();
         }

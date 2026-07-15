@@ -22,11 +22,14 @@ impl About {
 
             ui.label(format!("KSF: {}", app.display_info.ksf_name));
             ui.strong(&app.ksf_err);
+            ui.add_space(5.0);
 
             if ui.large_button("Select Client File").clicked() {
                 app.client_data_file_dialog.pick_file();
             }
             ui.strong(&app.client_data_err);
+            ui.add_space(5.0);
+
             ui.add_enabled_ui(true, |ui| {
                 egui::Grid::new("client_and_session_info_grid").show(ui, |ui| {
                     ui.monospace("Client");

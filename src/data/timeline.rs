@@ -32,15 +32,6 @@ impl DerefMut for Timeline {
 }
 
 impl Timeline {
-    // pub fn example() -> Self {
-    //     serde_json::from_str(
-    //         r#"{
-    //             "timeline": [["Tab",0.0],["Num4",1.1079073],["Num4",3.5078146],["Num4",3.6745386],["V",6.391463]]
-    //         }"#,
-    //     )
-    //     .unwrap()
-    // }
-
     pub fn from_file(file_path: &Path) -> Result<Self> {
         let mut file = File::open(&file_path)?;
         let mut s = String::new();

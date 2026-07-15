@@ -10,6 +10,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::Read, path::Path};
 
+/// Output of a single session. Includes the Client and Session data along with the recorded keypresses and times, and the KSF to translate those.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct OutputData {
     pub datetime: String,
@@ -67,8 +68,7 @@ fn create_test_data() {
 
         let mut frequency: IndexMap<Key, u32> = IndexMap::new();
         for (k, _desc) in ksf.frequency.iter() {
-            let n: u32 = rng.random_range(0..50);
-            frequency.insert(*k, n);
+            frequency.insert(*k, 0);
             fkeys.push(*k);
         }
         let mut duration: IndexMap<Key, (u32, f32)> = IndexMap::new();
@@ -83,20 +83,21 @@ fn create_test_data() {
         let mut timeline = Timeline::default();
         let mut session_time = 0.0;
         timeline.push((Key::Tab, session_time));
-
         for _ in 0..200 {
             session_time = session_time + rng.random::<f32>() * 2.0;
             if rng.random_bool(0.9) {
-                let k = if rng.random_bool(0.5) {
-                    *fkeys.choose(&mut rng).unwrap()
+                if rng.random_bool(0.5) {
+                    let k = fkeys.choose(&mut rng).unwrap();
+                    *frequency.get_mut(k).unwrap() += 1;
+                    timeline.push((*k, session_time));
                 } else {
-                    *dkeys.choose(&mut rng).unwrap()
+                    let k = dkeys.choose(&mut rng).unwrap();
+                    timeline.push((*k, session_time));
                 };
-                timeline.push((k, session_time));
             }
         }
-
         timeline.push((Key::Escape, session_time));
+
         let prim = OutputData {
             datetime: String::from("TEST FILE"),
             client: client_data.clone(),

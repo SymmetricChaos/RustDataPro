@@ -5,7 +5,7 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::Read, path::Path};
 
-/// A list of keybinds divided into Duration and Frequency
+/// Key Specification File. A list of keybinds divided into Duration and Frequency.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct KsfData {
     pub duration: Vec<(Key, String)>,
