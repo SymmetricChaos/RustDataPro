@@ -48,6 +48,14 @@ impl About {
                     ui.monospace(&app.data.client.primary_therapist);
                     ui.end_row();
 
+                    ui.monospace("DOA");
+                    if app.data.client.date_of_admission == 0 {
+                        ui.monospace("0");
+                    } else {
+                        ui.monospace(&format!("{}", app.data.client.doa()));
+                    }
+                    ui.end_row();
+
                     ui.monospace("Session");
                     ui.add(egui::DragValue::new(&mut app.data.client.current_session));
                     ui.end_row();
