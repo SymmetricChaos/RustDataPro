@@ -56,6 +56,11 @@ impl Sidebar {
                 if ui.large_blue_button("Calculate IOA").clicked() {
                     app.display_info.go_to_reliability();
                 }
+
+                ui.add_space(5.0);
+                if ui.large_blue_button("Create Client").clicked() {
+                    app.display_info.go_to_new_client();
+                }
             });
     }
 }

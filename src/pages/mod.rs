@@ -1,4 +1,5 @@
 pub mod about;
+pub mod new_client;
 pub mod random_services;
 pub mod session_page;
 pub mod sidebar;

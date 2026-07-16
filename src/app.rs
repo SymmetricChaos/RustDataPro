@@ -1,5 +1,6 @@
 use crate::{
     data::{ClientData, Data, KsfData, SessionData},
+    pages::{self, RandomServices, Timers, new_client::NewClient},
     reliability::ReliabilityPage,
     utils::{date_time_string, quick_file_name},
 };
@@ -13,6 +14,7 @@ pub enum Page {
     About,
     Session,
     Reliability,
+    CreateClient,
 }
 
 pub struct DisplayInfo {
@@ -42,6 +44,11 @@ impl DisplayInfo {
         self.sidebar_open = false;
     }
 
+    pub fn go_to_new_client(&mut self) {
+        self.active_page = Page::CreateClient;
+        self.sidebar_open = false;
+    }
+
     pub fn toggle_timer_display(&mut self) {
         self.timers_open = !self.timers_open;
     }
@@ -64,11 +71,12 @@ pub struct DataPro {
     pub client_data_err: String,
     pub client_data_path: Option<String>,
 
-    pub randomness_page: crate::pages::RandomServices,
-    pub timers: crate::pages::Timers,
+    pub randomness_page: RandomServices,
+    pub timers: Timers,
 
-    pub session_page: crate::pages::SessionPage,
+    pub session_page: pages::SessionPage,
     pub reliability_page: ReliabilityPage,
+    pub new_client_page: NewClient,
 }
 
 impl Default for DataPro {
@@ -95,11 +103,12 @@ impl Default for DataPro {
             client_data_err: String::default(),
             client_data_path: None,
 
-            randomness_page: crate::pages::RandomServices::default(),
-            timers: crate::pages::Timers::default(),
+            randomness_page: RandomServices::default(),
+            timers: Timers::default(),
 
-            session_page: crate::pages::SessionPage::new(),
+            session_page: pages::SessionPage::new(),
             reliability_page: ReliabilityPage::default(),
+            new_client_page: NewClient::default(),
         }
     }
 }
@@ -176,7 +185,7 @@ impl eframe::App for DataPro {
         // To show it must go before any other panel
         // It must be not to rendered (even if not shown) when Session is active because it may capture keypresses
         if self.display_info.sidebar_open {
-            crate::pages::Sidebar::view(self, ui);
+            pages::Sidebar::view(self, ui);
         };
 
         // ### Main Panel ###
@@ -188,7 +197,8 @@ impl eframe::App for DataPro {
                 &self.client_data_path,
             ),
             Page::Reliability => self.reliability_page.view(ui, &mut self.display_info),
-            Page::About => crate::pages::About::view(self, ui),
+            Page::About => pages::About::view(self, ui),
+            Page::CreateClient => self.new_client_page.view(ui, &mut self.display_info),
         }
     }
 }

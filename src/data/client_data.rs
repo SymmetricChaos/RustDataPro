@@ -46,6 +46,18 @@ impl Display for ClientData {
 }
 
 impl ClientData {
+    pub fn blank() -> Self {
+        Self {
+            name: String::new(),
+            id: String::new(),
+            case_manager: String::new(),
+            primary_therapist: String::new(),
+            assessments: Vec::new(),
+            conditions: Vec::new(),
+            current_session: 0,
+        }
+    }
+
     /// String containing only capital letters from client name.
     pub fn initials(&self) -> String {
         self.name

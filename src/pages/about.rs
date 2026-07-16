@@ -32,7 +32,7 @@ impl About {
 
             ui.add_enabled_ui(true, |ui| {
                 egui::Grid::new("client_and_session_info_grid").show(ui, |ui| {
-                    ui.monospace("Client");
+                    ui.monospace("Client Name");
                     ui.monospace(&app.data.client.name);
                     ui.end_row();
 
