@@ -27,7 +27,7 @@ impl Default for NewClient {
 }
 
 impl NewClient {
-    pub fn save_file(&mut self) -> Result<()> {
+    pub fn save_file_to_path(&mut self) -> Result<()> {
         if let Some(path) = self.file_dialog.take_picked() {
             let mut writer = BufWriter::new(File::create_new(path)?);
             writer.write_all(
@@ -43,6 +43,10 @@ impl NewClient {
 
     pub fn view(&mut self, ui: &mut egui::Ui, display_info: &mut DisplayInfo) {
         self.file_dialog.update(ui.ctx());
+        match self.save_file_to_path() {
+            Ok(_) => self.error.clear(),
+            Err(e) => self.error = e.to_string(),
+        }
 
         egui::CentralPanel::default().show(ui, |ui| {
             egui::Grid::new("client_and_session_info_grid")
@@ -87,10 +91,6 @@ impl NewClient {
 
             if ui.large_green_button("Save").clicked() {
                 self.file_dialog.save_file();
-                match self.save_file() {
-                    Ok(_) => self.error.clear(),
-                    Err(e) => self.error = e.to_string(),
-                }
             }
 
             if ui.large_red_button("Return").clicked() {

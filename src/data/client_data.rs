@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use chrono::{Datelike, Local};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, fs::File, io::Read, path::PathBuf};
@@ -12,6 +13,7 @@ pub struct ClientData {
     pub assessments: Vec<String>,
     pub conditions: Vec<String>,
     pub current_session: u32,
+    pub date_of_admission: i32, // date of admission as i32 representing days of the Gregorian calendar
 }
 
 impl Default for ClientData {
@@ -28,7 +30,8 @@ impl Default for ClientData {
                 "conditions": [
                     "None"
                 ],
-                "current_session": 0
+                "current_session": 0,
+                "date_of_admission": 0
             }"#,
         )
         .unwrap()
@@ -55,7 +58,13 @@ impl ClientData {
             assessments: Vec::new(),
             conditions: Vec::new(),
             current_session: 0,
+            date_of_admission: Local::now().date_naive().num_days_from_ce(),
         }
+    }
+
+    /// Number of days since admission
+    pub fn doa(&self) -> i32 {
+        Local::now().date_naive().num_days_from_ce() - self.date_of_admission
     }
 
     /// String containing only capital letters from client name.
