@@ -1,7 +1,7 @@
 use crate::{
     app::DisplayInfo,
     data::{DataType, IoaData, OutputData},
-    reliability::{
+    ioa::{
         calculations::{single_pair_interval_ioa, single_pair_total_ratio_ioa},
         excel_output::save_excel_workbook,
         validate_files::validate_files,
@@ -17,7 +17,7 @@ use std::{
     path::PathBuf,
 };
 
-pub struct ReliabilityPage {
+pub struct IoaPage {
     file_dialog: FileDialog,
     prim_data: Vec<(OutputData, PathBuf)>,
     reli_data: Vec<(OutputData, PathBuf)>,
@@ -27,7 +27,7 @@ pub struct ReliabilityPage {
     none_val: f32,
 }
 
-impl Default for ReliabilityPage {
+impl Default for IoaPage {
     fn default() -> Self {
         Self {
             file_dialog: Default::default(),
@@ -41,7 +41,7 @@ impl Default for ReliabilityPage {
     }
 }
 
-impl ReliabilityPage {
+impl IoaPage {
     fn push_error(&mut self, text: &str) {
         if self.error.is_empty() {
             self.error.push_str(text);

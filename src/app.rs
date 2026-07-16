@@ -1,7 +1,7 @@
 use crate::{
     data::{ClientData, Data, KsfData, SessionData},
+    ioa::IoaPage,
     pages::{self, RandomServices, Timers, new_client::NewClient},
-    reliability::ReliabilityPage,
     utils::{date_time_string, quick_file_name},
 };
 use chrono::Local;
@@ -75,7 +75,7 @@ pub struct DataPro {
     pub timers: Timers,
 
     pub session_page: pages::SessionPage,
-    pub reliability_page: ReliabilityPage,
+    pub reliability_page: IoaPage,
     pub new_client_page: NewClient,
 }
 
@@ -107,7 +107,7 @@ impl Default for DataPro {
             timers: Timers::default(),
 
             session_page: pages::SessionPage::new(),
-            reliability_page: ReliabilityPage::default(),
+            reliability_page: IoaPage::default(),
             new_client_page: NewClient::default(),
         }
     }

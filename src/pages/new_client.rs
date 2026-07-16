@@ -96,6 +96,8 @@ impl NewClient {
             if ui.large_red_button("Return").clicked() {
                 display_info.go_to_about();
             }
+
+            ui.strong(self.error.to_string());
         });
     }
 }
