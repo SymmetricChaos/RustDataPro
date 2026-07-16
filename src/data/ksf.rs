@@ -36,6 +36,13 @@ impl Default for KsfData {
 }
 
 impl KsfData {
+    pub fn blank() -> Self {
+        Self {
+            duration: Vec::new(),
+            frequency: Vec::new(),
+        }
+    }
+
     /// All key/description pairs. Frequency first.
     pub fn pairs(&self) -> impl Iterator<Item = &(Key, String)> {
         self.frequency.iter().chain(self.duration.iter())

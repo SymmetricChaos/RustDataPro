@@ -27,15 +27,10 @@ impl Default for NewClient {
 }
 
 impl NewClient {
-    pub fn save_file_to_path(&mut self) -> Result<()> {
+    fn save_file_to_path(&mut self) -> Result<()> {
         if let Some(path) = self.file_dialog.take_picked() {
             let mut writer = BufWriter::new(File::create_new(path)?);
-            writer.write_all(
-                self.client
-                    .to_json()
-                    .expect("failed to create json")
-                    .as_bytes(),
-            )?;
+            writer.write_all(self.client.to_json()?.as_bytes())?;
             writer.flush()?;
         }
         Ok(())
@@ -49,6 +44,7 @@ impl NewClient {
         }
 
         egui::CentralPanel::default().show(ui, |ui| {
+            ui.heading("Create New Client File");
             egui::Grid::new("client_and_session_info_grid")
                 .min_col_width(150.0)
                 .show(ui, |ui| {

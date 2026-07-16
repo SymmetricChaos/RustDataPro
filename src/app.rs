@@ -1,7 +1,7 @@
 use crate::{
     data::{ClientData, Data, KsfData, SessionData},
     ioa::IoaPage,
-    pages::{self, RandomServices, Timers, new_client::NewClient},
+    pages::{self, RandomServices, Timers, new_client::NewClient, new_ksf::NewKsf},
     utils::{date_time_string, quick_file_name},
 };
 use chrono::Local;
@@ -15,6 +15,7 @@ pub enum Page {
     Session,
     Reliability,
     CreateClient,
+    CreateKsf,
 }
 
 pub struct DisplayInfo {
@@ -49,6 +50,11 @@ impl DisplayInfo {
         self.sidebar_open = false;
     }
 
+    pub fn go_to_new_ksf(&mut self) {
+        self.active_page = Page::CreateKsf;
+        self.sidebar_open = false;
+    }
+
     pub fn toggle_timer_display(&mut self) {
         self.timers_open = !self.timers_open;
     }
@@ -77,6 +83,7 @@ pub struct DataPro {
     pub session_page: pages::SessionPage,
     pub reliability_page: IoaPage,
     pub new_client_page: NewClient,
+    pub new_ksf_page: NewKsf,
 }
 
 impl Default for DataPro {
@@ -109,6 +116,7 @@ impl Default for DataPro {
             session_page: pages::SessionPage::new(),
             reliability_page: IoaPage::default(),
             new_client_page: NewClient::default(),
+            new_ksf_page: NewKsf::default(),
         }
     }
 }
@@ -199,6 +207,7 @@ impl eframe::App for DataPro {
             Page::Reliability => self.reliability_page.view(ui, &mut self.display_info),
             Page::About => pages::About::view(self, ui),
             Page::CreateClient => self.new_client_page.view(ui, &mut self.display_info),
+            Page::CreateKsf => self.new_ksf_page.view(ui, &mut self.display_info),
         }
     }
 }
