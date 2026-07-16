@@ -1,5 +1,4 @@
 use crate::data::{
-    ClientData,
     DataType::{self},
     KsfData, SessionData,
     timeline::Timeline,
@@ -7,6 +6,7 @@ use crate::data::{
 use anyhow::{Context, Result};
 use egui::Key;
 use indexmap::IndexMap;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::Read, path::Path};
 
@@ -14,7 +14,12 @@ use std::{fs::File, io::Read, path::Path};
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct OutputData {
     pub datetime: String,
-    pub client: ClientData,
+    pub client_name: String,
+    pub client_id: String,
+    pub case_manager: String,
+    pub primary_therapist: String,
+    pub session_number: u32,
+    pub days_since_admissions: i32,
     pub session: SessionData,
     pub session_duration: f32,
     pub frequency: IndexMap<Key, u32>,
@@ -25,7 +30,7 @@ pub struct OutputData {
 
 impl OutputData {
     pub fn session_number(&self) -> u32 {
-        self.client.current_session
+        self.session_number
     }
 
     pub fn data_type(&self) -> DataType {
@@ -33,7 +38,10 @@ impl OutputData {
     }
 
     pub fn client_initials(&self) -> String {
-        self.client.initials()
+        self.client_name
+            .chars()
+            .filter(|c| c.is_ascii_uppercase())
+            .join("")
     }
 
     pub fn from_file(file_path: &Path) -> Result<Self> {
@@ -50,16 +58,16 @@ impl OutputData {
 
 #[test]
 fn create_test_data() {
+    use crate::{data::ClientData, utils::rounded_f32};
     use egui::Key;
-    use rand::seq::IndexedRandom;
-    use rand::{RngExt, make_rng, rngs::StdRng};
+    use rand::{RngExt, make_rng, rngs::StdRng, seq::IndexedRandom};
 
     let mut rng: StdRng = make_rng();
 
-    for session in 11..16 {
-        let mut client_data = ClientData::default();
-        client_data.current_session = session;
+    let mut client = ClientData::default();
 
+    for session in 11..16 {
+        client.current_session = session;
         let mut session_data = SessionData::default();
         session_data.data_type = DataType::Primary;
 
@@ -76,23 +84,24 @@ fn create_test_data() {
         for (k, _desc) in ksf.duration.iter() {
             let n: u32 = rng.random_range(..50);
             let f: f32 = rng.random::<f32>() * 50.0;
-            duration.insert(*k, (n, f));
+            duration.insert(*k, (n, rounded_f32(f)));
             dkeys.push(*k);
         }
 
         let mut timeline = Timeline::default();
         let mut session_time = 0.0;
-        timeline.push((Key::Tab, session_time));
-        for _ in 0..200 {
-            session_time = session_time + rng.random::<f32>() * 2.0;
+        timeline.push((Key::Tab, rounded_f32(session_time)));
+        for _ in 0..150 {
+            session_time = session_time + rng.random::<f32>() * 4.0;
             if rng.random_bool(0.9) {
+                let t = rounded_f32(session_time);
                 if rng.random_bool(0.5) {
                     let k = fkeys.choose(&mut rng).unwrap();
                     *frequency.get_mut(k).unwrap() += 1;
-                    timeline.push((*k, session_time));
+                    timeline.push((*k, t));
                 } else {
                     let k = dkeys.choose(&mut rng).unwrap();
-                    timeline.push((*k, session_time));
+                    timeline.push((*k, t));
                 };
             }
         }
@@ -100,19 +109,24 @@ fn create_test_data() {
 
         let prim = OutputData {
             datetime: String::from("TEST FILE"),
-            client: client_data.clone(),
             session: session_data.clone(),
-            session_duration: session_time,
+            session_duration: rounded_f32(session_time),
             frequency: frequency.clone(),
             duration: duration.clone(),
             timeline: timeline.clone(),
             ksf: ksf.clone(),
+            client_name: client.name.clone(),
+            client_id: client.id.clone(),
+            case_manager: client.case_manager.clone(),
+            primary_therapist: client.primary_therapist.clone(),
+            session_number: client.current_session,
+            days_since_admissions: client.doa(),
         };
 
         let file = File::create(&format!(
             "{}{}_{}_raw.txt",
-            prim.client.initials(),
-            prim.client.current_session,
+            client.initials(),
+            prim.session_number,
             prim.session.data_type
         ))
         .unwrap();
@@ -152,21 +166,26 @@ fn create_test_data() {
             }
         }
 
-        let prim = OutputData {
+        let reli = OutputData {
             datetime: String::from("TEST FILE"),
-            client: client_data,
-            session: session_data,
+            session: session_data.clone(),
             session_duration: session_time,
-            frequency: frequency,
-            duration: duration,
-            timeline: timeline,
-            ksf: ksf,
+            frequency: frequency.clone(),
+            duration: duration.clone(),
+            timeline: timeline.clone(),
+            ksf: ksf.clone(),
+            client_name: client.name.clone(),
+            client_id: client.id.clone(),
+            case_manager: client.case_manager.clone(),
+            primary_therapist: client.primary_therapist.clone(),
+            session_number: client.current_session,
+            days_since_admissions: client.doa(),
         };
 
         let file = File::create(&format!(
             "{}{}_{}_raw.txt",
-            prim.client.initials(),
-            prim.client.current_session,
+            client.initials(),
+            reli.session_number,
             prim.session.data_type
         ))
         .unwrap();

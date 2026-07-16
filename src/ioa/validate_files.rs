@@ -24,7 +24,7 @@ pub fn validate_files(
 
     // Assume the first primary file is correct and check that all files use the save KSF and have the same client ID
     let ksf = &prim_data[0].0.ksf;
-    let id = &prim_data[0].0.client.id;
+    let id = &prim_data[0].0.client_id;
     let comparison_path = &prim_data[0].1;
     for (o, path) in prim_data.iter().chain(reli_data.iter()).skip(1) {
         if &o.ksf != ksf {
@@ -34,7 +34,7 @@ pub fn validate_files(
                 quick_file_name(&path)
             ));
         }
-        if &o.client.id != id {
+        if &o.client_id != id {
             return Err(anyhow::anyhow!(
                 "all files must have the same Client ID as {}\nfile {} does not",
                 quick_file_name(&comparison_path),

@@ -270,12 +270,17 @@ impl SessionPage {
         serde_json::to_string(&OutputData {
             datetime: date_time_string(&self.session_start),
             session_duration: rounded_f32(self.session_timer.total_time()),
-            client: data.client.clone(),
             session: data.session.clone(),
             duration: dur_map,
             frequency: fre_map,
             timeline: self.timeline.clone(),
             ksf: data.ksf.clone(),
+            client_name: data.client.name.clone(),
+            client_id: data.client.id.clone(),
+            case_manager: data.client.case_manager.clone(),
+            primary_therapist: data.client.primary_therapist.clone(),
+            session_number: data.client.current_session,
+            days_since_admissions: data.client.doa(),
         })
         .context("failure to create json")
     }
