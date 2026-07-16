@@ -123,17 +123,6 @@ fn create_test_data() {
             days_since_admissions: client.doa(),
         };
 
-        let file = File::create(&format!(
-            "{}{}_{}_raw.txt",
-            client.initials(),
-            prim.session_number,
-            prim.session.data_type
-        ))
-        .unwrap();
-        let mut writer = std::io::BufWriter::new(file);
-        std::io::Write::write_all(&mut writer, prim.to_json().unwrap().as_bytes()).unwrap();
-        std::io::Write::flush(&mut writer).unwrap();
-
         // Jitter the timing for the keypresses
         session_data.data_type = DataType::Reliability;
         for (_k, t) in timeline.iter_mut() {
@@ -182,15 +171,26 @@ fn create_test_data() {
             days_since_admissions: client.doa(),
         };
 
-        let file = File::create(&format!(
+        let pfile = File::create(&format!(
             "{}{}_{}_raw.txt",
             client.initials(),
-            reli.session_number,
+            prim.session_number,
             prim.session.data_type
         ))
         .unwrap();
-        let mut writer = std::io::BufWriter::new(file);
+        let mut writer = std::io::BufWriter::new(pfile);
         std::io::Write::write_all(&mut writer, prim.to_json().unwrap().as_bytes()).unwrap();
+        std::io::Write::flush(&mut writer).unwrap();
+
+        let rfile = File::create(&format!(
+            "{}{}_{}_raw.txt",
+            client.initials(),
+            reli.session_number,
+            reli.session.data_type
+        ))
+        .unwrap();
+        let mut writer = std::io::BufWriter::new(rfile);
+        std::io::Write::write_all(&mut writer, reli.to_json().unwrap().as_bytes()).unwrap();
         std::io::Write::flush(&mut writer).unwrap();
     }
 }
