@@ -142,16 +142,22 @@ impl SessionPage {
         self.save_discard_open = false;
     }
 
-    /// Stop all timers, including the session timer, and update their saved times.
+    /// Stop all timers and update their saved times. This should only occur once in a session, when it ends.
     fn stop_all_timers(&mut self) {
-        for (timer, _, _, _) in self.timers.iter_mut() {
-            timer.stop();
+        if self.session_timer.was_started() {
+            self.timeline
+                .push((Key::Escape, rounded_f32(self.session_timer.total_time())));
+            self.keypresses_display.pop_front();
+            self.keypresses_display.push_back("e");
+            for (timer, _, _, _) in self.timers.iter_mut() {
+                timer.stop();
+            }
+            self.session_timer.stop();
         }
-        self.session_timer.stop();
     }
 
     /// Pause or unpause all timers, including the session timer.
-    fn toggle_all_timers(&mut self) {
+    fn pause_unpause_all_timers(&mut self) {
         for (timer, _, _, _) in self.timers.iter_mut() {
             if timer.was_started() {
                 timer.toggle();
@@ -339,19 +345,15 @@ impl SessionPage {
                 self.start_session();
             }
         }
-        // Stop and quit at any time.
+        // Stop timers and open the confirmation page.
         if self.clicked_keys.contains(&egui::Key::Escape) {
-            self.timeline
-                .push((Key::Escape, rounded_f32(self.session_timer.total_time())));
-            self.keypresses_display.pop_front();
-            self.keypresses_display.push_back("e");
             self.save_discard_open = true;
             self.stop_all_timers();
         }
         // Pausing can be toggled. Definition of pause prevents this from being used when Stopped.
         if self.clicked_keys.contains(&egui::Key::Space) {
             if self.session_timer.was_started() {
-                self.toggle_all_timers();
+                self.pause_unpause_all_timers();
             }
         }
         if self.clicked_keys.contains(&egui::Key::Backspace) {

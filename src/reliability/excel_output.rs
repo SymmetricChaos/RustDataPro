@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use crate::{
     data::{IoaData, OutputData},
     utils::quick_file_name,
@@ -7,6 +5,7 @@ use crate::{
 use anyhow::Result;
 use egui::Key;
 use rust_xlsxwriter::*;
+use std::path::PathBuf;
 
 fn write_excel_line<'a>(
     worksheet: &'a mut Worksheet,

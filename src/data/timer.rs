@@ -8,13 +8,13 @@ use std::{
 /// Need to use a macro to pass around a string literal
 macro_rules! timer_format {
     () => {
-        "{:7.2}"
+        "{:3.0}:{:05.2}"
     };
 }
 
 macro_rules! timer_display {
     ($timer:expr) => {
-        RichText::new(format!(timer_format!(), $timer)).monospace()
+        RichText::new(format!(timer_format!(), $timer / 60.0, $timer % 60.0)).monospace()
     };
     ($ui:ident, $timer:expr) => {
         $ui.label(timer_display!($timer))
