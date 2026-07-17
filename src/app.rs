@@ -67,6 +67,9 @@ impl DisplayInfo {
 const STARTING_ZOOM: f32 = 1.5;
 
 pub struct DataPro {
+    pub pick_client_directory: FileDialog,
+    pub client_directory_path: PathBuf,
+
     pub data: Data,
     pub display_info: DisplayInfo,
 
@@ -102,6 +105,9 @@ impl Default for DataPro {
                 zoom: STARTING_ZOOM,
                 ksf_name: String::from("DEFAULT"),
             },
+
+            pick_client_directory: FileDialog::default(),
+            client_directory_path: PathBuf::new(),
 
             ksf_file_dialog: FileDialog::default(),
             ksf_err: String::default(),
@@ -206,7 +212,10 @@ impl eframe::App for DataPro {
             ),
             Page::Reliability => self.reliability_page.view(ui, &mut self.display_info),
             Page::About => pages::About::view(self, ui),
-            Page::CreateClient => self.new_client_page.view(ui, &mut self.display_info),
+            Page::CreateClient => {
+                self.new_client_page
+                    .view(ui, &mut self.display_info, &self.client_directory_path)
+            }
             Page::CreateKsf => self.new_ksf_page.view(ui, &mut self.display_info),
         }
     }

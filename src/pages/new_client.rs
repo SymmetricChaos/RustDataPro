@@ -1,16 +1,15 @@
 use crate::{app::DisplayInfo, data::ClientData, utils::DataProUiElements};
 use anyhow::Result;
-use egui_file_dialog::FileDialog;
 use std::{
     fs::File,
     io::{BufWriter, Write},
+    path::PathBuf,
 };
 
 pub struct NewClient {
     client: ClientData,
     assessments: String,
     conditions: String,
-    file_dialog: FileDialog,
     error: String,
 }
 
@@ -20,31 +19,42 @@ impl Default for NewClient {
             client: ClientData::blank(),
             assessments: String::new(),
             conditions: String::new(),
-            file_dialog: FileDialog::new().default_file_name("ClientName.txt"),
             error: String::new(),
         }
     }
 }
 
 impl NewClient {
-    fn save_file_to_path(&mut self) -> Result<()> {
-        if let Some(path) = self.file_dialog.take_picked() {
-            let mut writer = BufWriter::new(File::create_new(path)?);
-            writer.write_all(self.client.to_json()?.as_bytes())?;
-            writer.flush()?;
+    fn save_file_to_path(&mut self, client_directory_path: &PathBuf) -> Result<()> {
+        if self.client.id.is_empty() {
+            return Err(anyhow::anyhow!(
+                "client must have an ID assigned in order to create a new file"
+            ));
         }
+
+        // Create a new directory for the client inside the client director
+        let mut p = client_directory_path.clone();
+        p.push(&format!("{}", self.client.id));
+        std::fs::create_dir(&p)?;
+
+        // Create the client file inside the new directory, title it client.txt
+        p.push("client.txt");
+        let mut writer = BufWriter::new(File::create_new(p)?);
+        writer.write_all(self.client.to_json()?.as_bytes())?;
+        writer.flush()?;
+
         Ok(())
     }
 
-    pub fn view(&mut self, ui: &mut egui::Ui, display_info: &mut DisplayInfo) {
-        self.file_dialog.update(ui.ctx());
-        match self.save_file_to_path() {
-            Ok(_) => self.error.clear(),
-            Err(e) => self.error = e.to_string(),
-        }
-
+    pub fn view(
+        &mut self,
+        ui: &mut egui::Ui,
+        display_info: &mut DisplayInfo,
+        client_directory_path: &PathBuf,
+    ) {
         egui::CentralPanel::default().show(ui, |ui| {
-            ui.heading("Create New Client File");
+            ui.heading("Create a New Client");
+            ui.add_space(10.0);
             egui::Grid::new("client_and_session_info_grid")
                 .min_col_width(150.0)
                 .show(ui, |ui| {
@@ -86,7 +96,10 @@ impl NewClient {
                 });
 
             if ui.large_green_button("Save").clicked() {
-                self.file_dialog.save_file();
+                match self.save_file_to_path(client_directory_path) {
+                    Ok(_) => self.error.clear(),
+                    Err(e) => self.error = e.to_string(),
+                }
             }
 
             if ui.large_red_button("Return").clicked() {

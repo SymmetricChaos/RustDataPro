@@ -13,7 +13,7 @@ pub struct ClientData {
     pub assessments: Vec<String>,
     pub conditions: Vec<String>,
     pub current_session: u32,
-    pub date_of_admission: i32, // date of admission as i32 representing days of the Gregorian calendar
+    pub date_of_admission: i32, // date of admission as i32 representing days of the Gregorian calendar, TODO store as human readable string
 }
 
 impl Default for ClientData {

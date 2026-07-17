@@ -5,6 +5,11 @@ pub struct Sidebar {}
 
 impl Sidebar {
     pub fn view(app: &mut DataPro, ui: &mut Ui) {
+        app.pick_client_directory.update(ui.ctx());
+        if let Some(pathbuf) = app.pick_client_directory.take_picked() {
+            println!("{:?}", pathbuf);
+            app.client_directory_path = pathbuf.clone();
+        }
         egui::Panel::left("welcome_panel")
             .default_size(200.0)
             .min_size(200.0)
@@ -42,27 +47,35 @@ impl Sidebar {
 
                 ui.add_space(20.0);
                 ui.label("Other Useful Functionality");
+
                 ui.add_space(5.0);
                 if ui.large_blue_button("Randomness").clicked() {
                     app.display_info.toggle_random_display();
                 }
-
                 ui.add_space(5.0);
                 if ui.large_blue_button("Timers").clicked() {
                     app.display_info.toggle_timer_display();
                 }
-
                 ui.add_space(5.0);
+
+                ui.separator();
+                ui.add_space(5.0);
+
+                if ui.large_blue_button("Select Directory").clicked() {
+                    app.pick_client_directory.pick_directory();
+                }
+                ui.add_space(5.0);
+
                 if ui.large_blue_button("Calculate IOA").clicked() {
                     app.display_info.go_to_reliability();
                 }
-
                 ui.add_space(5.0);
+
                 if ui.large_blue_button("Create Client").clicked() {
                     app.display_info.go_to_new_client();
                 }
-
                 ui.add_space(5.0);
+
                 if ui.large_blue_button("Create KSF").clicked() {
                     app.display_info.go_to_new_ksf();
                 }

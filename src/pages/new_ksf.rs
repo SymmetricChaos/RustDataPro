@@ -110,9 +110,8 @@ impl NewKsf {
         }
 
         egui::CentralPanel::default().show(ui, |ui| {
-            ui.heading("Create New Key Specification File");
-            ui.label("Key specifications should be written as:\n\tKeyName1, Description1\n\tKeyName2, Description2");
-            ui.add_space(5.0);
+            ui.heading("Create a New Keyboard Setup File");
+            ui.add_space(10.0);
 
             egui::Grid::new("new_ksf_info_grid")
                 .min_col_width(150.0)
