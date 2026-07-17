@@ -7,13 +7,23 @@ impl About {
         egui::CentralPanel::default().show(ui, |ui| {
             ui.add_space(15.0);
 
+            app.clients_directory.update(ui.ctx());
+            if let Some(path) = app.clients_directory.take_picked() {
+                // load a directory path
+            }
+
             app.ksf_file_dialog.update(ui.ctx());
             if let Some(path) = app.ksf_file_dialog.take_picked() {
                 app.load_ksf_file(path);
             }
+
             app.client_data_file_dialog.update(ui.ctx());
             if let Some(path) = app.client_data_file_dialog.take_picked() {
                 app.load_client_file(path);
+            }
+
+            if ui.large_button("Select Directory").clicked() {
+                app.clients_directory.pick_directory();
             }
 
             if ui.large_button("Select KSF").clicked() {
