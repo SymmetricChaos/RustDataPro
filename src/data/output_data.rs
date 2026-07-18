@@ -72,7 +72,7 @@ fn create_test_data() {
         let mut session_data = SessionData::default();
         session_data.data_type = DataType::Primary;
 
-        let ksf = KsfData::default();
+        let ksf = KsfData::_test_ksf();
         let mut fkeys = Vec::new();
 
         let mut frequency: IndexMap<Key, u32> = IndexMap::new();

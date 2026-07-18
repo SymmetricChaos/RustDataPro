@@ -2,10 +2,7 @@
 /docs
 /dist
 build_instructions.txt
-BW*.txt
-NN*.txt
 test*.txt
 reliability*.txt
 reliability*.xlsx
-/ExampleClients
 /DataProClients

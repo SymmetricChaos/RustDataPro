@@ -66,7 +66,7 @@ impl Sidebar {
                 ui.add_space(5.0);
 
                 if ui.large_blue_button("Calculate IOA").clicked() {
-                    app.display_info.go_to_reliability();
+                    app.display_info.go_to_ioa();
                 }
                 ui.add_space(5.0);
 

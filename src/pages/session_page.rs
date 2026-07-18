@@ -1,5 +1,5 @@
 use crate::{
-    app::{CLIENT_DATA_FILE_NAME, CLIENT_SESSION_DATA_FOLDER_NAME, DataPro, DisplayInfo},
+    app::{CLIENT_DATA_FILE_NAME, DataPro, DisplayInfo, SESSION_DATA_FOLDER_NAME},
     data::{
         Data, Timer, TimerStatus, output_data::OutputData, timeline::Timeline, view_simple_timer,
     },
@@ -210,7 +210,7 @@ impl SessionPage {
 
     fn end_session(&mut self, display_info: &mut DisplayInfo) {
         self.reset();
-        display_info.go_to_begin_session();
+        display_info.go_to_prep_session();
     }
 
     /// Write the output data into a human readable format.
@@ -290,7 +290,7 @@ impl SessionPage {
     fn save_output(&mut self, data: &Data, root_directory: &PathBuf) -> Result<()> {
         let path_to_folder = Path::new(root_directory)
             .join(data.client.id.to_string())
-            .join(CLIENT_SESSION_DATA_FOLDER_NAME);
+            .join(SESSION_DATA_FOLDER_NAME);
 
         let mut file_name = path_to_folder.clone();
         file_name.push(format!(

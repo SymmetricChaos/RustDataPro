@@ -1,6 +1,7 @@
 use chrono::{DateTime, Datelike, Local, Timelike};
 use egui::{Color32, InputState, Key, Response, RichText, Ui};
 use std::{borrow::Cow, collections::HashSet, ffi::OsStr, path::Path};
+use win_msgbox::Okay;
 
 // Round an f32 to one decimal
 pub fn rounded_f32(n: f32) -> f32 {
@@ -140,5 +141,20 @@ impl DataProUiElements for Ui {
 
     fn blue_button(&mut self, text: &'static str) -> Response {
         simple_custom_button!(self, text, Color32::LIGHT_BLUE)
+    }
+}
+
+pub fn error_dialog(message: anyhow::Error, crash: bool) {
+    if crash {
+        win_msgbox::error::<Okay>(&format!("Closing RustDataPro Because: {}", message))
+            .title("Critical Error")
+            .show()
+            .unwrap();
+        panic!("{}", message.to_string())
+    } else {
+        win_msgbox::error::<Okay>(&message.to_string())
+            .title("Error")
+            .show()
+            .unwrap();
     }
 }

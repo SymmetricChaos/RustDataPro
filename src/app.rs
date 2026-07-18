@@ -1,10 +1,10 @@
 use crate::{
     data::{ClientData, Data, KsfData, SessionData},
     ioa::IoaPage,
-    pages::{self, RandomServices, SessionPage, Timers, new_client::NewClient, new_ksf::NewKsf},
+    pages::{NewClient, NewKsf, PrepareSession, RandomServices, SessionPage, Sidebar, Timers},
     utils::{date_time_string, quick_file_name},
 };
-use anyhow::Result;
+use anyhow::{Context, Result};
 use chrono::Local;
 use egui::Visuals;
 use egui_file_dialog::FileDialog;
@@ -12,14 +12,15 @@ use std::path::{Path, PathBuf};
 
 pub const DEFAULT_ROOT_DIRECTORY_NAME: &'static str = "DataProClients";
 pub const CLIENT_DATA_FILE_NAME: &'static str = "client_data.txt";
-pub const CLIENT_SESSION_DATA_FOLDER_NAME: &'static str = "SessionRecords";
+pub const SESSION_DATA_FOLDER_NAME: &'static str = "SessionRecords";
+pub const IOA_DATA_FOLDER_NAME: &'static str = "IOAData";
 const STARTING_ZOOM: f32 = 1.5;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Page {
-    BeginSession,
-    Session,
-    Reliability,
+    PrepareSession,
+    RunSession,
+    Ioa,
     CreateClient,
     CreateKsf,
 }
@@ -33,20 +34,20 @@ pub struct DisplayInfo {
 }
 
 impl DisplayInfo {
-    pub fn go_to_begin_session(&mut self) {
-        self.active_page = Page::BeginSession;
+    pub fn go_to_prep_session(&mut self) {
+        self.active_page = Page::PrepareSession;
         self.sidebar_open = true;
     }
 
-    pub fn go_to_session(&mut self) {
-        self.active_page = Page::Session;
+    pub fn go_to_run_session(&mut self) {
+        self.active_page = Page::RunSession;
         self.sidebar_open = false;
         self.timers_open = false;
         self.random_open = false;
     }
 
-    pub fn go_to_reliability(&mut self) {
-        self.active_page = Page::Reliability;
+    pub fn go_to_ioa(&mut self) {
+        self.active_page = Page::Ioa;
         self.sidebar_open = false;
     }
 
@@ -86,7 +87,7 @@ pub struct DataPro {
     pub timers: Timers,
 
     pub session_page: SessionPage,
-    pub reliability_page: IoaPage,
+    pub ioa_page: IoaPage,
     pub new_client_page: NewClient,
     pub new_ksf_page: NewKsf,
 }
@@ -103,7 +104,7 @@ impl Default for DataPro {
                 ksf_name: String::new(),
             },
             display_info: DisplayInfo {
-                active_page: Page::BeginSession,
+                active_page: Page::PrepareSession,
                 timers_open: false,
                 random_open: false,
                 sidebar_open: true,
@@ -125,7 +126,7 @@ impl Default for DataPro {
             timers: Timers::default(),
 
             session_page: SessionPage::new(),
-            reliability_page: IoaPage::default(),
+            ioa_page: IoaPage::default(),
             new_client_page: NewClient::default(),
             new_ksf_page: NewKsf::default(),
         }
@@ -140,21 +141,49 @@ impl DataPro {
     }
 
     pub fn client_loaded(&self) -> bool {
-        self.data.client.id != "None"
+        !self.data.client.id.is_empty()
     }
 
     pub fn ksf_loaded(&self) -> bool {
-        self.data.ksf_name != ""
+        !self.data.ksf_name.is_empty()
     }
 
     /// Path to the client data file, if one is available.
-    pub fn client_data_file(&self) -> Result<PathBuf> {
+    pub fn client_data_file_path(&self) -> Result<PathBuf> {
         if !self.client_loaded() {
-            return Err(anyhow::anyhow!("no client selected"));
+            return Err(anyhow::anyhow!(
+                "cannot find client data file because no client is selected"
+            ));
         }
         let path = Path::new(&self.root_directory)
             .join(&self.data.client.id.to_string())
             .join(CLIENT_DATA_FILE_NAME);
+        Ok(path.to_path_buf())
+    }
+
+    pub fn overwrite_client_data_file(&self) -> Result<()> {
+        std::fs::write(
+            self.client_data_file_path()?,
+            &self
+                .data
+                .client
+                .to_json()
+                .with_context(|| "failed to create json version of client data file")?,
+        )
+        .with_context(|| "while attempting to overwrite client data file")?;
+
+        Ok(())
+    }
+
+    pub fn client_session_data_path(&self) -> Result<PathBuf> {
+        if !self.client_loaded() {
+            return Err(anyhow::anyhow!(
+                "cannot find client session data folder because no client is selected"
+            ));
+        }
+        let path = Path::new(&self.root_directory)
+            .join(&self.data.client.id.to_string())
+            .join(SESSION_DATA_FOLDER_NAME);
         Ok(path.to_path_buf())
     }
 
@@ -167,22 +196,20 @@ impl DataPro {
             }
             Err(e) => {
                 self.data.ksf = KsfData::default();
-                self.data.ksf_name = String::from("");
+                self.data.ksf_name.clear();
                 self.ksf_err = e.to_string();
             }
         };
     }
 
     pub fn load_client_file(&mut self, path: &PathBuf) {
-        let mut path = path.clone();
-        path.push(CLIENT_DATA_FILE_NAME);
-        match ClientData::from_file(&path) {
+        match ClientData::from_file(&Path::new(path).join(CLIENT_DATA_FILE_NAME)) {
             Ok(client) => {
                 self.data.client = client;
                 self.data.client.current_session += 1; // We are always one session ahead of the last saved value
                 self.client_data_err.clear();
                 if self.data.client.assessments.is_empty() {
-                    self.client_data_err.push_str("NO ASSESSMENTS");
+                    self.data.session.assessment = String::from("None");
                 } else {
                     self.data.session.assessment = self.data.client.assessments[0].clone();
                 }
@@ -190,7 +217,7 @@ impl DataPro {
                     if !self.client_data_err.is_empty() {
                         self.client_data_err.push('\n');
                     }
-                    self.client_data_err.push_str("NO CONDITIONS");
+                    self.data.session.condition = String::from("None");
                 } else {
                     self.data.session.condition = self.data.client.conditions[0].clone();
                 }
@@ -207,8 +234,7 @@ impl eframe::App for DataPro {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         // ### Windows ###
         self.timers.view(ui, &mut self.display_info.timers_open);
-        self.randomness_page
-            .view(ui, &mut self.display_info.random_open);
+        RandomServices::view(self, ui);
 
         // ### Top Bar ###
         // To go fully across it must be specified before any other panel
@@ -224,14 +250,14 @@ impl eframe::App for DataPro {
         // To show it must go before any other panel
         // It must be not to rendered (even if not shown) when Session is active because it may capture keypresses
         if self.display_info.sidebar_open {
-            pages::Sidebar::view(self, ui);
+            Sidebar::view(self, ui);
         };
 
         // ### Main Panel ###
         match self.display_info.active_page {
-            Page::Session => pages::session_page::SessionPage::view(self, ui),
-            Page::Reliability => self.reliability_page.view(ui, &mut self.display_info),
-            Page::BeginSession => pages::StartSession::view(self, ui),
+            Page::RunSession => SessionPage::view(self, ui),
+            Page::Ioa => IoaPage::view(self, ui),
+            Page::PrepareSession => PrepareSession::view(self, ui),
             Page::CreateClient => {
                 self.new_client_page
                     .view(ui, &mut self.display_info, &self.root_directory)

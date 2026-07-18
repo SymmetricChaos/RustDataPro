@@ -1,5 +1,5 @@
 use crate::{
-    app::DisplayInfo,
+    app::DataPro,
     data::{DataType, IoaData, OutputData},
     ioa::{
         calculations::{single_pair_interval_ioa, single_pair_total_ratio_ioa},
@@ -18,13 +18,13 @@ use std::{
 };
 
 pub struct IoaPage {
-    file_dialog: FileDialog,
-    prim_data: Vec<(OutputData, PathBuf)>,
-    reli_data: Vec<(OutputData, PathBuf)>,
-    error: String,
-    ioa_finished: bool,
-    strict: bool,
-    none_val: f32,
+    pub file_dialog: FileDialog,
+    pub prim_data: Vec<(OutputData, PathBuf)>,
+    pub reli_data: Vec<(OutputData, PathBuf)>,
+    pub error: String,
+    pub ioa_finished: bool,
+    pub strict: bool,
+    pub none_val: f32,
 }
 
 impl Default for IoaPage {
@@ -146,25 +146,25 @@ impl IoaPage {
         Ok(())
     }
 
-    pub fn view(&mut self, ui: &mut Ui, display_info: &mut DisplayInfo) {
-        self.file_dialog.update(ui.ctx());
-        if let Some(bufs) = self.file_dialog.take_picked_multiple() {
-            self.clear();
+    pub fn view(app: &mut DataPro, ui: &mut Ui) {
+        app.ioa_page.file_dialog.update(ui.ctx());
+        if let Some(bufs) = app.ioa_page.file_dialog.take_picked_multiple() {
+            app.ioa_page.clear();
             // Simultaneously parse and filter the input files.
             for buf in bufs {
                 match OutputData::from_file(buf.as_path()) {
                     Ok(data) => match data.session.data_type {
-                        DataType::Primary => self.prim_data.push((data, buf)),
-                        DataType::Reliability => self.reli_data.push((data, buf)),
+                        DataType::Primary => app.ioa_page.prim_data.push((data, buf)),
+                        DataType::Reliability => app.ioa_page.reli_data.push((data, buf)),
                     },
-                    Err(e) => self.push_error(&e.to_string()),
+                    Err(_) => (), //app.ioa_page.push_error(&e.to_string()),
                 }
             }
         }
 
         egui::CentralPanel::default().show(ui, |ui| {
             if ui.large_button("Select Data").clicked() {
-                self.file_dialog.pick_multiple();
+                app.ioa_page.file_dialog.pick_multiple();
             }
             ui.add_space(5.0);
             ui.horizontal(|ui| {
@@ -174,7 +174,7 @@ impl IoaPage {
                         egui::containers::ScrollArea::vertical()
                             .id_salt("prim_info_area")
                             .show(ui, |ui| {
-                                for (_, path) in self.prim_data.iter() {
+                                for (_, path) in app.ioa_page.prim_data.iter() {
                                     ui.strong(format!("{}", quick_file_name(&path)));
                                 }
                             });
@@ -186,7 +186,7 @@ impl IoaPage {
                         egui::containers::ScrollArea::vertical()
                             .id_salt("reli_info_area")
                             .show(ui, |ui| {
-                                for (_, path) in self.reli_data.iter() {
+                                for (_, path) in app.ioa_page.reli_data.iter() {
                                     ui.strong(format!("{}", quick_file_name(&path)));
                                 }
                             });
@@ -196,30 +196,30 @@ impl IoaPage {
             ui.add_space(20.0);
 
             if ui.large_green_button("Calculate IOA").clicked() {
-                if !self.ioa_finished {
-                    match validate_files(&self.prim_data, &self.reli_data) {
-                        Ok(_) => match self.calculate_ioa() {
+                if !app.ioa_page.ioa_finished {
+                    match validate_files(&app.ioa_page.prim_data, &app.ioa_page.reli_data) {
+                        Ok(_) => match app.ioa_page.calculate_ioa() {
                             Ok(_) => {
-                                self.error.clear();
-                                self.ioa_finished = true;
+                                app.ioa_page.error.clear();
+                                app.ioa_page.ioa_finished = true;
                             }
-                            Err(e) => self.push_error(&e.to_string()),
+                            Err(e) => app.ioa_page.push_error(&e.to_string()),
                         },
-                        Err(e) => self.push_error(&e.to_string()),
+                        Err(e) => app.ioa_page.push_error(&e.to_string()),
                     }
                 }
             }
             ui.add_space(5.0);
             if ui.large_red_button("Return").clicked() {
-                self.clear();
-                display_info.go_to_begin_session();
+                app.ioa_page.clear();
+                app.display_info.go_to_prep_session();
             }
             ui.add_space(5.0);
 
-            ui.strong(&self.error);
+            ui.strong(&app.ioa_page.error);
             ui.add_space(5.0);
 
-            if self.ioa_finished {
+            if app.ioa_page.ioa_finished {
                 ui.monospace(
                     RichText::new("IOA Calculated and Saved!")
                         .heading()

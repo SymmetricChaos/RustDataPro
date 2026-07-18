@@ -20,15 +20,15 @@ pub struct ClientData {
 impl Default for ClientData {
     fn default() -> Self {
         Self {
-            name: String::from("None"),
-            id: String::from("None"),
-            case_manager: String::from("None"),
-            primary_therapist: String::from("None"),
-            assessments: Vec::new(),
-            conditions: Vec::new(),
-            current_session: 0,
+            name: Default::default(),
+            id: Default::default(),
+            case_manager: Default::default(),
+            primary_therapist: Default::default(),
+            assessments: Default::default(),
+            conditions: Default::default(),
+            current_session: Default::default(),
             date_of_admission: Local::now().date_naive().format("%Y-%m-%d").to_string(),
-            location: String::from("None"),
+            location: Default::default(),
         }
     }
 }

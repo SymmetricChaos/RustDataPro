@@ -68,4 +68,25 @@ impl KsfData {
     pub fn to_json(&self) -> Result<String> {
         serde_json::to_string_pretty(&self).context("unable to convert ksf to json")
     }
+
+    pub fn _test_ksf() -> KsfData {
+        serde_json::from_str(
+            r#"{
+                "frequency": [
+                    ["V", "NegVoc"],
+                    ["A", "Aggression"],
+                    ["M", "Mand"],
+                    ["S", "SIB"],
+                    ["I", "Instruction"],
+                    ["C", "Compliance"]
+                ],
+                "duration": [
+                    ["Num4", "ToyEngage"],
+                    ["Num1", "Sr+"],
+                    ["Num2", "Sdelta"]
+                ]
+            }"#,
+        )
+        .unwrap()
+    }
 }
