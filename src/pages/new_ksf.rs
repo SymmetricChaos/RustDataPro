@@ -1,11 +1,15 @@
-use crate::{app::DisplayInfo, data::KsfData, utils::DataProUiElements};
+use crate::{
+    app::DisplayInfo,
+    data::{Data, KsfData},
+    utils::DataProUiElements,
+};
 use anyhow::{Context, Result};
 use egui::Key;
-use egui_file_dialog::FileDialog;
 use itertools::Itertools;
 use std::{
     fs::File,
     io::{BufWriter, Write},
+    path::PathBuf,
 };
 
 fn parse_line(s: &str) -> Result<(Key, String)> {
@@ -67,7 +71,6 @@ pub struct NewKsf {
     ksf: KsfData,
     freq_string: String,
     dura_string: String,
-    file_dialog: FileDialog,
     freq_error: String,
     dura_error: String,
     save_error: String,
@@ -79,7 +82,6 @@ impl Default for NewKsf {
             ksf: KsfData::blank(),
             freq_string: String::new(),
             dura_string: String::new(),
-            file_dialog: FileDialog::new().default_file_name("NewKsf.txt"),
             freq_error: String::new(),
             dura_error: String::new(),
             save_error: String::new(),
@@ -88,27 +90,30 @@ impl Default for NewKsf {
 }
 
 impl NewKsf {
-    fn save_file_to_path(&mut self) -> Result<()> {
-        if let Some(path) = self.file_dialog.take_picked() {
-            let mut writer = BufWriter::new(File::create_new(path)?);
-            if !self.ksf.is_valid() {
-                return Err(anyhow::anyhow!(
-                    "ksf contains duplicate keys or duplicate descriptions"
-                ));
-            }
-            writer.write_all(self.ksf.to_json()?.as_bytes())?;
-            writer.flush()?;
+    fn save_file_to_path(&mut self, data: &Data, client_directory_path: &PathBuf) -> Result<()> {
+        let mut p = client_directory_path.clone();
+        p.push(&format!("{}", data.client.id));
+        p.push("NewKSF.txt");
+
+        let mut writer = BufWriter::new(File::create_new(p)?);
+        if !self.ksf.is_valid() {
+            return Err(anyhow::anyhow!(
+                "ksf contains duplicate keys or duplicate descriptions"
+            ));
         }
+        writer.write_all(self.ksf.to_json()?.as_bytes())?;
+        writer.flush()?;
+
         Ok(())
     }
 
-    pub fn view(&mut self, ui: &mut egui::Ui, display_info: &mut DisplayInfo) {
-        self.file_dialog.update(ui.ctx());
-        match self.save_file_to_path() {
-            Ok(_) => self.save_error.clear(),
-            Err(e) => self.save_error = e.to_string(),
-        }
-
+    pub fn view(
+        &mut self,
+        ui: &mut egui::Ui,
+        data: &Data,
+        display_info: &mut DisplayInfo,
+        client_directory_path: &PathBuf,
+    ) {
         egui::CentralPanel::default().show(ui, |ui| {
             ui.heading("Create a New Keyboard Setup File");
             ui.add_space(10.0);
@@ -139,7 +144,10 @@ impl NewKsf {
                 self.dura_error.is_empty() && self.freq_error.is_empty(),
                 |ui| {
                     if ui.large_green_button("Save").clicked() {
-                        self.file_dialog.save_file();
+                        match self.save_file_to_path(data, client_directory_path) {
+                            Ok(_) => self.save_error.clear(),
+                            Err(e) => self.save_error = e.to_string(),
+                        }
                     }
                 },
             );

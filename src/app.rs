@@ -216,7 +216,12 @@ impl eframe::App for DataPro {
                 self.new_client_page
                     .view(ui, &mut self.display_info, &self.client_directory_path)
             }
-            Page::CreateKsf => self.new_ksf_page.view(ui, &mut self.display_info),
+            Page::CreateKsf => self.new_ksf_page.view(
+                ui,
+                &mut self.data,
+                &mut self.display_info,
+                &self.client_directory_path,
+            ),
         }
     }
 }

@@ -19,24 +19,17 @@ pub struct ClientData {
 
 impl Default for ClientData {
     fn default() -> Self {
-        serde_json::from_str(
-            r#"{
-                "name": "None None",
-                "id": "00000000",
-                "case_manager": "None None",
-                "primary_therapist": "None None",
-                "assessments": [
-                    "None"
-                ],
-                "conditions": [
-                    "None"
-                ],
-                "current_session": 0,
-                "date_of_admission": "2026-01-01",
-                "location": "None"
-            }"#,
-        )
-        .unwrap()
+        Self {
+            name: String::from("None"),
+            id: String::from("None"),
+            case_manager: String::from("None"),
+            primary_therapist: String::from("None"),
+            assessments: Vec::new(),
+            conditions: Vec::new(),
+            current_session: 0,
+            date_of_admission: Local::now().date_naive().format("%Y-%m-%d").to_string(),
+            location: String::from("None"),
+        }
     }
 }
 
@@ -57,20 +50,6 @@ impl Display for ClientData {
 }
 
 impl ClientData {
-    pub fn blank() -> Self {
-        Self {
-            name: String::new(),
-            id: String::new(),
-            case_manager: String::new(),
-            primary_therapist: String::new(),
-            assessments: Vec::new(),
-            conditions: Vec::new(),
-            current_session: 0,
-            date_of_admission: Local::now().date_naive().format("%Y-%m-%d").to_string(),
-            location: String::new(),
-        }
-    }
-
     /// Number of days since admission
     pub fn doa(&self) -> i32 {
         let x = NaiveDate::parse_from_str(&self.date_of_admission, "%Y-%m-%d")

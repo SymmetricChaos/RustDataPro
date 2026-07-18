@@ -32,43 +32,46 @@ impl About {
             ui.add_space(5.0);
 
             ui.add_enabled_ui(true, |ui| {
-                egui::Grid::new("client_and_session_info_grid").show(ui, |ui| {
-                    ui.monospace("Client Name");
-                    ui.monospace(&app.data.client.name);
-                    ui.end_row();
+                egui::Grid::new("client_and_session_info_grid")
+                    .min_col_width(150.0)
+                    .show(ui, |ui| {
+                        // For reasons of client privacy this is best not display and perhaps best not stored in the client file at all
+                        // ui.monospace("Client Name");
+                        // ui.monospace(&app.data.client.name);
+                        // ui.end_row();
 
-                    ui.monospace("ID");
-                    ui.monospace(&app.data.client.id);
-                    ui.end_row();
+                        ui.monospace("Client ID");
+                        ui.monospace(&app.data.client.id);
+                        ui.end_row();
 
-                    ui.monospace("Location");
-                    ui.text_edit_singleline(&mut app.data.client.location);
-                    ui.end_row();
+                        ui.monospace("Location");
+                        ui.text_edit_singleline(&mut app.data.client.location);
+                        ui.end_row();
 
-                    ui.monospace("Case Manager");
-                    ui.monospace(&app.data.client.case_manager);
-                    ui.end_row();
+                        ui.monospace("DOA").on_hover_text("Days Since Admission");
+                        ui.monospace(&format!("{}", app.data.client.doa()));
+                        ui.end_row();
 
-                    ui.monospace("Primary Therapist");
-                    ui.monospace(&app.data.client.primary_therapist);
-                    ui.end_row();
+                        ui.monospace("Session Number");
+                        ui.add(egui::DragValue::new(&mut app.data.client.current_session));
+                        ui.end_row();
 
-                    ui.monospace("DOA");
-                    ui.monospace(&format!("{}", app.data.client.doa()));
-                    ui.end_row();
+                        ui.monospace("Case Manager");
+                        ui.monospace(&app.data.client.case_manager);
+                        ui.end_row();
 
-                    ui.monospace("Session");
-                    ui.add(egui::DragValue::new(&mut app.data.client.current_session));
-                    ui.end_row();
+                        ui.monospace("Primary Therapist");
+                        ui.monospace(&app.data.client.primary_therapist);
+                        ui.end_row();
 
-                    ui.monospace("Therapist");
-                    ui.text_edit_singleline(&mut app.data.session.therapist);
-                    ui.end_row();
+                        ui.monospace("Session Therapist");
+                        ui.text_edit_singleline(&mut app.data.session.therapist);
+                        ui.end_row();
 
-                    ui.monospace("Data Collector");
-                    ui.text_edit_singleline(&mut app.data.session.data_collector);
-                    ui.end_row();
-                });
+                        ui.monospace("Data Collector");
+                        ui.text_edit_singleline(&mut app.data.session.data_collector);
+                        ui.end_row();
+                    });
             });
 
             // ### DROPDOWMS ###

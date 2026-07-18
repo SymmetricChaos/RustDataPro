@@ -16,7 +16,7 @@ pub struct NewClient {
 impl Default for NewClient {
     fn default() -> Self {
         Self {
-            client: ClientData::blank(),
+            client: ClientData::default(),
             assessments: String::new(),
             conditions: String::new(),
             error: String::new(),
@@ -63,7 +63,7 @@ impl NewClient {
                     ui.text_edit_singleline(&mut self.client.name);
                     ui.end_row();
 
-                    ui.monospace("ID");
+                    ui.monospace("Client ID");
                     ui.text_edit_singleline(&mut self.client.id);
                     ui.end_row();
 

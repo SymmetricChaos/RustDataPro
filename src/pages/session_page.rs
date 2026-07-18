@@ -1,8 +1,7 @@
 use crate::{
     app::DisplayInfo,
     data::{
-        Data, DataType, Timer, TimerStatus, output_data::OutputData, timeline::Timeline,
-        view_simple_timer,
+        Data, Timer, TimerStatus, output_data::OutputData, timeline::Timeline, view_simple_timer,
     },
     utils::{ClickedKeys, DataProUiElements, date_time_string, rounded_f32},
 };
@@ -30,7 +29,7 @@ macro_rules! record_keypress {
 /// Need to use a macro to pass around a string literal
 macro_rules! timer_format {
     () => {
-        "{:7.2}"
+        "{:7.1}"
     };
 }
 
@@ -210,7 +209,8 @@ impl SessionPage {
 
     fn save_session(&mut self, data: &mut Data, client_data_path: &Option<String>) {
         self.save_output(data).unwrap();
-        self.update_client_file(data, client_data_path).unwrap()
+        self.increment_current_session(data, client_data_path)
+            .unwrap()
     }
 
     fn end_session(&mut self, display_info: &mut DisplayInfo) {
@@ -286,15 +286,15 @@ impl SessionPage {
         .context("failure to create json")
     }
 
-    fn update_client_file(
+    /// The saved current session increments for both the primary and reliability documents
+    /// This assumes that both data collectors use INDEPENDENT files
+    fn increment_current_session(
         &mut self,
         data: &mut Data,
         client_data_path: &Option<String>,
     ) -> Result<()> {
-        if data.session.data_type == DataType::Primary {
-            if let Some(path) = client_data_path {
-                std::fs::write(path, &data.client.to_json()?)?;
-            }
+        if let Some(path) = client_data_path {
+            std::fs::write(path, &data.client.to_json()?)?;
         }
         data.client.current_session += 1;
         Ok(())
@@ -391,15 +391,22 @@ impl SessionPage {
             ui.horizontal(|ui| {
                 ui.group(|ui| {
                     ui.vertical(|ui| {
-                        ui.label(format!("Client: {}", data.client.name));
+                        ui.label(format!("Client ID: {}", data.client.id));
                         ui.label(format!("Session Number: {}", data.client.current_session));
-                        ui.label(format!("KSF: {}", display_info.ksf_name))
+                        ui.label(format!("Location: {}", data.client.location));
                     });
                 });
                 ui.group(|ui| {
                     ui.vertical(|ui| {
                         ui.label(format!("Assessment: {}", data.session.assessment));
                         ui.label(format!("Condition: {}", data.session.condition));
+                        ui.label(format!("KSF: {}", display_info.ksf_name));
+                    });
+                });
+                ui.group(|ui| {
+                    ui.vertical(|ui| {
+                        ui.label(format!("Therapist: {}", data.session.therapist));
+                        ui.label(format!("Data Collector: {}", data.session.data_collector));
                         ui.label(format!("Data Type: {}", data.session.data_type));
                     });
                 });
