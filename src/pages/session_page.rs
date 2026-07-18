@@ -1,5 +1,5 @@
 use crate::{
-    app::{CLIENT_DATA_FILE_NAME, CLIENT_SESSION_DATA_FOLDER_NAME, DisplayInfo},
+    app::{CLIENT_DATA_FILE_NAME, CLIENT_SESSION_DATA_FOLDER_NAME, DataPro, DisplayInfo},
     data::{
         Data, Timer, TimerStatus, output_data::OutputData, timeline::Timeline, view_simple_timer,
     },
@@ -19,7 +19,7 @@ use std::{
 };
 
 macro_rules! record_keypress {
-    ($self:ident, $key:expr, $time:expr) => {
+    ($self:expr, $key:expr, $time:expr) => {
         $self.timeline.push(($key, rounded_f32($time)));
         $self.keypresses_display.pop_front();
         $self.keypresses_display.push_back($key.name());
@@ -102,15 +102,15 @@ const KEY_WIDTH: f32 = 30.0;
 const ROW_HEIGHT: f32 = 20.0;
 
 pub struct SessionPage {
-    timers: Vec<(Timer, u32, Key, String)>,
-    counters: Vec<(u32, Key, String)>,
-    session_timer: Timer,
-    session_start: DateTime<Local>,
-    timeline: Timeline,
-    keypresses_display: VecDeque<&'static str>,
-    clicked_keys: ClickedKeys,
-    save_discard_open: bool,
-    unpress_available: bool,
+    pub timers: Vec<(Timer, u32, Key, String)>,
+    pub counters: Vec<(u32, Key, String)>,
+    pub session_timer: Timer,
+    pub session_start: DateTime<Local>,
+    pub timeline: Timeline,
+    pub keypresses_display: VecDeque<&'static str>,
+    pub clicked_keys: ClickedKeys,
+    pub save_discard_open: bool,
+    pub unpress_available: bool,
     pub limit_session_length: bool,
     pub maximum_session_length: f32,
 }
@@ -208,19 +208,13 @@ impl SessionPage {
         self.keypresses_display.push_back("t");
     }
 
-    fn save_session(&mut self, data: &mut Data, root_directory: &PathBuf) -> Result<()> {
-        self.save_output(data, root_directory)?;
-        self.increment_current_session(data, root_directory)?;
-        Ok(())
-    }
-
     fn end_session(&mut self, display_info: &mut DisplayInfo) {
         self.reset();
         display_info.go_to_begin_session();
     }
 
     /// Write the output data into a human readable format.
-    fn write_output_pretty(&self, data: &mut Data) -> String {
+    fn write_output_pretty(&self, data: &Data) -> String {
         let mut output = String::new();
 
         output.push_str("---Session---\n");
@@ -258,7 +252,7 @@ impl SessionPage {
     }
 
     /// Write the output data into a JSON format. Not especially human readable.
-    fn write_output_json(&self, data: &mut Data) -> Result<String> {
+    fn write_output_json(&self, data: &Data) -> Result<String> {
         let mut fre_map: IndexMap<Key, u32> = IndexMap::new();
         for (t, k, _d) in self.counters.iter() {
             fre_map.insert(*k, *t);
@@ -287,22 +281,13 @@ impl SessionPage {
         .context("failure to create json")
     }
 
-    /// The saved current session increments for both the primary and reliability documents
-    /// This assumes that both data collectors use INDEPENDENT files
-    fn increment_current_session(
-        &mut self,
-        data: &mut Data,
-        client_directory: &PathBuf,
-    ) -> Result<()> {
-        let mut path = client_directory.clone();
-        path.push(&data.client.id);
-        path.push(CLIENT_DATA_FILE_NAME);
-        std::fs::write(path, &data.client.to_json()?)?;
-        data.client.current_session += 1;
+    fn save_session(&mut self, data: &mut Data, root_directory: &PathBuf) -> Result<()> {
+        self.save_output(data, root_directory)?;
+        self.increment_current_session(data, root_directory)?;
         Ok(())
     }
 
-    fn save_output(&mut self, data: &mut Data, root_directory: &PathBuf) -> Result<()> {
+    fn save_output(&mut self, data: &Data, root_directory: &PathBuf) -> Result<()> {
         let path_to_folder = Path::new(root_directory)
             .join(data.client.id.to_string())
             .join(CLIENT_SESSION_DATA_FOLDER_NAME);
@@ -332,65 +317,88 @@ impl SessionPage {
         Ok(())
     }
 
-    pub fn view(
+    /// The saved current session increments for both the primary and reliability documents
+    /// This assumes that both data collectors use INDEPENDENT files
+    fn increment_current_session(
         &mut self,
-        ui: &mut Ui,
-        display_info: &mut DisplayInfo,
         data: &mut Data,
         root_directory: &PathBuf,
-    ) {
-        if self.limit_session_length && self.session_timer.is_active() {
-            if self.session_timer.current_time() >= self.maximum_session_length {
-                self.save_discard_open = true;
-                self.stop_all_timers();
+    ) -> Result<()> {
+        let mut path = root_directory.clone();
+        path.push(&data.client.id);
+        path.push(CLIENT_DATA_FILE_NAME);
+        std::fs::write(path, &data.client.to_json()?)?;
+        data.client.current_session += 1;
+        Ok(())
+    }
+
+    pub fn view(app: &mut DataPro, ui: &mut Ui) {
+        if app.session_page.limit_session_length && app.session_page.session_timer.is_active() {
+            if app.session_page.session_timer.current_time()
+                >= app.session_page.maximum_session_length
+            {
+                app.session_page.save_discard_open = true;
+                app.session_page.stop_all_timers();
             }
         }
 
         // Itercept key presses to detect clicks and then delete all of them to prevent egui from reusing them.
         ui.ctx().input_mut(|i| {
-            self.clicked_keys.update(i);
+            app.session_page.clicked_keys.update(i);
             i.events.clear();
         });
 
         // ### Permanent Keys ###
         // Starting is only allowed when session is Stopped.
-        if self.clicked_keys.contains(&egui::Key::Tab) {
-            if !self.session_timer.was_started() {
-                self.start_session();
+        if app.session_page.clicked_keys.contains(&egui::Key::Tab) {
+            if !app.session_page.session_timer.was_started() {
+                app.session_page.start_session();
             }
         }
-        // Stop timers and open the confirmation page.
-        if self.clicked_keys.contains(&egui::Key::Escape) {
-            self.save_discard_open = true;
-            self.stop_all_timers();
+        // Stop timers and open the confirmation app.session_page.
+        if app.session_page.clicked_keys.contains(&egui::Key::Escape) {
+            app.session_page.save_discard_open = true;
+            app.session_page.stop_all_timers();
         }
         // Pausing can be toggled. Definition of pause prevents this from being used when Stopped.
-        if self.clicked_keys.contains(&egui::Key::Space) {
-            if self.session_timer.was_started() {
-                self.pause_unpause_all_timers();
+        if app.session_page.clicked_keys.contains(&egui::Key::Space) {
+            if app.session_page.session_timer.was_started() {
+                app.session_page.pause_unpause_all_timers();
             }
         }
-        if self.clicked_keys.contains(&egui::Key::Backspace) {
-            if self.session_timer.is_active() {
-                self.unpress_key();
+        if app
+            .session_page
+            .clicked_keys
+            .contains(&egui::Key::Backspace)
+        {
+            if app.session_page.session_timer.is_active() {
+                app.session_page.unpress_key();
             }
         }
 
         // ### Duration and Frequency Keys ###
-        if self.session_timer.is_active() {
-            for (timer, bouts, key, _) in self.timers.iter_mut() {
-                if self.clicked_keys.contains(key) {
+        if app.session_page.session_timer.is_active() {
+            for (timer, bouts, key, _) in app.session_page.timers.iter_mut() {
+                if app.session_page.clicked_keys.contains(key) {
                     timer.stop_start();
                     if timer.is_active() {
                         *bouts += 1;
                     }
-                    record_keypress!(self, *key, self.session_timer.total_time());
+                    record_keypress!(
+                        app.session_page,
+                        *key,
+                        app.session_page.session_timer.total_time()
+                    );
                 }
             }
-            for (counter, key, _) in self.counters.iter_mut() {
-                if self.clicked_keys.contains(key) {
+            for (counter, key, _) in app.session_page.counters.iter_mut() {
+                if app.session_page.clicked_keys.contains(key) {
                     *counter += 1;
-                    record_keypress!(self, *key, self.session_timer.total_time());
+                    record_keypress!(
+                        app.session_page,
+                        *key,
+                        app.session_page.session_timer.total_time()
+                    );
                 }
             }
         }
@@ -399,31 +407,37 @@ impl SessionPage {
             ui.horizontal(|ui| {
                 ui.group(|ui| {
                     ui.vertical(|ui| {
-                        ui.label(format!("Client ID: {}", data.client.id));
-                        ui.label(format!("Session Number: {}", data.client.current_session));
-                        ui.label(format!("DOA: {}", data.client.days_since_admission()));
-                        ui.label(format!("Location: {}", data.client.location));
+                        ui.label(format!("Client ID: {}", app.data.client.id));
+                        ui.label(format!(
+                            "Session Number: {}",
+                            app.data.client.current_session
+                        ));
+                        ui.label(format!("DOA: {}", app.data.client.days_since_admission()));
+                        ui.label(format!("Location: {}", app.data.client.location));
                     });
                 });
                 ui.group(|ui| {
                     ui.vertical(|ui| {
-                        ui.label(format!("Assessment: {}", data.session.assessment));
-                        ui.label(format!("Condition: {}", data.session.condition));
-                        ui.label(format!("KSF: {}", data.ksf_name));
+                        ui.label(format!("Assessment: {}", app.data.session.assessment));
+                        ui.label(format!("Condition: {}", app.data.session.condition));
+                        ui.label(format!("KSF: {}", app.data.ksf_name));
                     });
                 });
                 ui.group(|ui| {
                     ui.vertical(|ui| {
-                        ui.label(format!("Therapist: {}", data.session.therapist));
-                        ui.label(format!("Data Collector: {}", data.session.data_collector));
-                        ui.label(format!("Data Type: {}", data.session.data_type));
+                        ui.label(format!("Therapist: {}", app.data.session.therapist));
+                        ui.label(format!(
+                            "Data Collector: {}",
+                            app.data.session.data_collector
+                        ));
+                        ui.label(format!("Data Type: {}", app.data.session.data_type));
                     });
                 });
             });
             ui.add_space(10.0);
 
             ui.label("TAB to start. ESC return to end session. SPACE to pause/unpause.");
-            match self.session_timer.status() {
+            match app.session_page.session_timer.status() {
                 TimerStatus::Active => {
                     ui.label(RichText::new("ACTIVE").monospace().color(Color32::GREEN))
                 }
@@ -441,13 +455,13 @@ impl SessionPage {
 
             ui.horizontal(|ui| {
                 ui.label("Session Time:");
-                view_simple_timer(ui, &mut self.session_timer);
-                if self.limit_session_length {
-                    ui.monospace(format!("[{:.2}]", self.maximum_session_length));
+                view_simple_timer(ui, &mut app.session_page.session_timer);
+                if app.session_page.limit_session_length {
+                    ui.monospace(format!("[{:.2}]", app.session_page.maximum_session_length));
                 }
             });
             ui.add_space(10.0);
-            ui.add_enabled_ui(self.session_timer.is_active(), |ui| {
+            ui.add_enabled_ui(app.session_page.session_timer.is_active(), |ui| {
                 ui.horizontal(|ui| {
                     ui.vertical(|ui| {
                         ui.group(|ui| {
@@ -476,7 +490,7 @@ impl SessionPage {
                                             ui.strong("Count");
                                         });
                                     });
-                                    for (counter, key, desc) in self.counters.iter() {
+                                    for (counter, key, desc) in app.session_page.counters.iter() {
                                         body.row(ROW_HEIGHT, |mut row| {
                                             row.col(|ui| {
                                                 ui.monospace(desc);
@@ -527,7 +541,8 @@ impl SessionPage {
                                             ui.strong("Current");
                                         });
                                     });
-                                    for (timer, bouts, key, desc) in self.timers.iter() {
+                                    for (timer, bouts, key, desc) in app.session_page.timers.iter()
+                                    {
                                         body.row(ROW_HEIGHT, |mut row| match timer.status() {
                                             TimerStatus::Active | TimerStatus::Paused => {
                                                 timer_display!(
@@ -562,31 +577,33 @@ impl SessionPage {
 
             ui.group(|ui| {
                 ui.horizontal(|ui| {
-                    for k in self.keypresses_display.make_contiguous()[1..11].iter() {
+                    for k in app.session_page.keypresses_display.make_contiguous()[1..11].iter() {
                         ui.monospace(*k);
                     }
                 });
             });
             ui.label("BACKSPACE to undo last entry.");
 
-            if self.save_discard_open {
+            let session_was_stared = app.session_page.session_timer.was_started();
+            if app.session_page.save_discard_open {
                 egui::Window::new("Confirm Exit").show(ui, |ui| {
                     ui.columns(2, |columns| {
                         columns[0].set_height(50.0);
-                        columns[0].add_enabled_ui(self.session_timer.was_started(), |ui| {
+                        columns[0].add_enabled_ui(session_was_stared, |ui| {
                             if ui
                                 .large_green_button("SAVE")
                                 .on_disabled_hover_text("no data to save")
                                 .clicked()
                             {
-                                self.save_session(data, root_directory)
+                                app.session_page
+                                    .save_session(&mut app.data, &app.root_directory)
                                     .expect("failure to save session data");
-                                self.end_session(display_info);
+                                app.session_page.end_session(&mut app.display_info);
                             }
                         });
                         columns[1].set_height(50.0);
                         if columns[1].large_red_button("DISCARD").clicked() {
-                            self.end_session(display_info);
+                            app.session_page.end_session(&mut app.display_info);
                         }
                     });
                 });

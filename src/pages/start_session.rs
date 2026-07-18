@@ -1,9 +1,9 @@
 use crate::{app::DataPro, data::DataType, utils::DataProUiElements};
 use egui_file_dialog::FileDialog;
 
-pub struct About {}
+pub struct StartSession {}
 
-impl About {
+impl StartSession {
     pub fn view(app: &mut DataPro, ui: &mut egui::Ui) {
         egui::CentralPanel::default().show(ui, |ui| {
             ui.add_space(15.0);
@@ -144,18 +144,18 @@ impl About {
             });
             ui.add_space(10.0);
 
-            // ui.horizontal(|ui| {
-            //     ui.add_enabled(
-            //         app.session_page.limit_session_length,
-            //         egui::DragValue::new(&mut app.session_page.maximum_session_length)
-            //             .range(0.0..=100_000.0),
-            //     );
-            //     ui.checkbox(
-            //         &mut app.session_page.limit_session_length,
-            //         "Limit Session Length",
-            //     );
-            // });
-            // ui.add_space(10.0);
+            ui.horizontal(|ui| {
+                ui.add_enabled(
+                    app.session_page.limit_session_length,
+                    egui::DragValue::new(&mut app.session_page.maximum_session_length)
+                        .range(0.0..=100_000.0),
+                );
+                ui.checkbox(
+                    &mut app.session_page.limit_session_length,
+                    "Limit Session Length",
+                );
+            });
+            ui.add_space(10.0);
 
             let can_start_session = app.data.client.id != "None" && app.data.ksf_name != "";
             ui.add_enabled_ui(can_start_session, |ui| {

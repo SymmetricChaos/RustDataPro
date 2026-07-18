@@ -142,7 +142,6 @@ impl Timers {
                                 );
                             }
 
-                            
                             ui.add_space(5.0);
                             ui.radio_value(&mut timer.timer_type, TimerType::Countdown, "Countdown");
                             ui.radio_value(&mut timer.timer_type, TimerType::Stopwatch, "Stopwatch");

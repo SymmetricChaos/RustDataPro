@@ -1,7 +1,7 @@
 use crate::{
     data::{ClientData, Data, KsfData, SessionData},
     ioa::IoaPage,
-    pages::{self, RandomServices, Timers, new_client::NewClient, new_ksf::NewKsf},
+    pages::{self, RandomServices, SessionPage, Timers, new_client::NewClient, new_ksf::NewKsf},
     utils::{date_time_string, quick_file_name},
 };
 use anyhow::Result;
@@ -85,7 +85,7 @@ pub struct DataPro {
     pub randomness_page: RandomServices,
     pub timers: Timers,
 
-    pub session_page: pages::SessionPage,
+    pub session_page: SessionPage,
     pub reliability_page: IoaPage,
     pub new_client_page: NewClient,
     pub new_ksf_page: NewKsf,
@@ -124,7 +124,7 @@ impl Default for DataPro {
             randomness_page: RandomServices::default(),
             timers: Timers::default(),
 
-            session_page: pages::SessionPage::new(),
+            session_page: SessionPage::new(),
             reliability_page: IoaPage::default(),
             new_client_page: NewClient::default(),
             new_ksf_page: NewKsf::default(),
@@ -229,14 +229,9 @@ impl eframe::App for DataPro {
 
         // ### Main Panel ###
         match self.display_info.active_page {
-            Page::Session => self.session_page.view(
-                ui,
-                &mut self.display_info,
-                &mut self.data,
-                &self.root_directory,
-            ),
+            Page::Session => pages::session_page::SessionPage::view(self, ui),
             Page::Reliability => self.reliability_page.view(ui, &mut self.display_info),
-            Page::BeginSession => pages::About::view(self, ui),
+            Page::BeginSession => pages::StartSession::view(self, ui),
             Page::CreateClient => {
                 self.new_client_page
                     .view(ui, &mut self.display_info, &self.root_directory)
