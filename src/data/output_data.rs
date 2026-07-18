@@ -20,6 +20,7 @@ pub struct OutputData {
     pub primary_therapist: String,
     pub session_number: u32,
     pub days_since_admissions: i32,
+    pub location: String,
     pub session: SessionData,
     pub session_duration: f32,
     pub frequency: IndexMap<Key, u32>,
@@ -121,6 +122,7 @@ fn create_test_data() {
             primary_therapist: client.primary_therapist.clone(),
             session_number: client.current_session,
             days_since_admissions: client.doa(),
+            location: client.location.clone(),
         };
 
         // Jitter the timing for the keypresses
@@ -169,6 +171,7 @@ fn create_test_data() {
             primary_therapist: client.primary_therapist.clone(),
             session_number: client.current_session,
             days_since_admissions: client.doa(),
+            location: client.location.clone(),
         };
 
         let pfile = File::create(&format!(

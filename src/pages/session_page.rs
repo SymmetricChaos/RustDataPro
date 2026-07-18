@@ -281,6 +281,7 @@ impl SessionPage {
             primary_therapist: data.client.primary_therapist.clone(),
             session_number: data.client.current_session,
             days_since_admissions: data.client.doa(),
+            location: data.client.location.clone(),
         })
         .context("failure to create json")
     }

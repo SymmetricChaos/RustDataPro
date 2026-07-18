@@ -74,6 +74,10 @@ impl NewClient {
                     ui.text_edit_singleline(&mut self.client.primary_therapist);
                     ui.end_row();
 
+                    ui.monospace("Location");
+                    ui.text_edit_singleline(&mut self.client.location);
+                    ui.end_row();
+
                     ui.monospace("Assessments\n(separate with commas)");
                     if ui.text_edit_multiline(&mut self.assessments).changed() {
                         self.client.assessments = self

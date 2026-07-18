@@ -13,7 +13,8 @@ pub struct ClientData {
     pub assessments: Vec<String>,
     pub conditions: Vec<String>,
     pub current_session: u32,
-    pub date_of_admission: i32, // date of admission as i32 representing days of the Gregorian calendar, TODO store as human readable string
+    pub date_of_admission: i32, // TODO store as human readable string
+    pub location: String,
 }
 
 impl Default for ClientData {
@@ -32,6 +33,7 @@ impl Default for ClientData {
                 ],
                 "current_session": 0,
                 "date_of_admission": 0
+                "location": "None"
             }"#,
         )
         .unwrap()
@@ -42,8 +44,13 @@ impl Display for ClientData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Client: {}\nID: {}\nCase Manager: {}\nPrimary Therapist: {}\nSession Number: {}", // NOTICE: assessments and conditions are exluded from this display
-            self.name, self.id, self.case_manager, self.primary_therapist, self.current_session
+            "Client: {}\nID: {}\nLocation: {}\nCase Manager: {}\nPrimary Therapist: {}\nSession Number: {}", // NOTICE: assessments and conditions are exluded from this display
+            self.name,
+            self.id,
+            self.location,
+            self.case_manager,
+            self.primary_therapist,
+            self.current_session
         )
     }
 }
@@ -59,6 +66,7 @@ impl ClientData {
             conditions: Vec::new(),
             current_session: 0,
             date_of_admission: Local::now().date_naive().num_days_from_ce(),
+            location: String::new(),
         }
     }
 

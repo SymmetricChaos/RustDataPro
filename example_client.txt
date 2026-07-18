@@ -12,5 +12,6 @@
     "DDTT"
   ],
   "current_session": 21,
-  "date_of_admission": 739800
+  "date_of_admission": 739800,
+  "location": "Wayne Manor"
 }

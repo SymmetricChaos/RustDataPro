@@ -41,6 +41,10 @@ impl About {
                     ui.monospace(&app.data.client.id);
                     ui.end_row();
 
+                    ui.monospace("Location");
+                    ui.text_edit_singleline(&mut app.data.client.location);
+                    ui.end_row();
+
                     ui.monospace("Case Manager");
                     ui.monospace(&app.data.client.case_manager);
                     ui.end_row();
