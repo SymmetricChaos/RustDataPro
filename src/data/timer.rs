@@ -108,13 +108,19 @@ impl Timer {
         }
     }
 
-    /// In Active or Paused, set status to Stopped, update the saved time, and clear the stashed time.
-    /// Prefer .pause() for expected behavior. This method is used for finalization on the session page.
+    /// If Active update the saved time with the elapsed time and the stashed time. If Paused update the saved time with only the stashed time.
+    /// Then sets the status to Stopped and clears the stashed time.
+    /// Prefer .pause() for typical timer behavior. This method is used for finalization on the session page.
     pub fn stop(&mut self) {
-        if self.is_active() || self.is_paused() {
-            self.status = TimerStatus::Stopped;
+        if self.is_active() {
             self.stashed_time += self.start_time.elapsed();
             self.saved_time += self.stashed_time;
+            self.status = TimerStatus::Stopped;
+            self.stashed_time = Duration::ZERO;
+        }
+        if self.is_paused() {
+            self.saved_time += self.stashed_time;
+            self.status = TimerStatus::Stopped;
             self.stashed_time = Duration::ZERO;
         }
     }
