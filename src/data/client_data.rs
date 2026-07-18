@@ -4,6 +4,9 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, fs::File, io::Read, path::PathBuf};
 
+pub const DATE_OF_ADMISSION_FORMAT_ERROR: &'static str =
+    "check client_data.txt\nDate of Admission must be formated as YYYY-MM-DD";
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ClientData {
     pub name: String,
@@ -45,17 +48,18 @@ impl Display for ClientData {
             self.primary_therapist,
             self.current_session,
             self.days_since_admission()
+                .expect(DATE_OF_ADMISSION_FORMAT_ERROR)
         )
     }
 }
 
 impl ClientData {
     /// Number of days since admission
-    pub fn days_since_admission(&self) -> i32 {
+    pub fn days_since_admission(&self) -> Result<i32> {
         let x = NaiveDate::parse_from_str(&self.date_of_admission, "%Y-%m-%d")
-            .unwrap()
+            .with_context(|| DATE_OF_ADMISSION_FORMAT_ERROR)?
             .num_days_from_ce();
-        Local::now().date_naive().num_days_from_ce() - x
+        Ok(Local::now().date_naive().num_days_from_ce() - x)
     }
 
     /// String containing only capital letters from client name.

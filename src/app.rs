@@ -2,7 +2,7 @@ use crate::{
     data::{ClientData, Data, KsfData, SessionData},
     ioa::IoaPage,
     pages::{NewClient, NewKsf, PrepareSession, RandomServices, SessionPage, Sidebar, Timers},
-    utils::{date_time_string, quick_file_name},
+    utils::{date_time_string, quick_file_name, windows_error_dialog},
 };
 use anyhow::{Context, Result};
 use chrono::Local;
@@ -77,11 +77,8 @@ pub struct DataPro {
     pub data: Data,
     pub display_info: DisplayInfo,
 
-    pub pick_ksf: FileDialog,
-    pub ksf_err: String,
-
     pub pick_client_folder: FileDialog,
-    pub client_data_err: String,
+    pub pick_ksf: FileDialog,
 
     pub randomness_page: RandomServices,
     pub timers: Timers,
@@ -90,6 +87,7 @@ pub struct DataPro {
     pub ioa_page: IoaPage,
     pub new_client_page: NewClient,
     pub new_ksf_page: NewKsf,
+    pub prep_session: PrepareSession,
 }
 
 impl Default for DataPro {
@@ -115,12 +113,9 @@ impl Default for DataPro {
                 .initial_directory(DEFAULT_ROOT_DIRECTORY_NAME.into()),
             root_directory,
 
-            pick_ksf: FileDialog::default().initial_directory(DEFAULT_ROOT_DIRECTORY_NAME.into()),
-            ksf_err: String::default(),
-
             pick_client_folder: FileDialog::default()
                 .initial_directory(DEFAULT_ROOT_DIRECTORY_NAME.into()),
-            client_data_err: String::default(),
+            pick_ksf: FileDialog::default().initial_directory(DEFAULT_ROOT_DIRECTORY_NAME.into()),
 
             randomness_page: RandomServices::default(),
             timers: Timers::default(),
@@ -129,6 +124,7 @@ impl Default for DataPro {
             ioa_page: IoaPage::default(),
             new_client_page: NewClient::default(),
             new_ksf_page: NewKsf::default(),
+            prep_session: PrepareSession::default(),
         }
     }
 }
@@ -192,12 +188,11 @@ impl DataPro {
             Ok(ksf) => {
                 self.data.ksf = ksf;
                 self.data.ksf_name = quick_file_name(&path).to_string();
-                self.ksf_err.clear();
             }
             Err(e) => {
                 self.data.ksf = KsfData::default();
                 self.data.ksf_name.clear();
-                self.ksf_err = e.to_string();
+                windows_error_dialog(e);
             }
         };
     }
@@ -207,24 +202,22 @@ impl DataPro {
             Ok(client) => {
                 self.data.client = client;
                 self.data.client.current_session += 1; // We are always one session ahead of the last saved value
-                self.client_data_err.clear();
                 if self.data.client.assessments.is_empty() {
                     self.data.session.assessment = String::from("None");
                 } else {
                     self.data.session.assessment = self.data.client.assessments[0].clone();
                 }
                 if self.data.client.conditions.is_empty() {
-                    if !self.client_data_err.is_empty() {
-                        self.client_data_err.push('\n');
-                    }
                     self.data.session.condition = String::from("None");
                 } else {
                     self.data.session.condition = self.data.client.conditions[0].clone();
                 }
+                self.data.ksf = KsfData::default();
+                self.data.ksf_name.clear();
             }
             Err(e) => {
-                self.client_data_err = e.to_string();
-                self.data.client = ClientData::default()
+                self.data.client = ClientData::default();
+                windows_error_dialog(e);
             }
         };
     }

@@ -1,7 +1,8 @@
 use crate::{
     app::{CLIENT_DATA_FILE_NAME, DataPro, DisplayInfo, SESSION_DATA_FOLDER_NAME},
     data::{
-        Data, Timer, TimerStatus, output_data::OutputData, timeline::Timeline, view_simple_timer,
+        DATE_OF_ADMISSION_FORMAT_ERROR, Data, Timer, TimerStatus, output_data::OutputData,
+        timeline::Timeline, view_simple_timer,
     },
     utils::{ClickedKeys, DataProUiElements, date_time_string, rounded_f32},
 };
@@ -275,7 +276,10 @@ impl SessionPage {
             case_manager: data.client.case_manager.clone(),
             primary_therapist: data.client.primary_therapist.clone(),
             session_number: data.client.current_session,
-            days_since_admissions: data.client.days_since_admission(),
+            days_since_admissions: data
+                .client
+                .days_since_admission()
+                .expect(DATE_OF_ADMISSION_FORMAT_ERROR),
             location: data.client.location.clone(),
         })
         .context("failure to create json")
@@ -412,7 +416,13 @@ impl SessionPage {
                             "Session Number: {}",
                             app.data.client.current_session
                         ));
-                        ui.label(format!("DOA: {}", app.data.client.days_since_admission()));
+                        ui.label(format!(
+                            "DOA: {}",
+                            app.data
+                                .client
+                                .days_since_admission()
+                                .expect(DATE_OF_ADMISSION_FORMAT_ERROR)
+                        ));
                         ui.label(format!("Location: {}", app.data.client.location));
                     });
                 });

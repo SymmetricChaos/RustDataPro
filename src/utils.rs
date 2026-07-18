@@ -3,7 +3,7 @@ use egui::{Color32, InputState, Key, Response, RichText, Ui};
 use std::{borrow::Cow, collections::HashSet, ffi::OsStr, path::Path};
 use win_msgbox::Okay;
 
-// Round an f32 to one decimal
+/// Round an f32 to one decimal, the level of precision used in output data
 pub fn rounded_f32(n: f32) -> f32 {
     (n * 10.0).trunc() / 10.0
 }
@@ -86,8 +86,8 @@ pub trait DataProUiElements {
     fn green_button(&mut self, text: &'static str) -> Response;
     fn large_red_button(&mut self, text: &'static str) -> Response;
     fn red_button(&mut self, text: &'static str) -> Response;
-    fn large_yellow_button(&mut self, text: &'static str) -> Response;
-    fn yellow_button(&mut self, text: &'static str) -> Response;
+    // fn large_yellow_button(&mut self, text: &'static str) -> Response;
+    // fn yellow_button(&mut self, text: &'static str) -> Response;
     fn large_blue_button(&mut self, text: &'static str) -> Response;
     fn blue_button(&mut self, text: &'static str) -> Response;
 }
@@ -127,13 +127,13 @@ impl DataProUiElements for Ui {
         simple_custom_button!(self, text, Color32::LIGHT_RED)
     }
 
-    fn large_yellow_button(&mut self, text: &'static str) -> Response {
-        simple_custom_button!(large, self, text, Color32::GOLD)
-    }
+    // fn large_yellow_button(&mut self, text: &'static str) -> Response {
+    //     simple_custom_button!(large, self, text, Color32::GOLD)
+    // }
 
-    fn yellow_button(&mut self, text: &'static str) -> Response {
-        simple_custom_button!(self, text, Color32::GOLD)
-    }
+    // fn yellow_button(&mut self, text: &'static str) -> Response {
+    //     simple_custom_button!(self, text, Color32::GOLD)
+    // }
 
     fn large_blue_button(&mut self, text: &'static str) -> Response {
         simple_custom_button!(large, self, text, Color32::LIGHT_BLUE)
@@ -144,17 +144,11 @@ impl DataProUiElements for Ui {
     }
 }
 
-pub fn error_dialog(message: anyhow::Error, crash: bool) {
-    if crash {
-        win_msgbox::error::<Okay>(&format!("Closing RustDataPro Because: {}", message))
-            .title("Critical Error")
-            .show()
-            .unwrap();
-        panic!("{}", message.to_string())
-    } else {
-        win_msgbox::error::<Okay>(&message.to_string())
-            .title("Error")
-            .show()
-            .unwrap();
-    }
+// Create a windows style error dialog
+pub fn windows_error_dialog(message: anyhow::Error) {
+    win_msgbox::error::<Okay>(&message.to_string())
+        .title("Error")
+        .set_foreground()
+        .show()
+        .unwrap();
 }

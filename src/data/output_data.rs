@@ -121,7 +121,7 @@ fn create_test_data() {
             case_manager: client.case_manager.clone(),
             primary_therapist: client.primary_therapist.clone(),
             session_number: client.current_session,
-            days_since_admissions: client.days_since_admission(),
+            days_since_admissions: client.days_since_admission().unwrap(),
             location: client.location.clone(),
         };
 
@@ -170,7 +170,7 @@ fn create_test_data() {
             case_manager: client.case_manager.clone(),
             primary_therapist: client.primary_therapist.clone(),
             session_number: client.current_session,
-            days_since_admissions: client.days_since_admission(),
+            days_since_admissions: client.days_since_admission().unwrap(),
             location: client.location.clone(),
         };
 

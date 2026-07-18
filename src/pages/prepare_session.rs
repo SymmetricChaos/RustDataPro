@@ -1,13 +1,23 @@
 use crate::{
     app::{DataPro, SESSION_DATA_FOLDER_NAME},
     data::DataType,
-    utils::{DataProUiElements, error_dialog},
+    utils::{DataProUiElements, windows_error_dialog},
 };
-use egui::TextStyle;
+use egui::{Color32, TextStyle};
 use egui_file_dialog::FileDialog;
 use std::path::Path;
 
-pub struct PrepareSession {}
+pub struct PrepareSession {
+    pub can_start_session: bool,
+}
+
+impl Default for PrepareSession {
+    fn default() -> Self {
+        Self {
+            can_start_session: true,
+        }
+    }
+}
 
 impl PrepareSession {
     pub fn view(app: &mut DataPro, ui: &mut egui::Ui) {
@@ -24,12 +34,13 @@ impl PrepareSession {
                 .initial_directory(Path::new(&path).join(SESSION_DATA_FOLDER_NAME));
         }
 
+        app.prep_session.can_start_session = true;
+
         egui::CentralPanel::default().show(ui, |ui| {
             ui.add_space(15.0);
             if ui.large_button("Select Client").clicked() {
                 app.pick_client_folder.pick_directory();
             }
-            ui.strong(&app.client_data_err);
             ui.add_space(5.0);
 
             ui.add_enabled_ui(app.client_loaded(), |ui| {
@@ -40,9 +51,7 @@ impl PrepareSession {
                 {
                     app.pick_ksf.pick_file();
                 }
-
                 ui.label(format!("KSF: {}", app.data.ksf_name));
-                ui.strong(&app.ksf_err);
                 ui.add_space(5.0);
             });
 
@@ -70,20 +79,41 @@ impl PrepareSession {
                             .lost_focus()
                         {
                             if let Err(e) = app.overwrite_client_data_file() {
-                                error_dialog(e, false)
+                                windows_error_dialog(e)
                             }
                         }
                         ui.end_row();
 
                         ui.monospace("Date of Admission");
-                        ui.add(
-                            egui::TextEdit::singleline(&mut format!(
-                                "{} days ago",
-                                app.data.client.days_since_admission()
-                            ))
-                            .font(TextStyle::Monospace)
-                            .interactive(false),
-                        );
+                        match app.data.client.days_since_admission() {
+                            Ok(n) => {
+                                if n.is_negative() {
+                                    ui.add(
+                                        egui::TextEdit::singleline(&mut format!("{n} days ago"))
+                                            .font(TextStyle::Monospace)
+                                            .text_color(Color32::RED)
+                                            .interactive(false),
+                                    );
+                                app.prep_session.can_start_session = false;
+                                } else {
+                                    ui.add(
+                                        egui::TextEdit::singleline(&mut format!("{n} days ago"))
+                                            .font(TextStyle::Monospace)
+                                            .interactive(false),
+                                    );
+                                }
+                            }
+                            Err(_e) => {
+                                ui.add(
+                                    egui::TextEdit::singleline(&mut format!("ERROR"))
+                                        .font(TextStyle::Monospace)
+                                        .text_color(Color32::RED)
+                                        .interactive(false),
+                                )
+                                .on_hover_text(format!("Date of Admission cannot be {} because it is in invalid date\nformat date as YYYY-MM-DD",app.data.client.date_of_admission));
+                                app.prep_session.can_start_session = false;
+                            }
+                        }
                         ui.end_row();
 
                         ui.monospace("Session Number");
@@ -92,7 +122,7 @@ impl PrepareSession {
                             .lost_focus()
                         {
                             if let Err(e) = app.overwrite_client_data_file() {
-                                error_dialog(e, false)
+                                windows_error_dialog(e)
                             }
                         }
                         ui.end_row();
@@ -182,18 +212,24 @@ impl PrepareSession {
             });
             ui.add_space(10.0);
 
-            let can_start_session = app.client_loaded() && app.ksf_loaded();
-            ui.add_enabled_ui(can_start_session, |ui| {
+            if !app.client_loaded() {
+                app.prep_session.can_start_session = false;
+            }
+            if !app.ksf_loaded() {
+                app.prep_session.can_start_session = false;
+            }
+
+            ui.add_enabled_ui(app.prep_session.can_start_session, |ui| {
                 if ui
                     .large_green_button("BEGIN SESSION")
-                    .on_disabled_hover_text("both client and KSF must be selected")
+                    .on_disabled_hover_text("there files that need to be loaded or errors that must be resolved")
                     .clicked()
                 {
                     // Update the client file with any changes
                     // This is only relevant if the user changes a client field and then immediately clicks BEGIN SESSION
                     // If they do anything else the file will update when they switch pages
                     if let Err(e) = app.overwrite_client_data_file() {
-                        error_dialog(e, false)
+                        windows_error_dialog(e)
                     } else {
                         // Load the data and switch pages.
                         app.session_page.load_ksf(&app.data);

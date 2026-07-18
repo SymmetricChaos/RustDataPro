@@ -1,7 +1,7 @@
 use crate::{
     app::DisplayInfo,
     data::{Data, KsfData},
-    utils::DataProUiElements,
+    utils::{DataProUiElements, windows_error_dialog},
 };
 use anyhow::{Context, Result};
 use egui::Key;
@@ -146,7 +146,7 @@ impl NewKsf {
                     if ui.large_green_button("Save").clicked() {
                         match self.save_file_to_path(data, client_directory_path) {
                             Ok(_) => self.save_error.clear(),
-                            Err(e) => self.save_error = e.to_string(),
+                            Err(e) => windows_error_dialog(e),
                         }
                     }
                 },
@@ -158,7 +158,6 @@ impl NewKsf {
 
             ui.strong(self.freq_error.to_string());
             ui.strong(self.dura_error.to_string());
-            ui.strong(self.save_error.to_string());
         });
     }
 }
