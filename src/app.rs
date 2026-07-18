@@ -9,9 +9,11 @@ use egui::Visuals;
 use egui_file_dialog::FileDialog;
 use std::path::PathBuf;
 
+pub const CLIENT_DATA_FILE_NAME: &'static str = "client_data.txt";
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Page {
-    About,
+    BeginSession,
     Session,
     Reliability,
     CreateClient,
@@ -28,8 +30,8 @@ pub struct DisplayInfo {
 }
 
 impl DisplayInfo {
-    pub fn go_to_about(&mut self) {
-        self.active_page = Page::About;
+    pub fn go_to_begin_session(&mut self) {
+        self.active_page = Page::BeginSession;
         self.sidebar_open = true;
     }
 
@@ -68,7 +70,7 @@ const STARTING_ZOOM: f32 = 1.5;
 
 pub struct DataPro {
     pub pick_client_directory: FileDialog,
-    pub client_directory_path: PathBuf,
+    pub client_directory: PathBuf,
 
     pub data: Data,
     pub display_info: DisplayInfo,
@@ -78,8 +80,7 @@ pub struct DataPro {
 
     pub client_data_file_dialog: FileDialog,
     pub client_data_err: String,
-    pub client_data_path: Option<String>,
-
+    // pub client_data_path: Option<String>,
     pub randomness_page: RandomServices,
     pub timers: Timers,
 
@@ -91,6 +92,8 @@ pub struct DataPro {
 
 impl Default for DataPro {
     fn default() -> Self {
+        let mut client_directory = std::env::current_dir().unwrap();
+        client_directory.push("DataProClients");
         Self {
             data: Data {
                 client: ClientData::default(),
@@ -98,7 +101,7 @@ impl Default for DataPro {
                 ksf: KsfData::default(),
             },
             display_info: DisplayInfo {
-                active_page: Page::About,
+                active_page: Page::BeginSession,
                 timers_open: false,
                 random_open: false,
                 sidebar_open: true,
@@ -106,15 +109,15 @@ impl Default for DataPro {
                 ksf_name: String::from("DEFAULT"),
             },
 
-            pick_client_directory: FileDialog::default(),
-            client_directory_path: PathBuf::new(),
+            pick_client_directory: FileDialog::default().initial_directory("DataProClients".into()),
+            client_directory,
 
-            ksf_file_dialog: FileDialog::default(),
+            ksf_file_dialog: FileDialog::default().initial_directory("DataProClients".into()),
             ksf_err: String::default(),
 
-            client_data_file_dialog: FileDialog::default(),
+            client_data_file_dialog: FileDialog::default()
+                .initial_directory("DataProClients".into()),
             client_data_err: String::default(),
-            client_data_path: None,
 
             randomness_page: RandomServices::default(),
             timers: Timers::default(),
@@ -150,9 +153,10 @@ impl DataPro {
     }
 
     pub fn load_client_file(&mut self, path: PathBuf) {
+        let mut path = path;
+        path.push("client_data.txt");
         match ClientData::from_file(&path) {
             Ok(sess_data) => {
-                self.client_data_path = Some(path.as_path().to_str().unwrap().to_string());
                 self.data.client = sess_data;
                 self.data.client.current_session += 1; // We are always one session ahead of the last saved value
                 self.client_data_err.clear();
@@ -208,19 +212,19 @@ impl eframe::App for DataPro {
                 ui,
                 &mut self.display_info,
                 &mut self.data,
-                &self.client_data_path,
+                &self.client_directory,
             ),
             Page::Reliability => self.reliability_page.view(ui, &mut self.display_info),
-            Page::About => pages::About::view(self, ui),
+            Page::BeginSession => pages::About::view(self, ui),
             Page::CreateClient => {
                 self.new_client_page
-                    .view(ui, &mut self.display_info, &self.client_directory_path)
+                    .view(ui, &mut self.display_info, &self.client_directory)
             }
             Page::CreateKsf => self.new_ksf_page.view(
                 ui,
                 &mut self.data,
                 &mut self.display_info,
-                &self.client_directory_path,
+                &self.client_directory,
             ),
         }
     }

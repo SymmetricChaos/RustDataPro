@@ -17,16 +17,16 @@ impl About {
                 app.load_client_file(path);
             }
 
-            if ui.large_button("Select KSF").clicked() {
-                app.ksf_file_dialog.pick_file();
-            }
+            // if ui.large_button("Select KSF").clicked() {
+            //     app.ksf_file_dialog.pick_file();
+            // }
 
-            ui.label(format!("KSF: {}", app.display_info.ksf_name));
-            ui.strong(&app.ksf_err);
-            ui.add_space(5.0);
+            // ui.label(format!("KSF: {}", app.display_info.ksf_name));
+            // ui.strong(&app.ksf_err);
+            // ui.add_space(5.0);
 
-            if ui.large_button("Select Client File").clicked() {
-                app.client_data_file_dialog.pick_file();
+            if ui.large_button("Select Client").clicked() {
+                app.client_data_file_dialog.pick_directory();
             }
             ui.strong(&app.client_data_err);
             ui.add_space(5.0);
@@ -133,11 +133,17 @@ impl About {
             });
             ui.add_space(10.0);
 
-            if ui.large_green_button("BEGIN SESSION").clicked() {
-                app.session_page.load_ksf(&app.data);
-                app.display_info.go_to_session();
-                app.timers.pause_all_timers();
-            }
+            ui.add_enabled_ui(app.data.client.id != "None", |ui| {
+                if ui
+                    .large_green_button("BEGIN SESSION")
+                    .on_disabled_hover_text("no client selected")
+                    .clicked()
+                {
+                    app.session_page.load_ksf(&app.data);
+                    app.display_info.go_to_session();
+                    app.timers.pause_all_timers();
+                }
+            })
         });
     }
 }

@@ -212,7 +212,7 @@ impl IoaPage {
             ui.add_space(5.0);
             if ui.large_red_button("Return").clicked() {
                 self.clear();
-                display_info.go_to_about();
+                display_info.go_to_begin_session();
             }
             ui.add_space(5.0);
 

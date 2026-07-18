@@ -1,5 +1,5 @@
 use crate::{
-    app::DisplayInfo,
+    app::{CLIENT_DATA_FILE_NAME, DisplayInfo},
     data::{
         Data, Timer, TimerStatus, output_data::OutputData, timeline::Timeline, view_simple_timer,
     },
@@ -15,6 +15,7 @@ use std::{
     collections::VecDeque,
     fs::File,
     io::{BufWriter, Write},
+    path::PathBuf,
 };
 
 macro_rules! record_keypress {
@@ -207,15 +208,15 @@ impl SessionPage {
         self.keypresses_display.push_back("t");
     }
 
-    fn save_session(&mut self, data: &mut Data, client_data_path: &Option<String>) {
-        self.save_output(data).unwrap();
-        self.increment_current_session(data, client_data_path)
-            .unwrap()
+    fn save_session(&mut self, data: &mut Data, client_direcory: &PathBuf) -> Result<()> {
+        self.save_output(data)?;
+        self.increment_current_session(data, client_direcory)?;
+        Ok(())
     }
 
     fn end_session(&mut self, display_info: &mut DisplayInfo) {
         self.reset();
-        display_info.go_to_about();
+        display_info.go_to_begin_session();
     }
 
     /// Write the output data into a human readable format.
@@ -291,11 +292,12 @@ impl SessionPage {
     fn increment_current_session(
         &mut self,
         data: &mut Data,
-        client_data_path: &Option<String>,
+        client_directory: &PathBuf,
     ) -> Result<()> {
-        if let Some(path) = client_data_path {
-            std::fs::write(path, &data.client.to_json()?)?;
-        }
+        let mut path = client_directory.clone();
+        path.push(&data.client.id);
+        path.push(CLIENT_DATA_FILE_NAME);
+        std::fs::write(path, &data.client.to_json()?)?;
         data.client.current_session += 1;
         Ok(())
     }
@@ -329,7 +331,7 @@ impl SessionPage {
         ui: &mut Ui,
         display_info: &mut DisplayInfo,
         data: &mut Data,
-        client_data_path: &Option<String>,
+        client_direcory: &PathBuf,
     ) {
         if self.limit_session_length && self.session_timer.is_active() {
             if self.session_timer.current_time() >= self.maximum_session_length {
@@ -570,7 +572,8 @@ impl SessionPage {
                                 .on_disabled_hover_text("no data to save")
                                 .clicked()
                             {
-                                self.save_session(data, client_data_path);
+                                self.save_session(data, client_direcory)
+                                    .expect("failure to save session data");
                                 self.end_session(display_info);
                             }
                         });

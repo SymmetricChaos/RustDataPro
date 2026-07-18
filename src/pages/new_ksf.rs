@@ -153,7 +153,7 @@ impl NewKsf {
             );
 
             if ui.large_red_button("Return").clicked() {
-                display_info.go_to_about();
+                display_info.go_to_begin_session();
             }
 
             ui.strong(self.freq_error.to_string());

@@ -8,7 +8,7 @@ impl Sidebar {
         app.pick_client_directory.update(ui.ctx());
         if let Some(pathbuf) = app.pick_client_directory.take_picked() {
             println!("{:?}", pathbuf);
-            app.client_directory_path = pathbuf.clone();
+            app.client_directory = pathbuf.clone();
         }
         egui::Panel::left("welcome_panel")
             .default_size(200.0)

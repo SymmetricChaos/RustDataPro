@@ -1,4 +1,8 @@
-use crate::{app::DisplayInfo, data::ClientData, utils::DataProUiElements};
+use crate::{
+    app::{CLIENT_DATA_FILE_NAME, DisplayInfo},
+    data::ClientData,
+    utils::DataProUiElements,
+};
 use anyhow::Result;
 use std::{
     fs::File,
@@ -37,8 +41,8 @@ impl NewClient {
         p.push(&format!("{}", self.client.id));
         std::fs::create_dir(&p)?;
 
-        // Create the client file inside the new directory, title it client.txt
-        p.push("client.txt");
+        // Create the client file inside the new directory, title it client_data.txt
+        p.push(CLIENT_DATA_FILE_NAME);
         let mut writer = BufWriter::new(File::create_new(p)?);
         writer.write_all(self.client.to_json()?.as_bytes())?;
         writer.flush()?;
@@ -112,7 +116,7 @@ impl NewClient {
             }
 
             if ui.large_red_button("Return").clicked() {
-                display_info.go_to_about();
+                display_info.go_to_begin_session();
             }
 
             ui.strong(self.error.to_string());
