@@ -57,6 +57,7 @@ impl NewClient {
             ui.add_space(10.0);
             egui::Grid::new("client_and_session_info_grid")
                 .min_col_width(150.0)
+                .spacing((10.0, 10.0))
                 .show(ui, |ui| {
                     ui.monospace("Client Name");
                     ui.text_edit_singleline(&mut self.client.name);
@@ -76,6 +77,10 @@ impl NewClient {
 
                     ui.monospace("Location");
                     ui.text_edit_singleline(&mut self.client.location);
+                    ui.end_row();
+
+                    ui.monospace("Date of Admission\n(YYYY-MM-DD)");
+                    ui.text_edit_singleline(&mut self.client.date_of_admission);
                     ui.end_row();
 
                     ui.monospace("Assessments\n(separate with commas)");

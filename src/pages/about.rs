@@ -54,11 +54,7 @@ impl About {
                     ui.end_row();
 
                     ui.monospace("DOA");
-                    if app.data.client.date_of_admission == 0 {
-                        ui.monospace("0");
-                    } else {
-                        ui.monospace(&format!("{}", app.data.client.doa()));
-                    }
+                    ui.monospace(&format!("{}", app.data.client.doa()));
                     ui.end_row();
 
                     ui.monospace("Session");

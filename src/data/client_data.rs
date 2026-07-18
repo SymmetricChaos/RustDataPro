@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use chrono::{Datelike, Local};
+use chrono::{Datelike, Local, NaiveDate};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, fs::File, io::Read, path::PathBuf};
@@ -13,7 +13,7 @@ pub struct ClientData {
     pub assessments: Vec<String>,
     pub conditions: Vec<String>,
     pub current_session: u32,
-    pub date_of_admission: i32, // TODO store as human readable string
+    pub date_of_admission: String,
     pub location: String,
 }
 
@@ -32,7 +32,7 @@ impl Default for ClientData {
                     "None"
                 ],
                 "current_session": 0,
-                "date_of_admission": 0
+                "date_of_admission": "2026-01-01",
                 "location": "None"
             }"#,
         )
@@ -44,13 +44,14 @@ impl Display for ClientData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Client: {}\nID: {}\nLocation: {}\nCase Manager: {}\nPrimary Therapist: {}\nSession Number: {}", // NOTICE: assessments and conditions are exluded from this display
+            "Client: {}\nID: {}\nLocation: {}\nCase Manager: {}\nPrimary Therapist: {}\nSession Number: {}\nDOA {}",
             self.name,
             self.id,
             self.location,
             self.case_manager,
             self.primary_therapist,
-            self.current_session
+            self.current_session,
+            self.doa()
         )
     }
 }
@@ -65,14 +66,17 @@ impl ClientData {
             assessments: Vec::new(),
             conditions: Vec::new(),
             current_session: 0,
-            date_of_admission: Local::now().date_naive().num_days_from_ce(),
+            date_of_admission: Local::now().date_naive().format("%Y-%m-%d").to_string(),
             location: String::new(),
         }
     }
 
     /// Number of days since admission
     pub fn doa(&self) -> i32 {
-        Local::now().date_naive().num_days_from_ce() - self.date_of_admission
+        let x = NaiveDate::parse_from_str(&self.date_of_admission, "%Y-%m-%d")
+            .unwrap()
+            .num_days_from_ce();
+        Local::now().date_naive().num_days_from_ce() - x
     }
 
     /// String containing only capital letters from client name.
