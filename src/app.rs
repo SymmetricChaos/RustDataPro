@@ -4,12 +4,16 @@ use crate::{
     pages::{self, RandomServices, Timers, new_client::NewClient, new_ksf::NewKsf},
     utils::{date_time_string, quick_file_name},
 };
+use anyhow::Result;
 use chrono::Local;
 use egui::Visuals;
 use egui_file_dialog::FileDialog;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
+pub const DEFAULT_ROOT_DIRECTORY_NAME: &'static str = "DataProClients";
 pub const CLIENT_DATA_FILE_NAME: &'static str = "client_data.txt";
+pub const CLIENT_SESSION_DATA_FOLDER_NAME: &'static str = "SessionRecords";
+const STARTING_ZOOM: f32 = 1.5;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Page {
@@ -26,7 +30,6 @@ pub struct DisplayInfo {
     pub random_open: bool,
     pub sidebar_open: bool,
     pub zoom: f32,
-    pub ksf_name: String,
 }
 
 impl DisplayInfo {
@@ -66,21 +69,19 @@ impl DisplayInfo {
     }
 }
 
-const STARTING_ZOOM: f32 = 1.5;
-
 pub struct DataPro {
-    pub pick_client_directory: FileDialog,
-    pub client_directory: PathBuf,
+    pub pick_root_directory: FileDialog,
+    pub root_directory: PathBuf,
 
     pub data: Data,
     pub display_info: DisplayInfo,
 
-    pub ksf_file_dialog: FileDialog,
+    pub pick_ksf: FileDialog,
     pub ksf_err: String,
 
-    pub client_data_file_dialog: FileDialog,
+    pub pick_client_folder: FileDialog,
     pub client_data_err: String,
-    // pub client_data_path: Option<String>,
+
     pub randomness_page: RandomServices,
     pub timers: Timers,
 
@@ -92,13 +93,14 @@ pub struct DataPro {
 
 impl Default for DataPro {
     fn default() -> Self {
-        let mut client_directory = std::env::current_dir().unwrap();
-        client_directory.push("DataProClients");
+        let mut root_directory = std::env::current_dir().unwrap();
+        root_directory.push(DEFAULT_ROOT_DIRECTORY_NAME);
         Self {
             data: Data {
                 client: ClientData::default(),
                 session: SessionData::default(),
                 ksf: KsfData::default(),
+                ksf_name: String::new(),
             },
             display_info: DisplayInfo {
                 active_page: Page::BeginSession,
@@ -106,17 +108,17 @@ impl Default for DataPro {
                 random_open: false,
                 sidebar_open: true,
                 zoom: STARTING_ZOOM,
-                ksf_name: String::from("DEFAULT"),
             },
 
-            pick_client_directory: FileDialog::default().initial_directory("DataProClients".into()),
-            client_directory,
+            pick_root_directory: FileDialog::default()
+                .initial_directory(DEFAULT_ROOT_DIRECTORY_NAME.into()),
+            root_directory,
 
-            ksf_file_dialog: FileDialog::default().initial_directory("DataProClients".into()),
+            pick_ksf: FileDialog::default().initial_directory(DEFAULT_ROOT_DIRECTORY_NAME.into()),
             ksf_err: String::default(),
 
-            client_data_file_dialog: FileDialog::default()
-                .initial_directory("DataProClients".into()),
+            pick_client_folder: FileDialog::default()
+                .initial_directory(DEFAULT_ROOT_DIRECTORY_NAME.into()),
             client_data_err: String::default(),
 
             randomness_page: RandomServices::default(),
@@ -137,27 +139,46 @@ impl DataPro {
         Default::default()
     }
 
-    pub fn load_ksf_file(&mut self, path: PathBuf) {
+    pub fn client_loaded(&self) -> bool {
+        self.data.client.id != "None"
+    }
+
+    pub fn ksf_loaded(&self) -> bool {
+        self.data.ksf_name != ""
+    }
+
+    /// Path to the client data file, if one is available.
+    pub fn client_data_file(&self) -> Result<PathBuf> {
+        if !self.client_loaded() {
+            return Err(anyhow::anyhow!("no client selected"));
+        }
+        let path = Path::new(&self.root_directory)
+            .join(&self.data.client.id.to_string())
+            .join(CLIENT_DATA_FILE_NAME);
+        Ok(path.to_path_buf())
+    }
+
+    pub fn load_ksf_file(&mut self, path: &PathBuf) {
         match KsfData::from_file(&path) {
             Ok(ksf) => {
                 self.data.ksf = ksf;
-                self.display_info.ksf_name = quick_file_name(&path).to_string();
+                self.data.ksf_name = quick_file_name(&path).to_string();
                 self.ksf_err.clear();
             }
             Err(e) => {
                 self.data.ksf = KsfData::default();
-                self.display_info.ksf_name = String::from("DEFAULT");
+                self.data.ksf_name = String::from("");
                 self.ksf_err = e.to_string();
             }
         };
     }
 
-    pub fn load_client_file(&mut self, path: PathBuf) {
-        let mut path = path;
-        path.push("client_data.txt");
+    pub fn load_client_file(&mut self, path: &PathBuf) {
+        let mut path = path.clone();
+        path.push(CLIENT_DATA_FILE_NAME);
         match ClientData::from_file(&path) {
-            Ok(sess_data) => {
-                self.data.client = sess_data;
+            Ok(client) => {
+                self.data.client = client;
                 self.data.client.current_session += 1; // We are always one session ahead of the last saved value
                 self.client_data_err.clear();
                 if self.data.client.assessments.is_empty() {
@@ -212,19 +233,19 @@ impl eframe::App for DataPro {
                 ui,
                 &mut self.display_info,
                 &mut self.data,
-                &self.client_directory,
+                &self.root_directory,
             ),
             Page::Reliability => self.reliability_page.view(ui, &mut self.display_info),
             Page::BeginSession => pages::About::view(self, ui),
             Page::CreateClient => {
                 self.new_client_page
-                    .view(ui, &mut self.display_info, &self.client_directory)
+                    .view(ui, &mut self.display_info, &self.root_directory)
             }
             Page::CreateKsf => self.new_ksf_page.view(
                 ui,
                 &mut self.data,
                 &mut self.display_info,
-                &self.client_directory,
+                &self.root_directory,
             ),
         }
     }

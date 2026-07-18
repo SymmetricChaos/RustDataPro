@@ -1,4 +1,5 @@
 use crate::{app::DataPro, data::DataType, utils::DataProUiElements};
+use egui_file_dialog::FileDialog;
 
 pub struct About {}
 
@@ -7,29 +8,36 @@ impl About {
         egui::CentralPanel::default().show(ui, |ui| {
             ui.add_space(15.0);
 
-            app.ksf_file_dialog.update(ui.ctx());
-            if let Some(path) = app.ksf_file_dialog.take_picked() {
-                app.load_ksf_file(path);
+            app.pick_ksf.update(ui.ctx());
+            if let Some(path) = app.pick_ksf.take_picked() {
+                app.load_ksf_file(&path);
             }
 
-            app.client_data_file_dialog.update(ui.ctx());
-            if let Some(path) = app.client_data_file_dialog.take_picked() {
-                app.load_client_file(path);
+            app.pick_client_folder.update(ui.ctx());
+            if let Some(path) = app.pick_client_folder.take_picked() {
+                app.load_client_file(&path);
+                app.pick_ksf = FileDialog::new().initial_directory(path);
             }
-
-            // if ui.large_button("Select KSF").clicked() {
-            //     app.ksf_file_dialog.pick_file();
-            // }
-
-            // ui.label(format!("KSF: {}", app.display_info.ksf_name));
-            // ui.strong(&app.ksf_err);
-            // ui.add_space(5.0);
 
             if ui.large_button("Select Client").clicked() {
-                app.client_data_file_dialog.pick_directory();
+                app.pick_client_folder.pick_directory();
             }
             ui.strong(&app.client_data_err);
             ui.add_space(5.0);
+
+            ui.add_enabled_ui(app.data.client.id != "None", |ui| {
+                if ui
+                    .large_button("Select KSF")
+                    .on_disabled_hover_text("no client selected")
+                    .clicked()
+                {
+                    app.pick_ksf.pick_file();
+                }
+
+                ui.label(format!("KSF: {}", app.data.ksf_name));
+                ui.strong(&app.ksf_err);
+                ui.add_space(5.0);
+            });
 
             ui.add_enabled_ui(true, |ui| {
                 egui::Grid::new("client_and_session_info_grid")
@@ -48,12 +56,28 @@ impl About {
                         ui.text_edit_singleline(&mut app.data.client.location);
                         ui.end_row();
 
-                        ui.monospace("DOA").on_hover_text("Days Since Admission");
-                        ui.monospace(&format!("{}", app.data.client.doa()));
+                        ui.monospace("Date of Admission");
+                        ui.monospace(&format!(
+                            "{} ({} days ago)",
+                            app.data.client.date_of_admission,
+                            app.data.client.days_since_admission()
+                        ));
                         ui.end_row();
 
                         ui.monospace("Session Number");
-                        ui.add(egui::DragValue::new(&mut app.data.client.current_session));
+                        if ui
+                            .add(egui::DragValue::new(&mut app.data.client.current_session))
+                            .changed()
+                        {
+                            // let path = Path::new(&app.root_directory);
+                            // path.join(&app.data.client.id.to_string());
+                            // path.join(CLIENT_DATA_FILE_NAME);
+                            // std::fs::write(
+                            //     path,
+                            //     &app.data.client.to_json().expect("failed to create json"),
+                            // )
+                            // .expect("failed to save update client file");
+                        }
                         ui.end_row();
 
                         ui.monospace("Case Manager");
@@ -120,23 +144,24 @@ impl About {
             });
             ui.add_space(10.0);
 
-            ui.horizontal(|ui| {
-                ui.add_enabled(
-                    app.session_page.limit_session_length,
-                    egui::DragValue::new(&mut app.session_page.maximum_session_length)
-                        .range(0.0..=100_000.0),
-                );
-                ui.checkbox(
-                    &mut app.session_page.limit_session_length,
-                    "Limit Session Length",
-                );
-            });
-            ui.add_space(10.0);
+            // ui.horizontal(|ui| {
+            //     ui.add_enabled(
+            //         app.session_page.limit_session_length,
+            //         egui::DragValue::new(&mut app.session_page.maximum_session_length)
+            //             .range(0.0..=100_000.0),
+            //     );
+            //     ui.checkbox(
+            //         &mut app.session_page.limit_session_length,
+            //         "Limit Session Length",
+            //     );
+            // });
+            // ui.add_space(10.0);
 
-            ui.add_enabled_ui(app.data.client.id != "None", |ui| {
+            let can_start_session = app.data.client.id != "None" && app.data.ksf_name != "";
+            ui.add_enabled_ui(can_start_session, |ui| {
                 if ui
                     .large_green_button("BEGIN SESSION")
-                    .on_disabled_hover_text("no client selected")
+                    .on_disabled_hover_text("both client and KSF must be selected")
                     .clicked()
                 {
                     app.session_page.load_ksf(&app.data);

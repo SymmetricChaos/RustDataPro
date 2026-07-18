@@ -18,4 +18,5 @@ pub struct Data {
     pub client: ClientData,
     pub session: SessionData,
     pub ksf: KsfData,
+    pub ksf_name: String,
 }

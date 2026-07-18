@@ -14,35 +14,14 @@ pub struct KsfData {
 
 impl Default for KsfData {
     fn default() -> Self {
-        serde_json::from_str(
-            r#"{
-                "frequency": [
-                    ["V", "NegVoc"],
-                    ["A", "Aggression"],
-                    ["M", "Mand"],
-                    ["S", "SIB"],
-                    ["I", "Instruction"],
-                    ["C", "Compliance"]
-                ],
-                "duration": [
-                    ["Num4", "ToyEngage"],
-                    ["Num1", "Sr+"],
-                    ["Num2", "Sdelta"]
-                ]
-            }"#,
-        )
-        .unwrap()
-    }
-}
-
-impl KsfData {
-    pub fn blank() -> Self {
         Self {
             duration: Vec::new(),
             frequency: Vec::new(),
         }
     }
+}
 
+impl KsfData {
     /// All key/description pairs. Frequency first.
     pub fn pairs(&self) -> impl Iterator<Item = &(Key, String)> {
         self.frequency.iter().chain(self.duration.iter())

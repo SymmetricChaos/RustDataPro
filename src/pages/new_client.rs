@@ -1,5 +1,5 @@
 use crate::{
-    app::{CLIENT_DATA_FILE_NAME, DisplayInfo},
+    app::{CLIENT_DATA_FILE_NAME, CLIENT_SESSION_DATA_FOLDER_NAME, DisplayInfo},
     data::ClientData,
     utils::DataProUiElements,
 };
@@ -43,9 +43,13 @@ impl NewClient {
 
         // Create the client file inside the new directory, title it client_data.txt
         p.push(CLIENT_DATA_FILE_NAME);
-        let mut writer = BufWriter::new(File::create_new(p)?);
+        let mut writer = BufWriter::new(File::create_new(&p)?);
         writer.write_all(self.client.to_json()?.as_bytes())?;
         writer.flush()?;
+
+        // Create the client records folder where OutputData will be stored
+        p.push(CLIENT_SESSION_DATA_FOLDER_NAME);
+        std::fs::create_dir(&p)?;
 
         Ok(())
     }

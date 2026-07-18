@@ -1,5 +1,5 @@
 use crate::{
-    app::{CLIENT_DATA_FILE_NAME, DisplayInfo},
+    app::{CLIENT_DATA_FILE_NAME, CLIENT_SESSION_DATA_FOLDER_NAME, DisplayInfo},
     data::{
         Data, Timer, TimerStatus, output_data::OutputData, timeline::Timeline, view_simple_timer,
     },
@@ -15,7 +15,7 @@ use std::{
     collections::VecDeque,
     fs::File,
     io::{BufWriter, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 macro_rules! record_keypress {
@@ -208,9 +208,9 @@ impl SessionPage {
         self.keypresses_display.push_back("t");
     }
 
-    fn save_session(&mut self, data: &mut Data, client_direcory: &PathBuf) -> Result<()> {
-        self.save_output(data)?;
-        self.increment_current_session(data, client_direcory)?;
+    fn save_session(&mut self, data: &mut Data, root_directory: &PathBuf) -> Result<()> {
+        self.save_output(data, root_directory)?;
+        self.increment_current_session(data, root_directory)?;
         Ok(())
     }
 
@@ -281,7 +281,7 @@ impl SessionPage {
             case_manager: data.client.case_manager.clone(),
             primary_therapist: data.client.primary_therapist.clone(),
             session_number: data.client.current_session,
-            days_since_admissions: data.client.doa(),
+            days_since_admissions: data.client.days_since_admission(),
             location: data.client.location.clone(),
         })
         .context("failure to create json")
@@ -302,24 +302,30 @@ impl SessionPage {
         Ok(())
     }
 
-    fn save_output(&mut self, data: &mut Data) -> Result<()> {
-        let file = File::create(&format!(
+    fn save_output(&mut self, data: &mut Data, root_directory: &PathBuf) -> Result<()> {
+        let path_to_folder = Path::new(root_directory)
+            .join(data.client.id.to_string())
+            .join(CLIENT_SESSION_DATA_FOLDER_NAME);
+
+        let mut file_name = path_to_folder.clone();
+        file_name.push(format!(
             "{}{}_{}.txt",
             data.client.initials(),
             data.client.current_session,
             data.session.data_type
-        ))?;
-        let mut writer = BufWriter::new(file);
+        ));
+        let mut writer = BufWriter::new(File::create(file_name)?);
         writer.write_all(self.write_output_pretty(data).as_bytes())?;
         writer.flush()?;
 
-        let file = File::create(&format!(
+        let mut file_name_raw = path_to_folder.clone();
+        file_name_raw.push(format!(
             "{}{}_{}_raw.txt",
             data.client.initials(),
             data.client.current_session,
             data.session.data_type
-        ))?;
-        let mut writer = BufWriter::new(file);
+        ));
+        let mut writer = BufWriter::new(File::create(file_name_raw)?);
         writer.write_all(self.write_output_json(data)?.as_bytes())?;
         writer.flush()?;
 
@@ -331,7 +337,7 @@ impl SessionPage {
         ui: &mut Ui,
         display_info: &mut DisplayInfo,
         data: &mut Data,
-        client_direcory: &PathBuf,
+        root_directory: &PathBuf,
     ) {
         if self.limit_session_length && self.session_timer.is_active() {
             if self.session_timer.current_time() >= self.maximum_session_length {
@@ -395,6 +401,7 @@ impl SessionPage {
                     ui.vertical(|ui| {
                         ui.label(format!("Client ID: {}", data.client.id));
                         ui.label(format!("Session Number: {}", data.client.current_session));
+                        ui.label(format!("DOA: {}", data.client.days_since_admission()));
                         ui.label(format!("Location: {}", data.client.location));
                     });
                 });
@@ -402,7 +409,7 @@ impl SessionPage {
                     ui.vertical(|ui| {
                         ui.label(format!("Assessment: {}", data.session.assessment));
                         ui.label(format!("Condition: {}", data.session.condition));
-                        ui.label(format!("KSF: {}", display_info.ksf_name));
+                        ui.label(format!("KSF: {}", data.ksf_name));
                     });
                 });
                 ui.group(|ui| {
@@ -572,7 +579,7 @@ impl SessionPage {
                                 .on_disabled_hover_text("no data to save")
                                 .clicked()
                             {
-                                self.save_session(data, client_direcory)
+                                self.save_session(data, root_directory)
                                     .expect("failure to save session data");
                                 self.end_session(display_info);
                             }

@@ -79,7 +79,7 @@ pub struct NewKsf {
 impl Default for NewKsf {
     fn default() -> Self {
         Self {
-            ksf: KsfData::blank(),
+            ksf: KsfData::default(),
             freq_string: String::new(),
             dura_string: String::new(),
             freq_error: String::new(),

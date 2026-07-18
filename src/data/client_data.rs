@@ -44,14 +44,14 @@ impl Display for ClientData {
             self.case_manager,
             self.primary_therapist,
             self.current_session,
-            self.doa()
+            self.days_since_admission()
         )
     }
 }
 
 impl ClientData {
     /// Number of days since admission
-    pub fn doa(&self) -> i32 {
+    pub fn days_since_admission(&self) -> i32 {
         let x = NaiveDate::parse_from_str(&self.date_of_admission, "%Y-%m-%d")
             .unwrap()
             .num_days_from_ce();
