@@ -114,7 +114,7 @@ impl Timers {
                                 view_simple_timer(ui, &timer.timer);
                             }
                             ui.add_space(5.0);
-                            if ui.button("⟳").on_hover_text("reset").clicked() {
+                            if ui.button("↺").on_hover_text("reset").clicked() {
                                 timer.timer.reset();
                             }
                             ui.add_space(5.0);
