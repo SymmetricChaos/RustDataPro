@@ -92,7 +92,17 @@ impl Default for Timer {
 }
 
 impl Timer {
-    /// Set status to Active and set the start_time to to Local::now().
+    /// Pause or unpause. Preferred interface for a Timer.
+    pub fn toggle(&mut self) {
+        match self.status {
+            TimerStatus::Active => self.pause(),
+            TimerStatus::Paused | TimerStatus::NotStarted => self.start(),
+            TimerStatus::Stopped => (),
+        }
+    }
+
+    /// Set status to Active and update the most recently started time.
+    /// Does nothing if status is Active.
     pub fn start(&mut self) {
         if !self.status.is_active() {
             self.status = TimerStatus::Active;
@@ -100,7 +110,7 @@ impl Timer {
         }
     }
 
-    /// Set status to Paused and update the stashed time.
+    /// If status is Active, set status to Paused and update the stashed time.
     pub fn pause(&mut self) {
         if self.is_active() {
             self.status = TimerStatus::Paused;
@@ -125,8 +135,8 @@ impl Timer {
         }
     }
 
-    /// Set status to Stopped and clear the stashed time.
-    /// Specific to use on the session page for undoing a key press.
+    /// If status is Active, set status to Stopped and clear the stashed time.
+    /// Specific to use on the session page for undoing a key press on a timer.
     pub fn unstart(&mut self) {
         if self.status.is_active() {
             self.status = TimerStatus::Stopped;
@@ -134,18 +144,8 @@ impl Timer {
         }
     }
 
-    /// Pause or unpause. Does nothing if the timer is Stopped.
-    /// Preferred interfact for a Timer.
-    pub fn toggle(&mut self) {
-        match self.status {
-            TimerStatus::Active => self.pause(),
-            TimerStatus::Paused | TimerStatus::NotStarted => self.start(),
-            TimerStatus::Stopped => (),
-        }
-    }
-
     /// Stop or start. Does nothing if the timer is Paused.
-    /// Specific to use on the session page.
+    /// Specific for use on the session page to update saved time and clear stashed time.
     pub fn stop_start(&mut self) {
         match self.status {
             TimerStatus::Active => self.stop(),
