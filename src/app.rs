@@ -12,8 +12,8 @@ use std::path::{Path, PathBuf};
 
 pub const DEFAULT_ROOT_DIRECTORY_NAME: &'static str = "DataProClients";
 pub const CLIENT_DATA_FILE_NAME: &'static str = "client_data.txt";
-pub const SESSION_DATA_FOLDER_NAME: &'static str = "SessionRecords";
-pub const IOA_DATA_FOLDER_NAME: &'static str = "IOAData";
+pub const SESSION_DATA_FOLDER_NAME: &'static str = "Session Records";
+pub const IOA_DATA_FOLDER_NAME: &'static str = "IOA Data";
 const STARTING_ZOOM: f32 = 1.5;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -174,12 +174,26 @@ impl DataPro {
     pub fn client_session_data_path(&self) -> Result<PathBuf> {
         if !self.client_loaded() {
             return Err(anyhow::anyhow!(
-                "cannot find client session data folder because no client is selected"
+                "cannot find {} folder because no client is selected",
+                SESSION_DATA_FOLDER_NAME
             ));
         }
         let path = Path::new(&self.root_directory)
             .join(&self.data.client.id.to_string())
             .join(SESSION_DATA_FOLDER_NAME);
+        Ok(path.to_path_buf())
+    }
+
+    pub fn client_ioa_data_path(&self) -> Result<PathBuf> {
+        if !self.client_loaded() {
+            return Err(anyhow::anyhow!(
+                "cannot find {} folder because no client is selected",
+                IOA_DATA_FOLDER_NAME
+            ));
+        }
+        let path = Path::new(&self.root_directory)
+            .join(&self.data.client.id.to_string())
+            .join(IOA_DATA_FOLDER_NAME);
         Ok(path.to_path_buf())
     }
 

@@ -14,7 +14,7 @@ use egui_file_dialog::FileDialog;
 use std::{
     fs::File,
     io::{BufWriter, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 pub struct IoaPage {
@@ -127,7 +127,7 @@ impl IoaPage {
         Ok(())
     }
 
-    fn calculate_ioa(&mut self) -> Result<()> {
+    fn calculate_ioa(&mut self, ioa_directory: &PathBuf) -> Result<()> {
         let mut ioa_data = IoaData::from_ksf(&self.prim_data[0].0.ksf);
 
         self.interval_ioa(&mut ioa_data);
@@ -135,11 +135,14 @@ impl IoaPage {
         self.duration_ioa(&mut ioa_data)?;
 
         ioa_data.normalize(self.prim_data.len() as f32);
+        let path = Path::new(ioa_directory)
+            .join(format!("reliability_{}", time_stamp()))
+            .to_string_lossy()
+            .to_string();
 
-        let file_stem = format!("reliability_{}", time_stamp());
-        save_excel_workbook(&ioa_data, &file_stem, &self.prim_data, &self.reli_data)?;
+        save_excel_workbook(&ioa_data, &path, &self.prim_data, &self.reli_data)?;
 
-        let mut writer = BufWriter::new(File::create(&format!("{}.txt", file_stem))?);
+        let mut writer = BufWriter::new(File::create(&format!("{}.txt", path))?);
         writer.write_all(ioa_data.to_json()?.as_bytes())?;
         writer.flush()?;
 
@@ -195,21 +198,31 @@ impl IoaPage {
             });
             ui.add_space(20.0);
 
-            if ui.large_green_button("Calculate IOA").clicked() {
-                if !app.ioa_page.ioa_finished {
-                    match validate_files(&app.ioa_page.prim_data, &app.ioa_page.reli_data) {
-                        Ok(_) => match app.ioa_page.calculate_ioa() {
-                            Ok(_) => {
-                                app.ioa_page.error.clear();
-                                app.ioa_page.ioa_finished = true;
-                            }
+            ui.add_enabled_ui(app.client_loaded(), |ui| {
+                if ui
+                    .large_green_button("Calculate IOA")
+                    .on_disabled_hover_text("no client selected")
+                    .clicked()
+                {
+                    if !app.ioa_page.ioa_finished {
+                        match validate_files(&app.ioa_page.prim_data, &app.ioa_page.reli_data) {
+                            Ok(_) => match app.ioa_page.calculate_ioa(
+                                &app.client_ioa_data_path().expect("ERROR REACHING IOA DATA"),
+                            ) {
+                                Ok(_) => {
+                                    app.ioa_page.error.clear();
+                                    app.ioa_page.ioa_finished = true;
+                                }
+                                Err(e) => app.ioa_page.push_error(&e.to_string()),
+                            },
                             Err(e) => app.ioa_page.push_error(&e.to_string()),
-                        },
-                        Err(e) => app.ioa_page.push_error(&e.to_string()),
+                        }
                     }
                 }
-            }
+            });
+
             ui.add_space(5.0);
+
             if ui.large_red_button("Return").clicked() {
                 app.ioa_page.clear();
                 app.display_info.go_to_prep_session();

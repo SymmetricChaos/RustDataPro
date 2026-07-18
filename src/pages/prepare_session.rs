@@ -30,11 +30,12 @@ impl PrepareSession {
         if let Some(path) = app.pick_client_folder.take_picked() {
             app.load_client_file(&path.clone());
             app.pick_ksf = FileDialog::new().initial_directory(path.clone());
-            app.ioa_page.file_dialog = FileDialog::new()
-                .initial_directory(Path::new(&path).join(SESSION_DATA_FOLDER_NAME));
+            let ioa = Path::new(&path).join(SESSION_DATA_FOLDER_NAME);
+            println!("{:?}", ioa);
+            app.ioa_page.file_dialog = FileDialog::new().initial_directory(ioa);
         }
 
-        app.prep_session.can_start_session = true;
+        app.prep_session.can_start_session = app.client_loaded() && app.ksf_loaded();
 
         egui::CentralPanel::default().show(ui, |ui| {
             ui.add_space(15.0);
@@ -212,12 +213,7 @@ impl PrepareSession {
             });
             ui.add_space(10.0);
 
-            if !app.client_loaded() {
-                app.prep_session.can_start_session = false;
-            }
-            if !app.ksf_loaded() {
-                app.prep_session.can_start_session = false;
-            }
+
 
             ui.add_enabled_ui(app.prep_session.can_start_session, |ui| {
                 if ui
