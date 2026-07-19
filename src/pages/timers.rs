@@ -125,11 +125,11 @@ impl Timers {
                             }
                             ui.add_space(5.0);
 
-                            let counter_adjust_size = (40.0,20.0);
+                            let counter_adjust_size = (50.0,20.0);
                             if timer.timer_type == TimerType::Countdown {
                                 let draginfo = ui.add_sized(counter_adjust_size,
                                     egui::DragValue::new(&mut timer.timer.countdown_from)
-                                        .range(0.0..=9999.0),
+                                        .range(0.0..=86400.0),
                                 );
                                 if draginfo.has_focus() {
                                     accept_keyboard_controls = false;

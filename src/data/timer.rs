@@ -8,7 +8,7 @@ use std::{
 /// Need to use a macro to pass around a string literal
 macro_rules! timer_format {
     () => {
-        "{:3.0}:{:05.2}"
+        "{:4.0}:{:05.2}"
     };
 }
 
