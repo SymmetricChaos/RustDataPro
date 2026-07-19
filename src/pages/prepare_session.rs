@@ -1,5 +1,5 @@
 use crate::{
-    app::{DataPro, SESSION_DATA_FOLDER_NAME},
+    app::{DataPro, NO_CLIENT_MESSAGE, SESSION_DATA_FOLDER_NAME},
     data::DataType,
     utils::{DataProUiElements, windows_error_dialog},
 };
@@ -46,7 +46,7 @@ impl PrepareSession {
             ui.add_enabled_ui(app.client_loaded(), |ui| {
                 if ui
                     .large_button("Select KSF")
-                    .on_disabled_hover_text("no client selected")
+                    .on_disabled_hover_text(NO_CLIENT_MESSAGE)
                     .clicked()
                 {
                     app.pick_ksf.pick_file();
@@ -172,29 +172,29 @@ impl PrepareSession {
                         egui::ComboBox::from_id_salt("assessment")
                             .selected_text(&app.data.session.assessment)
                             .show_ui(ui, |ui| {
-                                for item in app.data.client.assessments.iter() {
+                                for item in app.data.assessments.iter() {
                                     ui.selectable_value(
                                         &mut app.data.session.assessment,
-                                        item.to_string(),
-                                        item,
+                                        item.0.clone(),
+                                        item.0.clone(),
                                     );
                                 }
                             });
                         ui.end_row();
 
-                        ui.monospace("Condition");
-                        egui::ComboBox::from_id_salt("condition")
-                            .selected_text(&app.data.session.condition)
-                            .show_ui(ui, |ui| {
-                                for item in app.data.client.conditions.iter() {
-                                    ui.selectable_value(
-                                        &mut app.data.session.condition,
-                                        item.to_string(),
-                                        item,
-                                    );
-                                }
-                            });
-                        ui.end_row();
+                        // ui.monospace("Condition");
+                        // egui::ComboBox::from_id_salt("condition")
+                        //     .selected_text(&app.data.session.condition)
+                        //     .show_ui(ui, |ui| {
+                        //         for item in app.data.client.conditions.iter() {
+                        //             ui.selectable_value(
+                        //                 &mut app.data.session.condition,
+                        //                 item.to_string(),
+                        //                 item,
+                        //             );
+                        //         }
+                        //     });
+                        // ui.end_row();
                     });
                 ui.add_space(10.0);
             });

@@ -2,8 +2,9 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, fs::File, io::Read, path::Path};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum DataType {
+    #[default]
     Primary,
     Reliability,
 }
@@ -17,28 +18,13 @@ impl Display for DataType {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct SessionData {
     pub assessment: String,
     pub condition: String,
     pub therapist: String,
     pub data_collector: String,
     pub data_type: DataType,
-}
-
-impl Default for SessionData {
-    fn default() -> Self {
-        serde_json::from_str(
-            r#"{
-                "assessment": "None",
-                "condition": "None",
-                "therapist": "None",
-                "data_collector": "None",
-                "data_type": "Primary"
-            }"#,
-        )
-        .unwrap()
-    }
 }
 
 impl Display for SessionData {

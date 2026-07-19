@@ -27,18 +27,13 @@ macro_rules! timer_display {
 const ACTIVE_COLOR: Color32 = Color32::YELLOW;
 const NEGATIVE_COLOR: Color32 = Color32::RED;
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TimerStatus {
+    #[default]
     NotStarted,
     Active,
     Stopped,
     Paused,
-}
-
-impl Default for TimerStatus {
-    fn default() -> Self {
-        Self::NotStarted
-    }
 }
 
 impl Display for TimerStatus {

@@ -8,14 +8,8 @@ use std::{
     path::Path,
 };
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct Timeline(Vec<(Key, f32)>);
-
-impl Default for Timeline {
-    fn default() -> Self {
-        Self(Vec::new())
-    }
-}
 
 impl Deref for Timeline {
     type Target = Vec<(Key, f32)>;

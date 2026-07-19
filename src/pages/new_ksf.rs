@@ -1,5 +1,5 @@
 use crate::{
-    app::DisplayInfo,
+    app::DataPro,
     data::{Data, KsfData},
     utils::{DataProUiElements, windows_error_dialog},
 };
@@ -9,7 +9,7 @@ use itertools::Itertools;
 use std::{
     fs::File,
     io::{BufWriter, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 fn parse_line(s: &str) -> Result<(Key, String)> {
@@ -67,8 +67,10 @@ fn entry_row(
     ));
 }
 
+#[derive(Default)]
 pub struct NewKsf {
     ksf: KsfData,
+    file_name: String,
     freq_string: String,
     dura_string: String,
     freq_error: String,
@@ -76,46 +78,36 @@ pub struct NewKsf {
     save_error: String,
 }
 
-impl Default for NewKsf {
-    fn default() -> Self {
-        Self {
-            ksf: KsfData::default(),
-            freq_string: String::new(),
-            dura_string: String::new(),
-            freq_error: String::new(),
-            dura_error: String::new(),
-            save_error: String::new(),
-        }
-    }
-}
-
 impl NewKsf {
-    fn save_file_to_path(&mut self, data: &Data, client_directory_path: &PathBuf) -> Result<()> {
-        let mut p = client_directory_path.clone();
-        p.push(&format!("{}", data.client.id));
-        p.push("NewKSF.txt");
-
-        let mut writer = BufWriter::new(File::create_new(p)?);
+    fn save_file_to_path(&mut self, data: &Data, root_directory: &PathBuf) -> Result<()> {
         if !self.ksf.is_valid() {
             return Err(anyhow::anyhow!(
                 "ksf contains duplicate keys or duplicate descriptions"
             ));
         }
+        let p = Path::new(root_directory)
+            .join(&format!("{}", data.client.id))
+            .join(&format!("{}.xtx", self.file_name));
+        let mut writer = BufWriter::new(File::create_new(p)?);
         writer.write_all(self.ksf.to_json()?.as_bytes())?;
         writer.flush()?;
 
         Ok(())
     }
 
-    pub fn view(
-        &mut self,
-        ui: &mut egui::Ui,
-        data: &Data,
-        display_info: &mut DisplayInfo,
-        client_directory_path: &PathBuf,
-    ) {
+    pub fn view(app: &mut DataPro, ui: &mut egui::Ui) {
         egui::CentralPanel::default().show(ui, |ui| {
-            ui.heading("Create a New Keyboard Setup File");
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = 0.0;
+                ui.heading("New Keyboard Setup File for Client ");
+                ui.add(egui::Label::new(
+                    egui::RichText::new(&app.data.client.id).heading().strong(),
+                ));
+            });
+            ui.add_space(10.0);
+
+            ui.label("Name");
+            ui.text_edit_singleline(&mut app.new_ksf_page.file_name);
             ui.add_space(10.0);
 
             egui::Grid::new("new_ksf_info_grid")
@@ -124,28 +116,39 @@ impl NewKsf {
                     ui.monospace("Frequency Keys");
                     entry_row(
                         ui,
-                        &mut self.freq_string,
-                        &mut self.ksf.frequency,
-                        &mut self.freq_error,
+                        &mut app.new_ksf_page.freq_string,
+                        &mut app.new_ksf_page.ksf.frequency,
+                        &mut app.new_ksf_page.freq_error,
                     );
                     ui.end_row();
 
                     ui.monospace("Duration Keys");
                     entry_row(
                         ui,
-                        &mut self.dura_string,
-                        &mut self.ksf.duration,
-                        &mut self.dura_error,
+                        &mut app.new_ksf_page.dura_string,
+                        &mut app.new_ksf_page.ksf.duration,
+                        &mut app.new_ksf_page.dura_error,
                     );
                     ui.end_row();
                 });
 
             ui.add_enabled_ui(
-                self.dura_error.is_empty() && self.freq_error.is_empty(),
+                app.new_ksf_page.dura_error.is_empty()
+                    && app.new_ksf_page.freq_error.is_empty()
+                    && !app.new_ksf_page.file_name.is_empty(),
                 |ui| {
-                    if ui.large_green_button("Save").clicked() {
-                        match self.save_file_to_path(data, client_directory_path) {
-                            Ok(_) => self.save_error.clear(),
+                    if ui
+                        .large_green_button("Save")
+                        .on_disabled_hover_text(
+                            "cannot save until a name is chosen and there are no errors",
+                        )
+                        .clicked()
+                    {
+                        match app
+                            .new_ksf_page
+                            .save_file_to_path(&app.data, &app.root_directory)
+                        {
+                            Ok(_) => app.new_ksf_page.save_error.clear(),
                             Err(e) => windows_error_dialog(e),
                         }
                     }
@@ -153,11 +156,11 @@ impl NewKsf {
             );
 
             if ui.large_red_button("Return").clicked() {
-                display_info.go_to_prep_session();
+                app.display_info.go_to_prep_session();
             }
 
-            ui.strong(self.freq_error.to_string());
-            ui.strong(self.dura_error.to_string());
+            ui.strong(app.new_ksf_page.freq_error.to_string());
+            ui.strong(app.new_ksf_page.dura_error.to_string());
         });
     }
 }

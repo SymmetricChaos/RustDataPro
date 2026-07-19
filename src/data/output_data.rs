@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::{fs::File, io::Read, path::Path};
 
 /// Output of a single session. Includes the Client and Session data along with the recorded keypresses and times, and the KSF to translate those.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct OutputData {
     pub datetime: String,
     pub client_name: String,

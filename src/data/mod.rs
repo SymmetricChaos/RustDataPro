@@ -1,3 +1,4 @@
+pub mod assessment_data;
 pub mod client_data;
 pub mod ioa_data;
 pub mod ksf;
@@ -6,6 +7,7 @@ pub mod session_data;
 pub mod timeline;
 pub mod timer;
 
+pub use assessment_data::*;
 pub use client_data::*;
 pub use ioa_data::*;
 pub use ksf::*;
@@ -17,6 +19,7 @@ pub use timer::*;
 pub struct Data {
     pub client: ClientData,
     pub session: SessionData,
+    pub assessments: AssessmentsData,
     pub ksf: KsfData,
     pub ksf_name: String,
 }

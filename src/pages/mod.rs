@@ -1,3 +1,4 @@
+pub mod new_assessments;
 pub mod new_client;
 pub mod new_ksf;
 pub mod prepare_session;

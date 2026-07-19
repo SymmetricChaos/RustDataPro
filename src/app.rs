@@ -1,7 +1,10 @@
 use crate::{
-    data::{ClientData, Data, KsfData, SessionData},
+    data::{AssessmentsData, ClientData, Data, KsfData, SessionData},
     ioa::IoaPage,
-    pages::{NewClient, NewKsf, PrepareSession, RandomServices, SessionPage, Sidebar, Timers},
+    pages::{
+        NewClient, NewKsf, PrepareSession, RandomServices, SessionPage, Sidebar, Timers,
+        new_assessments::NewAssessments,
+    },
     utils::{date_time_string, quick_file_name, windows_error_dialog},
 };
 use anyhow::{Context, Result};
@@ -12,8 +15,10 @@ use std::path::{Path, PathBuf};
 
 pub const DEFAULT_ROOT_DIRECTORY_NAME: &'static str = "DataProClients";
 pub const CLIENT_DATA_FILE_NAME: &'static str = "client_data.txt";
+pub const ASSESSMENTS_FILE_NAME: &'static str = "assessments.txt";
 pub const SESSION_DATA_FOLDER_NAME: &'static str = "Session Records";
 pub const IOA_DATA_FOLDER_NAME: &'static str = "IOA Data";
+pub const NO_CLIENT_MESSAGE: &'static str = "no client loaded";
 const STARTING_ZOOM: f32 = 1.5;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -23,6 +28,7 @@ pub enum Page {
     Ioa,
     CreateClient,
     CreateKsf,
+    CreateAssessments,
 }
 
 pub struct DisplayInfo {
@@ -56,6 +62,11 @@ impl DisplayInfo {
         self.sidebar_open = false;
     }
 
+    pub fn go_to_new_assessments(&mut self) {
+        self.active_page = Page::CreateAssessments;
+        self.sidebar_open = false;
+    }
+
     pub fn go_to_new_ksf(&mut self) {
         self.active_page = Page::CreateKsf;
         self.sidebar_open = false;
@@ -83,11 +94,13 @@ pub struct DataPro {
     pub randomness_page: RandomServices,
     pub timers: Timers,
 
+    pub prep_session: PrepareSession,
     pub session_page: SessionPage,
+
     pub ioa_page: IoaPage,
     pub new_client_page: NewClient,
     pub new_ksf_page: NewKsf,
-    pub prep_session: PrepareSession,
+    pub new_assessments_page: NewAssessments,
 }
 
 impl Default for DataPro {
@@ -98,6 +111,7 @@ impl Default for DataPro {
             data: Data {
                 client: ClientData::default(),
                 session: SessionData::default(),
+                assessments: AssessmentsData::default(),
                 ksf: KsfData::default(),
                 ksf_name: String::new(),
             },
@@ -120,11 +134,13 @@ impl Default for DataPro {
             randomness_page: RandomServices::default(),
             timers: Timers::default(),
 
+            prep_session: PrepareSession::default(),
             session_page: SessionPage::new(),
+
             ioa_page: IoaPage::default(),
             new_client_page: NewClient::default(),
             new_ksf_page: NewKsf::default(),
-            prep_session: PrepareSession::default(),
+            new_assessments_page: NewAssessments::default(),
         }
     }
 }
@@ -174,8 +190,9 @@ impl DataPro {
     pub fn client_session_data_path(&self) -> Result<PathBuf> {
         if !self.client_loaded() {
             return Err(anyhow::anyhow!(
-                "cannot find {} folder because no client is selected",
-                SESSION_DATA_FOLDER_NAME
+                "cannot find {} folder because {}",
+                SESSION_DATA_FOLDER_NAME,
+                NO_CLIENT_MESSAGE
             ));
         }
         let path = Path::new(&self.root_directory)
@@ -187,8 +204,9 @@ impl DataPro {
     pub fn client_ioa_data_path(&self) -> Result<PathBuf> {
         if !self.client_loaded() {
             return Err(anyhow::anyhow!(
-                "cannot find {} folder because no client is selected",
-                IOA_DATA_FOLDER_NAME
+                "cannot find {} folder because {}",
+                IOA_DATA_FOLDER_NAME,
+                NO_CLIENT_MESSAGE
             ));
         }
         let path = Path::new(&self.root_directory)
@@ -216,16 +234,13 @@ impl DataPro {
             Ok(client) => {
                 self.data.client = client;
                 self.data.client.current_session += 1; // We are always one session ahead of the last saved value
-                if self.data.client.assessments.is_empty() {
-                    self.data.session.assessment = String::from("None");
-                } else {
-                    self.data.session.assessment = self.data.client.assessments[0].clone();
-                }
-                if self.data.client.conditions.is_empty() {
-                    self.data.session.condition = String::from("None");
-                } else {
-                    self.data.session.condition = self.data.client.conditions[0].clone();
-                }
+                match AssessmentsData::from_file(&Path::new(path).join(ASSESSMENTS_FILE_NAME)) {
+                    Ok(a) => self.data.assessments = a,
+                    Err(e) => {
+                        windows_error_dialog(e);
+                        self.data.assessments = AssessmentsData::default();
+                    }
+                };
                 self.data.ksf = KsfData::default();
                 self.data.ksf_name.clear();
             }
@@ -265,16 +280,9 @@ impl eframe::App for DataPro {
             Page::RunSession => SessionPage::view(self, ui),
             Page::Ioa => IoaPage::view(self, ui),
             Page::PrepareSession => PrepareSession::view(self, ui),
-            Page::CreateClient => {
-                self.new_client_page
-                    .view(ui, &mut self.display_info, &self.root_directory)
-            }
-            Page::CreateKsf => self.new_ksf_page.view(
-                ui,
-                &mut self.data,
-                &mut self.display_info,
-                &self.root_directory,
-            ),
+            Page::CreateClient => NewClient::view(self, ui),
+            Page::CreateKsf => NewKsf::view(self, ui),
+            Page::CreateAssessments => NewAssessments::view(self, ui),
         }
     }
 }

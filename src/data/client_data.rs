@@ -7,14 +7,12 @@ use std::{fmt::Display, fs::File, io::Read, path::PathBuf};
 pub const DATE_OF_ADMISSION_FORMAT_ERROR: &'static str =
     "check client_data.txt\nDate of Admission must be formated as YYYY-MM-DD";
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ClientData {
     pub name: String,
     pub id: String,
     pub case_manager: String,
     pub primary_therapist: String,
-    pub assessments: Vec<String>,
-    pub conditions: Vec<String>,
     pub current_session: u32,
     pub date_of_admission: String,
     pub location: String,
@@ -27,8 +25,6 @@ impl Default for ClientData {
             id: Default::default(),
             case_manager: Default::default(),
             primary_therapist: Default::default(),
-            assessments: Default::default(),
-            conditions: Default::default(),
             current_session: Default::default(),
             date_of_admission: Local::now().date_naive().format("%Y-%m-%d").to_string(),
             location: Default::default(),

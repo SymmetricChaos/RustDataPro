@@ -5,7 +5,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::Read, path::Path};
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct IoaData {
     pub ten_sec_interval: IndexMap<Key, f32>,
     pub sixty_sec_interval: IndexMap<Key, f32>,
@@ -14,17 +14,8 @@ pub struct IoaData {
 }
 
 impl IoaData {
-    pub fn new() -> Self {
-        Self {
-            ten_sec_interval: IndexMap::new(),
-            sixty_sec_interval: IndexMap::new(),
-            total_duration: IndexMap::new(),
-            total_count: IndexMap::new(),
-        }
-    }
-
     pub fn from_ksf(ksf: &KsfData) -> Self {
-        let mut ioa = IoaData::new();
+        let mut ioa = IoaData::default();
         // Total duration is meaningless for frequency keys but we need this for alignment
         for (k, _) in ksf.frequency.iter() {
             ioa.total_duration.insert(*k, f32::NAN);

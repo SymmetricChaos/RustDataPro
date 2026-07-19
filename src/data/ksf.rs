@@ -6,19 +6,10 @@ use serde::{Deserialize, Serialize};
 use std::{fs::File, io::Read, path::Path};
 
 /// Key Specification File. A list of keybinds divided into Duration and Frequency.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Default)]
 pub struct KsfData {
     pub duration: Vec<(Key, String)>,
     pub frequency: Vec<(Key, String)>,
-}
-
-impl Default for KsfData {
-    fn default() -> Self {
-        Self {
-            duration: Vec::new(),
-            frequency: Vec::new(),
-        }
-    }
 }
 
 impl KsfData {

@@ -1,5 +1,5 @@
 use crate::{
-    app::DataPro,
+    app::{DataPro, NO_CLIENT_MESSAGE},
     data::{ClientData, KsfData},
     utils::DataProUiElements,
 };
@@ -65,19 +65,42 @@ impl Sidebar {
                 }
                 ui.add_space(5.0);
 
-                if ui.large_blue_button("Calculate IOA").clicked() {
-                    app.display_info.go_to_ioa();
-                }
-                ui.add_space(5.0);
-
                 if ui.large_blue_button("Create Client").clicked() {
                     app.display_info.go_to_new_client();
                 }
                 ui.add_space(5.0);
 
-                if ui.large_blue_button("Create KSF").clicked() {
-                    app.display_info.go_to_new_ksf();
-                }
+                ui.add_space(10.0);
+                ui.separator();
+                ui.add_space(10.0);
+
+                ui.add_enabled_ui(app.client_loaded(), |ui| {
+                    if ui
+                        .large_blue_button("Calculate IOA")
+                        .on_disabled_hover_text(NO_CLIENT_MESSAGE)
+                        .clicked()
+                    {
+                        app.display_info.go_to_ioa();
+                    }
+                    ui.add_space(5.0);
+
+                    if ui
+                        .large_blue_button("New KSF")
+                        .on_disabled_hover_text(NO_CLIENT_MESSAGE)
+                        .clicked()
+                    {
+                        app.display_info.go_to_new_ksf();
+                    }
+                    ui.add_space(5.0);
+
+                    if ui
+                        .large_blue_button("New Assessments")
+                        .on_disabled_hover_text(NO_CLIENT_MESSAGE)
+                        .clicked()
+                    {
+                        app.display_info.go_to_new_assessments();
+                    }
+                });
 
                 ui.add_space(10.0);
                 ui.separator();
