@@ -67,6 +67,16 @@ impl ClientData {
             .join("")
     }
 
+    // Remove all leading and trailing spaces from String fields
+    pub fn trim_all_fields(&mut self) {
+        self.name = self.name.trim().to_owned();
+        self.id = self.id.trim().to_owned();
+        self.case_manager = self.case_manager.trim().to_owned();
+        self.primary_therapist = self.primary_therapist.trim().to_owned();
+        self.date_of_admission = self.date_of_admission.trim().to_owned();
+        self.location = self.location.trim().to_owned();
+    }
+
     pub fn from_file(file_path: &PathBuf) -> Result<Self> {
         let mut file = File::open(&file_path)?;
         let mut s = String::new();

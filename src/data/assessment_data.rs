@@ -37,7 +37,7 @@ impl AssessmentsData {
         serde_json::to_string_pretty(&self).context("unable to convert assessments to json")
     }
 
-    pub fn _test_data() -> Self {
+    pub fn fa_conditions() -> Self {
         Self(vec![(
             "FA".into(),
             vec![

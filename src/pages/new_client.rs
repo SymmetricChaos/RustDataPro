@@ -3,14 +3,14 @@ use crate::{
         ASSESSMENTS_FILE_NAME, CLIENT_DATA_FILE_NAME, DataPro, IOA_DATA_FOLDER_NAME,
         SESSION_DATA_FOLDER_NAME,
     },
-    data::{ClientData, KsfData},
+    data::{AssessmentsData, ClientData, KsfData},
     utils::DataProUiElements,
 };
 use anyhow::Result;
+use chrono::Local;
 use sha2::{Digest, Sha256};
 use std::{
     fs::File,
-    hash::Hasher,
     io::{BufWriter, Write},
     path::{Path, PathBuf},
 };
@@ -31,28 +31,31 @@ impl Default for NewClient {
 
 impl NewClient {
     fn save_file_to_path(&mut self, root_directory: &PathBuf) -> Result<()> {
-        let p = Path::new(root_directory).join(self.client.id.to_string());
+        let client_path = Path::new(root_directory).join(self.client.id.to_string());
 
         // Create a new directory for the client inside the root
-        std::fs::create_dir(&p)?;
+        std::fs::create_dir(&client_path)?;
 
-        // Create the client records folder where OutputData will be stored
-        std::fs::create_dir(Path::new(&p.join(SESSION_DATA_FOLDER_NAME)))?;
+        // Create the Session Data folder
+        std::fs::create_dir(Path::new(&client_path.join(SESSION_DATA_FOLDER_NAME)))?;
 
         // Create the IOA folder
-        std::fs::create_dir(Path::new(&p.join(IOA_DATA_FOLDER_NAME)))?;
+        std::fs::create_dir(Path::new(&client_path.join(IOA_DATA_FOLDER_NAME)))?;
 
         // Create the client file inside the new directory, title it client_data.txt
-        let mut writer =
-            BufWriter::new(File::create_new(Path::new(&p.join(CLIENT_DATA_FILE_NAME)))?);
+        let mut writer = BufWriter::new(File::create_new(Path::new(
+            &client_path.join(CLIENT_DATA_FILE_NAME),
+        ))?);
         writer.write_all(self.client.to_json()?.as_bytes())?;
         writer.flush()?;
 
-        // Create a blank assessments file
-        File::create_new(Path::new(&p.join(ASSESSMENTS_FILE_NAME)))?;
+        // Create a default assessments file with an FA and conditions
+        let mut writer = File::create_new(Path::new(&client_path.join(ASSESSMENTS_FILE_NAME)))?;
+        writer.write_all(AssessmentsData::fa_conditions().to_json()?.as_bytes())?;
+        writer.flush()?;
 
         // Create a template KSF file
-        let mut writer = File::create_new(Path::new(&p.join("TEMPLATEKSF.txt")))?;
+        let mut writer = File::create_new(Path::new(&client_path.join("TEMPLATEKSF.txt")))?;
         writer.write_all(KsfData::_test_ksf().to_json()?.as_bytes())?;
         writer.flush()?;
 
@@ -76,6 +79,7 @@ impl NewClient {
                         )
                         .clicked()
                     {
+                        app.new_client_page.client.trim_all_fields();
                         let hash = Sha256::new()
                             .chain_update(&app.new_client_page.client.name)
                             .chain_update(&app.new_client_page.client.case_manager)
@@ -103,6 +107,9 @@ impl NewClient {
 
                     ui.monospace("Date of Admission\n(YYYY-MM-DD)");
                     ui.text_edit_singleline(&mut app.new_client_page.client.date_of_admission);
+                    if ui.button("today").clicked() {
+                        app.new_client_page.client.date_of_admission = Local::now().date_naive().format("%Y-%m-%d").to_string();
+                    }
                     ui.end_row();
 
                     ui.monospace("Location");
@@ -116,6 +123,7 @@ impl NewClient {
                     .on_disabled_hover_text("client must have an ID assigned")
                     .clicked()
                 {
+                    app.new_client_page.client.trim_all_fields();
                     match app.new_client_page.save_file_to_path(&app.root_directory) {
                         Ok(_) => app.new_client_page.error.clear(),
                         Err(e) => app.new_client_page.error = e.to_string(),
