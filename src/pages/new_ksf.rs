@@ -87,7 +87,7 @@ impl NewKsf {
         }
         let p = Path::new(root_directory)
             .join(&format!("{}", data.client.id))
-            .join(&format!("{}.xtx", self.file_name));
+            .join(&format!("{}.txt", self.file_name));
         let mut writer = BufWriter::new(File::create_new(p)?);
         writer.write_all(self.ksf.to_json()?.as_bytes())?;
         writer.flush()?;

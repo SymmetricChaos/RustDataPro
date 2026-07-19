@@ -93,14 +93,16 @@ impl PrepareSession {
                                             .font(TextStyle::Monospace)
                                             .text_color(Color32::RED)
                                             .interactive(false),
-                                    );
-                                app.prep_session.can_start_session = false;
+                                    )
+                                    .on_hover_text(&app.data.client.date_of_admission);
+                                    app.prep_session.can_start_session = false;
                                 } else {
                                     ui.add(
                                         egui::TextEdit::singleline(&mut format!("{n} days ago"))
                                             .font(TextStyle::Monospace)
                                             .interactive(false),
-                                    );
+                                    )
+                                    .on_hover_text(&app.data.client.date_of_admission);
                                 }
                             }
                             Err(_e) => {
@@ -110,7 +112,10 @@ impl PrepareSession {
                                         .text_color(Color32::RED)
                                         .interactive(false),
                                 )
-                                .on_hover_text(format!("Date of Admission cannot be {} because it is in invalid date\nformat date as YYYY-MM-DD",app.data.client.date_of_admission));
+                                .on_hover_text(format!(
+                                    "{} is an invalid date\nformat date as YYYY-MM-DD",
+                                    app.data.client.date_of_admission
+                                ));
                                 app.prep_session.can_start_session = false;
                             }
                         }
@@ -177,19 +182,20 @@ impl PrepareSession {
                             .selected_text(assessment_text)
                             .show_ui(ui, |ui| {
                                 for (assessment, _conditions) in app.data.assessments.iter() {
-                                    if ui.selectable_value(
-                                        &mut app.data.session.assessment,
-                                        assessment.clone(),
-                                        assessment.clone(),
-                                    ).clicked() {
+                                    if ui
+                                        .selectable_value(
+                                            &mut app.data.session.assessment,
+                                            assessment.clone(),
+                                            assessment.clone(),
+                                        )
+                                        .clicked()
+                                    {
                                         app.data.session.condition.clear();
                                     }
                                 }
                             });
 
-
                         ui.end_row();
-
 
                         ui.monospace("Condition");
                         let condition_text = match app.condition_chosen() {
@@ -199,17 +205,16 @@ impl PrepareSession {
                         egui::ComboBox::from_id_salt("condition")
                             .selected_text(condition_text)
                             .show_ui(ui, |ui| {
-                                for (assessment,conditions) in app.data.assessments.iter() {
+                                for (assessment, conditions) in app.data.assessments.iter() {
                                     if assessment == &app.data.session.assessment {
                                         for condition in conditions {
                                             ui.selectable_value(
-                                        &mut app.data.session.condition,
-                                        condition.to_string(),
-                                        condition,
+                                                &mut app.data.session.condition,
+                                                condition.to_string(),
+                                                condition,
                                             );
                                         }
                                     }
-
                                 }
                             });
                         ui.end_row();
@@ -230,12 +235,12 @@ impl PrepareSession {
             });
             ui.add_space(10.0);
 
-
-
             ui.add_enabled_ui(app.prep_session.can_start_session, |ui| {
                 if ui
                     .large_green_button("BEGIN SESSION")
-                    .on_disabled_hover_text("there files that need to be loaded or errors that must be resolved")
+                    .on_disabled_hover_text(
+                        "there files that need to be loaded or errors that must be resolved",
+                    )
                     .clicked()
                 {
                     // Update the client file with any changes

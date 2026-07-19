@@ -1,3 +1,4 @@
+use crate::app::ASSESSMENTS_FILE_NAME;
 use crate::data::Data;
 use crate::utils::DataProUiElements;
 use crate::{app::DataPro, data::AssessmentsData};
@@ -22,7 +23,7 @@ impl NewAssessments {
     fn save_file_to_path(&mut self, data: &Data, root_directory: &PathBuf) -> Result<()> {
         let p = Path::new(root_directory)
             .join(&format!("{}", data.client.id))
-            .join("asessments.txt");
+            .join(ASSESSMENTS_FILE_NAME);
         let mut writer = BufWriter::new(File::create_new(p)?);
         writer.write_all(self.assessments.to_json()?.as_bytes())?;
         writer.flush()?;

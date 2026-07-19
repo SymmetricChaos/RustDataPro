@@ -3,12 +3,14 @@ use crate::{
         ASSESSMENTS_FILE_NAME, CLIENT_DATA_FILE_NAME, DataPro, IOA_DATA_FOLDER_NAME,
         SESSION_DATA_FOLDER_NAME,
     },
-    data::ClientData,
+    data::{ClientData, KsfData},
     utils::DataProUiElements,
 };
 use anyhow::Result;
+use sha2::{Digest, Sha256};
 use std::{
     fs::File,
+    hash::Hasher,
     io::{BufWriter, Write},
     path::{Path, PathBuf},
 };
@@ -49,6 +51,11 @@ impl NewClient {
         // Create a blank assessments file
         File::create_new(Path::new(&p.join(ASSESSMENTS_FILE_NAME)))?;
 
+        // Create a template KSF file
+        let mut writer = File::create_new(Path::new(&p.join("TEMPLATEKSF.txt")))?;
+        writer.write_all(KsfData::_test_ksf().to_json()?.as_bytes())?;
+        writer.flush()?;
+
         Ok(())
     }
 
@@ -60,13 +67,30 @@ impl NewClient {
                 .min_col_width(150.0)
                 .spacing((10.0, 10.0))
                 .show(ui, |ui| {
-                    // Considering removing this
-                    // ui.monospace("Client Name");
-                    // ui.text_edit_singleline(&mut self.client.name);
-                    // ui.end_row();
-
                     ui.monospace("Client ID");
                     ui.text_edit_singleline(&mut app.new_client_page.client.id);
+                    if ui
+                        .button("suggest")
+                        .on_hover_text(
+                            "derived from Client Name, Case Manager, Primary Therapist, and Date of Admission",
+                        )
+                        .clicked()
+                    {
+                        let hash = Sha256::new()
+                            .chain_update(&app.new_client_page.client.name)
+                            .chain_update(&app.new_client_page.client.case_manager)
+                            .chain_update(&app.new_client_page.client.primary_therapist)
+                            .chain_update(&app.new_client_page.client.date_of_admission)
+                            .finalize();
+                        app.new_client_page.client.id = format!(
+                            "{:0<10}",
+                            u64::from_be_bytes(hash[0..8].try_into().unwrap())%10000000000
+                        )
+                    }
+                    ui.end_row();
+
+                    ui.monospace("Client Name");
+                    ui.text_edit_singleline(&mut app.new_client_page.client.name);
                     ui.end_row();
 
                     ui.monospace("Case Manager");
@@ -77,12 +101,12 @@ impl NewClient {
                     ui.text_edit_singleline(&mut app.new_client_page.client.primary_therapist);
                     ui.end_row();
 
-                    ui.monospace("Location");
-                    ui.text_edit_singleline(&mut app.new_client_page.client.location);
-                    ui.end_row();
-
                     ui.monospace("Date of Admission\n(YYYY-MM-DD)");
                     ui.text_edit_singleline(&mut app.new_client_page.client.date_of_admission);
+                    ui.end_row();
+
+                    ui.monospace("Location");
+                    ui.text_edit_singleline(&mut app.new_client_page.client.location);
                     ui.end_row();
                 });
 
