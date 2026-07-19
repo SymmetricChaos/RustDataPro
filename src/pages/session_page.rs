@@ -231,8 +231,13 @@ impl SessionPage {
 
         output.push_str("\n\n--Duration--\n");
 
-        for (timer, bouts, _, desc) in self.timers.iter() {
-            output.push_str(&format!("{} {} {:.1}\n", desc, bouts, timer.saved_time()));
+        for (timer, bouts, _key, desc) in self.timers.iter() {
+            output.push_str(&format!(
+                "{} {:.1} ({} bouts)\n",
+                desc,
+                timer.saved_time(),
+                bouts
+            ));
         }
 
         output.push_str("\n--Frequency--\n");

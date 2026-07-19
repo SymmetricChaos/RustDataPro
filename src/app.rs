@@ -160,6 +160,14 @@ impl DataPro {
         !self.data.ksf_name.is_empty()
     }
 
+    pub fn assessment_chosen(&self) -> bool {
+        !self.data.session.assessment.is_empty()
+    }
+
+    pub fn condition_chosen(&self) -> bool {
+        !self.data.session.condition.is_empty()
+    }
+
     /// Path to the client data file, if one is available.
     pub fn client_data_file_path(&self) -> Result<PathBuf> {
         if !self.client_loaded() {
@@ -215,7 +223,7 @@ impl DataPro {
         Ok(path.to_path_buf())
     }
 
-    pub fn load_ksf_file(&mut self, path: &PathBuf) {
+    pub fn load_ksf(&mut self, path: &PathBuf) {
         match KsfData::from_file(&path) {
             Ok(ksf) => {
                 self.data.ksf = ksf;
@@ -230,11 +238,15 @@ impl DataPro {
     }
 
     pub fn load_client_file(&mut self, path: &PathBuf) {
-        match ClientData::from_file(&Path::new(path).join(CLIENT_DATA_FILE_NAME)) {
+        match ClientData::from_file(&Path::new(path).join(CLIENT_DATA_FILE_NAME))
+            .context("failure while loading client file")
+        {
             Ok(client) => {
                 self.data.client = client;
                 self.data.client.current_session += 1; // We are always one session ahead of the last saved value
-                match AssessmentsData::from_file(&Path::new(path).join(ASSESSMENTS_FILE_NAME)) {
+                match AssessmentsData::from_file(&Path::new(path).join(ASSESSMENTS_FILE_NAME))
+                    .context("failure while loading assessments")
+                {
                     Ok(a) => self.data.assessments = a,
                     Err(e) => {
                         windows_error_dialog(e);
@@ -243,6 +255,8 @@ impl DataPro {
                 };
                 self.data.ksf = KsfData::default();
                 self.data.ksf_name.clear();
+                self.data.session.assessment.clear();
+                self.data.session.condition.clear();
             }
             Err(e) => {
                 self.data.client = ClientData::default();

@@ -23,7 +23,7 @@ impl PrepareSession {
     pub fn view(app: &mut DataPro, ui: &mut egui::Ui) {
         app.pick_ksf.update(ui.ctx());
         if let Some(path) = app.pick_ksf.take_picked() {
-            app.load_ksf_file(&path);
+            app.load_ksf(&path);
         }
 
         app.pick_client_folder.update(ui.ctx());
@@ -169,32 +169,50 @@ impl PrepareSession {
                         ui.end_row();
 
                         ui.monospace("Assessment");
+                        let assessment_text = match app.assessment_chosen() {
+                            true => egui::RichText::new(&app.data.session.assessment),
+                            false => egui::RichText::new("NONE").color(Color32::RED),
+                        };
                         egui::ComboBox::from_id_salt("assessment")
-                            .selected_text(&app.data.session.assessment)
+                            .selected_text(assessment_text)
                             .show_ui(ui, |ui| {
-                                for item in app.data.assessments.iter() {
-                                    ui.selectable_value(
+                                for (assessment, _conditions) in app.data.assessments.iter() {
+                                    if ui.selectable_value(
                                         &mut app.data.session.assessment,
-                                        item.0.clone(),
-                                        item.0.clone(),
-                                    );
+                                        assessment.clone(),
+                                        assessment.clone(),
+                                    ).clicked() {
+                                        app.data.session.condition.clear();
+                                    }
+                                }
+                            });
+
+
+                        ui.end_row();
+
+
+                        ui.monospace("Condition");
+                        let condition_text = match app.condition_chosen() {
+                            true => egui::RichText::new(&app.data.session.condition),
+                            false => egui::RichText::new("NONE").color(Color32::RED),
+                        };
+                        egui::ComboBox::from_id_salt("condition")
+                            .selected_text(condition_text)
+                            .show_ui(ui, |ui| {
+                                for (assessment,conditions) in app.data.assessments.iter() {
+                                    if assessment == &app.data.session.assessment {
+                                        for condition in conditions {
+                                            ui.selectable_value(
+                                        &mut app.data.session.condition,
+                                        condition.to_string(),
+                                        condition,
+                                            );
+                                        }
+                                    }
+
                                 }
                             });
                         ui.end_row();
-
-                        // ui.monospace("Condition");
-                        // egui::ComboBox::from_id_salt("condition")
-                        //     .selected_text(&app.data.session.condition)
-                        //     .show_ui(ui, |ui| {
-                        //         for item in app.data.client.conditions.iter() {
-                        //             ui.selectable_value(
-                        //                 &mut app.data.session.condition,
-                        //                 item.to_string(),
-                        //                 item,
-                        //             );
-                        //         }
-                        //     });
-                        // ui.end_row();
                     });
                 ui.add_space(10.0);
             });

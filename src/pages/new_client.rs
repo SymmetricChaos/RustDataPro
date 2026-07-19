@@ -1,5 +1,8 @@
 use crate::{
-    app::{CLIENT_DATA_FILE_NAME, DataPro, IOA_DATA_FOLDER_NAME, SESSION_DATA_FOLDER_NAME},
+    app::{
+        ASSESSMENTS_FILE_NAME, CLIENT_DATA_FILE_NAME, DataPro, IOA_DATA_FOLDER_NAME,
+        SESSION_DATA_FOLDER_NAME,
+    },
     data::ClientData,
     utils::DataProUiElements,
 };
@@ -28,7 +31,7 @@ impl NewClient {
     fn save_file_to_path(&mut self, root_directory: &PathBuf) -> Result<()> {
         let p = Path::new(root_directory).join(self.client.id.to_string());
 
-        // Create a new directory for the client inside the client director
+        // Create a new directory for the client inside the root
         std::fs::create_dir(&p)?;
 
         // Create the client records folder where OutputData will be stored
@@ -42,6 +45,9 @@ impl NewClient {
             BufWriter::new(File::create_new(Path::new(&p.join(CLIENT_DATA_FILE_NAME)))?);
         writer.write_all(self.client.to_json()?.as_bytes())?;
         writer.flush()?;
+
+        // Create a blank assessments file
+        File::create_new(Path::new(&p.join(ASSESSMENTS_FILE_NAME)))?;
 
         Ok(())
     }

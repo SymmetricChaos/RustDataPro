@@ -36,13 +36,14 @@ impl Display for ClientData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Client: {}\nID: {}\nLocation: {}\nCase Manager: {}\nPrimary Therapist: {}\nSession Number: {}\nDOA {}",
+            "Client: {}\nID: {}\nLocation: {}\nCase Manager: {}\nPrimary Therapist: {}\nSession Number: {}\nDate of Admission {}: ({} days ago)",
             self.name,
             self.id,
             self.location,
             self.case_manager,
             self.primary_therapist,
             self.current_session,
+            self.date_of_admission,
             self.days_since_admission()
                 .expect(DATE_OF_ADMISSION_FORMAT_ERROR)
         )
