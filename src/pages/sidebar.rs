@@ -24,9 +24,10 @@ impl Sidebar {
         egui::Panel::left("welcome_panel")
             .default_size(200.0)
             .min_size(200.0)
+            .max_size(200.0)
             .show(ui, |ui| {
                 warn_if_debug_build(ui);
-                ui.strong("Welcome to RustDataPro!");
+                ui.strong("Welcome to RutgersDataPro!");
                 ui.add_space(10.0);
                 ui.horizontal(|ui| {
                     ui.spacing_mut().item_spacing.x = 0.0;
@@ -60,15 +61,27 @@ impl Sidebar {
                 ui.separator();
                 ui.add_space(10.0);
 
-                if ui.large_blue_button("Change Directory").clicked() {
+                ui.label("Current Directory");
+                if ui
+                    .add(
+                        egui::Button::new(
+                            egui::RichText::new(app.root_directory.to_string_lossy()).monospace(),
+                        )
+                        .truncate(),
+                    )
+                    .on_hover_text(app.root_directory.to_string_lossy())
+                    .clicked()
+                {
                     app.pick_root_directory.pick_directory();
                 }
-                ui.add_space(5.0);
 
-                if ui.large_blue_button("Create Client").clicked() {
+                ui.add_space(10.0);
+                ui.separator();
+                ui.add_space(10.0);
+
+                if ui.large_button("Create Client").clicked() {
                     app.display_info.go_to_new_client();
                 }
-                ui.add_space(5.0);
 
                 ui.add_space(10.0);
                 ui.separator();
@@ -76,7 +89,7 @@ impl Sidebar {
 
                 ui.add_enabled_ui(app.client_loaded(), |ui| {
                     if ui
-                        .large_blue_button("Calculate IOA")
+                        .large_button("Calculate IOA")
                         .on_disabled_hover_text(NO_CLIENT_MESSAGE)
                         .clicked()
                     {
@@ -85,7 +98,7 @@ impl Sidebar {
                     ui.add_space(5.0);
 
                     if ui
-                        .large_blue_button("New KSF")
+                        .large_button("New KSF")
                         .on_disabled_hover_text(NO_CLIENT_MESSAGE)
                         .clicked()
                     {
@@ -94,7 +107,7 @@ impl Sidebar {
                     ui.add_space(5.0);
 
                     if ui
-                        .large_blue_button("New Assessments")
+                        .large_button("New Assessments")
                         .on_disabled_hover_text(NO_CLIENT_MESSAGE)
                         .clicked()
                     {
@@ -106,15 +119,12 @@ impl Sidebar {
                 ui.separator();
                 ui.add_space(10.0);
 
-                ui.label("Other Useful Functionality");
-                ui.add_space(5.0);
-
-                if ui.large_blue_button("Randomness").clicked() {
+                if ui.large_button("Randomness").clicked() {
                     app.display_info.toggle_random_display();
                 }
                 ui.add_space(5.0);
 
-                if ui.large_blue_button("Timers").clicked() {
+                if ui.large_button("Timers").clicked() {
                     app.display_info.toggle_timer_display();
                 }
                 ui.add_space(5.0);

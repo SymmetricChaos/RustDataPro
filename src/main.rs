@@ -8,10 +8,10 @@ fn main() -> eframe::Result {
 
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
+            .with_maximized(true)
             .with_inner_size([1000.0, 800.0])
-            .with_min_inner_size([500.0, 400.0])
+            .with_min_inner_size([100.0, 80.0])
             .with_icon(
-                // NOTE: Adding an icon is optional
                 eframe::icon_data::from_png_bytes(
                     &include_bytes!("../assets/favicon-512x512.png")[..],
                 )
@@ -20,7 +20,7 @@ fn main() -> eframe::Result {
         ..Default::default()
     };
     eframe::run_native(
-        "Rust Data Pro",
+        "Rutgers Data Pro",
         native_options,
         Box::new(|cc| Ok(Box::new(datapro::app::DataPro::new(cc)))),
     )

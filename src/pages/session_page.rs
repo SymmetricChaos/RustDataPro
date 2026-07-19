@@ -1,9 +1,10 @@
 use crate::{
-    app::{CLIENT_DATA_FILE_NAME, DataPro, DisplayInfo, SESSION_DATA_FOLDER_NAME},
+    app::{CLIENT_DATA_FILE_NAME, DataPro, SESSION_DATA_FOLDER_NAME},
     data::{
         DATE_OF_ADMISSION_FORMAT_ERROR, Data, Timer, TimerStatus, output_data::OutputData,
         timeline::Timeline, view_simple_timer,
     },
+    display_controller::DisplayInfo,
     utils::{ClickedKeys, DataProUiElements, date_time_string, rounded_f32},
 };
 use anyhow::{Context, Result};

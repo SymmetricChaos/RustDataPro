@@ -221,13 +221,16 @@ impl PrepareSession {
                 .initial_directory(Path::new(&path).join(SESSION_DATA_FOLDER_NAME));
         }
 
-        app.prep_session.can_start_session = app.client_loaded() && app.ksf_loaded();
+        app.prep_session.can_start_session = app.client_loaded()
+            && app.ksf_loaded()
+            && app.assessment_chosen()
+            && app.condition_chosen();
 
         egui::CentralPanel::default().show(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
                     ui.add_space(25.0);
-                    if ui.large_button("Select Client").clicked() {
+                    if ui.large_blue_button("Select Client").clicked() {
                         app.pick_client_folder.pick_directory();
                     }
                     ui.add_space(5.0);
@@ -238,7 +241,7 @@ impl PrepareSession {
                     ui.add_space(25.0);
                     ui.add_enabled_ui(app.client_loaded(), |ui| {
                         if ui
-                            .large_button("Select KSF")
+                            .large_blue_button("Select KSF")
                             .on_disabled_hover_text(NO_CLIENT_MESSAGE)
                             .clicked()
                         {

@@ -1,5 +1,6 @@
 use crate::{
     data::{AssessmentsData, ClientData, Data, KsfData, SessionData},
+    display_controller::{DisplayInfo, Page},
     ioa::IoaPage,
     pages::{
         NewClient, NewKsf, PrepareSession, RandomServices, SessionPage, Sidebar, Timers,
@@ -20,66 +21,6 @@ pub const SESSION_DATA_FOLDER_NAME: &'static str = "Session Records";
 pub const IOA_DATA_FOLDER_NAME: &'static str = "IOA Data";
 pub const NO_CLIENT_MESSAGE: &'static str = "no client loaded";
 const STARTING_ZOOM: f32 = 1.5;
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum Page {
-    PrepareSession,
-    RunSession,
-    Ioa,
-    CreateClient,
-    CreateKsf,
-    CreateAssessments,
-}
-
-pub struct DisplayInfo {
-    pub active_page: Page,
-    pub timers_open: bool,
-    pub random_open: bool,
-    pub sidebar_open: bool,
-    pub zoom: f32,
-}
-
-impl DisplayInfo {
-    pub fn go_to_prep_session(&mut self) {
-        self.active_page = Page::PrepareSession;
-        self.sidebar_open = true;
-    }
-
-    pub fn go_to_run_session(&mut self) {
-        self.active_page = Page::RunSession;
-        self.sidebar_open = false;
-        self.timers_open = false;
-        self.random_open = false;
-    }
-
-    pub fn go_to_ioa(&mut self) {
-        self.active_page = Page::Ioa;
-        self.sidebar_open = false;
-    }
-
-    pub fn go_to_new_client(&mut self) {
-        self.active_page = Page::CreateClient;
-        self.sidebar_open = false;
-    }
-
-    pub fn go_to_new_assessments(&mut self) {
-        self.active_page = Page::CreateAssessments;
-        self.sidebar_open = false;
-    }
-
-    pub fn go_to_new_ksf(&mut self) {
-        self.active_page = Page::CreateKsf;
-        self.sidebar_open = false;
-    }
-
-    pub fn toggle_timer_display(&mut self) {
-        self.timers_open = !self.timers_open;
-    }
-
-    pub fn toggle_random_display(&mut self) {
-        self.random_open = !self.random_open;
-    }
-}
 
 pub struct DataPro {
     pub pick_root_directory: FileDialog,
@@ -116,7 +57,7 @@ impl Default for DataPro {
                 ksf_name: String::new(),
             },
             display_info: DisplayInfo {
-                active_page: Page::PrepareSession,
+                active_page: Default::default(),
                 timers_open: false,
                 random_open: false,
                 sidebar_open: true,
@@ -150,6 +91,13 @@ impl DataPro {
         cc.egui_ctx.set_pixels_per_point(STARTING_ZOOM);
         cc.egui_ctx.set_visuals(Visuals::dark());
         Default::default()
+    }
+
+    pub fn ready_to_start_session(&self) -> bool {
+        self.client_loaded()
+            && self.ksf_loaded()
+            && self.assessment_chosen()
+            && self.condition_chosen()
     }
 
     pub fn client_loaded(&self) -> bool {
