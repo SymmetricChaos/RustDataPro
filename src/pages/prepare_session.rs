@@ -30,8 +30,8 @@ impl PrepareSession {
         if let Some(path) = app.pick_client_folder.take_picked() {
             app.load_client_file(&path.clone());
             app.pick_ksf = FileDialog::new().initial_directory(path.clone());
-            let ioa = Path::new(&path).join(SESSION_DATA_FOLDER_NAME);
-            app.ioa_page.file_dialog = FileDialog::new().initial_directory(ioa);
+            app.ioa_page.file_dialog = FileDialog::new()
+                .initial_directory(Path::new(&path).join(SESSION_DATA_FOLDER_NAME));
         }
 
         app.prep_session.can_start_session = app.client_loaded() && app.ksf_loaded();

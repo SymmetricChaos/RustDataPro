@@ -239,13 +239,13 @@ impl DataPro {
 
     pub fn load_client_file(&mut self, path: &PathBuf) {
         match ClientData::from_file(&Path::new(path).join(CLIENT_DATA_FILE_NAME))
-            .context("failure while loading client file")
+            .context("error reading client data.txt")
         {
             Ok(client) => {
                 self.data.client = client;
                 self.data.client.current_session += 1; // We are always one session ahead of the last saved value
                 match AssessmentsData::from_file(&Path::new(path).join(ASSESSMENTS_FILE_NAME))
-                    .context("failure while loading assessments")
+                    .context("error reading assessments.txt")
                 {
                     Ok(a) => self.data.assessments = a,
                     Err(e) => {

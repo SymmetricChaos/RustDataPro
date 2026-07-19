@@ -1,5 +1,6 @@
 use chrono::{DateTime, Datelike, Local, Timelike};
 use egui::{Color32, InputState, Key, Response, RichText, Ui};
+use itertools::Itertools;
 use std::{borrow::Cow, collections::HashSet, ffi::OsStr, path::Path};
 use win_msgbox::Okay;
 
@@ -147,7 +148,7 @@ impl DataProUiElements for Ui {
 
 // Create a windows style error dialog
 pub fn windows_error_dialog(message: anyhow::Error) {
-    win_msgbox::error::<Okay>(&message.to_string())
+    win_msgbox::error::<Okay>(&message.chain().map(|e| e.to_string()).join("\n"))
         .title("Error")
         .set_foreground()
         .show()
