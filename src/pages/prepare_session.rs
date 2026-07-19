@@ -20,6 +20,193 @@ impl Default for PrepareSession {
 }
 
 impl PrepareSession {
+    fn client_and_session_information(app: &mut DataPro, ui: &mut egui::Ui) {
+        ui.add_enabled_ui(app.client_loaded(), |ui| {
+            egui::Grid::new("client_and_session_info_grid")
+                .min_col_width(150.0)
+                .min_row_height(22.0)
+                .show(ui, |ui| {
+                    // For reasons of client privacy this is best not display and perhaps best not stored in the client file at all
+                    // ui.monospace("Client Name");
+                    // ui.monospace(&app.data.client.name);
+                    // ui.end_row();
+
+                    ui.monospace("Client ID");
+                    ui.add(
+                        egui::TextEdit::singleline(&mut app.data.client.id.to_string())
+                            .font(TextStyle::Monospace)
+                            .interactive(false),
+                    );
+                    ui.end_row();
+
+                    ui.monospace("Location");
+                    if ui
+                        .text_edit_singleline(&mut app.data.client.location)
+                        .lost_focus()
+                    {
+                        if let Err(e) = app.overwrite_client_data_file() {
+                            windows_error_dialog(e)
+                        }
+                    }
+                    ui.end_row();
+
+                    ui.monospace("Date of Admission");
+                    match app.data.client.days_since_admission() {
+                        Ok(n) => {
+                            if n.is_negative() {
+                                ui.add(
+                                    egui::TextEdit::singleline(&mut format!("{n} days ago"))
+                                        .font(TextStyle::Monospace)
+                                        .text_color(Color32::RED)
+                                        .interactive(false),
+                                )
+                                .on_hover_text(&app.data.client.date_of_admission);
+                                app.prep_session.can_start_session = false;
+                            } else {
+                                ui.add(
+                                    egui::TextEdit::singleline(&mut format!("{n} days ago"))
+                                        .font(TextStyle::Monospace)
+                                        .interactive(false),
+                                )
+                                .on_hover_text(&app.data.client.date_of_admission);
+                            }
+                        }
+                        Err(_e) => {
+                            ui.add(
+                                egui::TextEdit::singleline(&mut format!("ERROR"))
+                                    .font(TextStyle::Monospace)
+                                    .text_color(Color32::RED)
+                                    .interactive(false),
+                            )
+                            .on_hover_text(format!(
+                                "{} is an invalid date\nformat date as YYYY-MM-DD",
+                                app.data.client.date_of_admission
+                            ));
+                            app.prep_session.can_start_session = false;
+                        }
+                    }
+                    ui.end_row();
+
+                    ui.monospace("Session Number");
+                    if ui
+                        .add(egui::DragValue::new(&mut app.data.client.current_session))
+                        .lost_focus()
+                    {
+                        if let Err(e) = app.overwrite_client_data_file() {
+                            windows_error_dialog(e)
+                        }
+                    }
+                    ui.end_row();
+
+                    ui.monospace("Case Manager");
+                    ui.add(
+                        egui::TextEdit::singleline(&mut app.data.client.case_manager)
+                            .font(TextStyle::Monospace)
+                            .interactive(false),
+                    );
+                    ui.end_row();
+
+                    ui.monospace("Primary Therapist");
+                    ui.add(
+                        egui::TextEdit::singleline(&mut app.data.client.primary_therapist)
+                            .font(TextStyle::Monospace)
+                            .interactive(false),
+                    );
+                    ui.end_row();
+
+                    ui.monospace("Session Therapist");
+                    ui.text_edit_singleline(&mut app.data.session.therapist);
+                    ui.end_row();
+
+                    ui.monospace("Data Collector");
+                    ui.text_edit_singleline(&mut app.data.session.data_collector);
+                    ui.end_row();
+
+                    ui.monospace("Data Type");
+                    egui::ComboBox::from_id_salt("datatype")
+                        .selected_text(app.data.session.data_type.to_string())
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(
+                                &mut app.data.session.data_type,
+                                DataType::Primary,
+                                "Primary",
+                            );
+                            ui.selectable_value(
+                                &mut app.data.session.data_type,
+                                DataType::Reliability,
+                                "Reliability",
+                            );
+                        });
+                    ui.end_row();
+
+                    ui.monospace("Assessment");
+                    let assessment_text = match app.assessment_chosen() {
+                        true => egui::RichText::new(&app.data.session.assessment),
+                        false => egui::RichText::new("NONE").color(Color32::RED),
+                    };
+                    egui::ComboBox::from_id_salt("assessment")
+                        .selected_text(assessment_text)
+                        .show_ui(ui, |ui| {
+                            for (assessment, _conditions) in app.data.assessments.iter() {
+                                if ui
+                                    .selectable_value(
+                                        &mut app.data.session.assessment,
+                                        assessment.clone(),
+                                        assessment.clone(),
+                                    )
+                                    .clicked()
+                                {
+                                    app.data.session.condition.clear();
+                                }
+                            }
+                        });
+
+                    ui.end_row();
+
+                    ui.monospace("Condition");
+                    let condition_text = match app.condition_chosen() {
+                        true => egui::RichText::new(&app.data.session.condition),
+                        false => egui::RichText::new("NONE").color(Color32::RED),
+                    };
+                    egui::ComboBox::from_id_salt("condition")
+                        .selected_text(condition_text)
+                        .show_ui(ui, |ui| {
+                            for (assessment, conditions) in app.data.assessments.iter() {
+                                if assessment == &app.data.session.assessment {
+                                    for condition in conditions {
+                                        ui.selectable_value(
+                                            &mut app.data.session.condition,
+                                            condition.to_string(),
+                                            condition,
+                                        );
+                                    }
+                                }
+                            }
+                        });
+                    ui.end_row();
+                });
+            ui.add_space(10.0);
+        });
+    }
+
+    fn ksf_display(app: &mut DataPro, ui: &mut egui::Ui) {
+        if app.ksf_loaded() {
+            ui.group(|ui| {
+                ui.label(&app.data.ksf_name);
+                ui.add_space(10.0);
+                ui.strong("Frequency Keys");
+                for (key, desc) in app.data.ksf.frequency.iter() {
+                    ui.monospace(format!("{:<2} {}", key.symbol_or_name(), desc));
+                }
+                ui.add_space(10.0);
+                ui.strong("Duration Keys");
+                for (key, desc) in app.data.ksf.duration.iter() {
+                    ui.monospace(format!("{:<2} {}", key.symbol_or_name(), desc));
+                }
+            });
+        }
+    }
+
     pub fn view(app: &mut DataPro, ui: &mut egui::Ui) {
         app.pick_ksf.update(ui.ctx());
         if let Some(path) = app.pick_ksf.take_picked() {
@@ -37,189 +224,31 @@ impl PrepareSession {
         app.prep_session.can_start_session = app.client_loaded() && app.ksf_loaded();
 
         egui::CentralPanel::default().show(ui, |ui| {
-            ui.add_space(15.0);
-            if ui.large_button("Select Client").clicked() {
-                app.pick_client_folder.pick_directory();
-            }
-            ui.add_space(5.0);
-
-            ui.add_enabled_ui(app.client_loaded(), |ui| {
-                if ui
-                    .large_button("Select KSF")
-                    .on_disabled_hover_text(NO_CLIENT_MESSAGE)
-                    .clicked()
-                {
-                    app.pick_ksf.pick_file();
-                }
-                ui.label(format!("KSF: {}", app.data.ksf_name));
-                ui.add_space(5.0);
-            });
-
-            ui.add_enabled_ui(app.client_loaded(), |ui| {
-                egui::Grid::new("client_and_session_info_grid")
-                    .min_col_width(150.0)
-                    .min_row_height(22.0)
-                    .show(ui, |ui| {
-                        // For reasons of client privacy this is best not display and perhaps best not stored in the client file at all
-                        // ui.monospace("Client Name");
-                        // ui.monospace(&app.data.client.name);
-                        // ui.end_row();
-
-                        ui.monospace("Client ID");
-                        ui.add(
-                            egui::TextEdit::singleline(&mut app.data.client.id.to_string())
-                                .font(TextStyle::Monospace)
-                                .interactive(false),
-                        );
-                        ui.end_row();
-
-                        ui.monospace("Location");
+            ui.horizontal(|ui| {
+                ui.vertical(|ui| {
+                    ui.add_space(25.0);
+                    if ui.large_button("Select Client").clicked() {
+                        app.pick_client_folder.pick_directory();
+                    }
+                    ui.add_space(5.0);
+                    PrepareSession::client_and_session_information(app, ui);
+                });
+                ui.add_space(50.0);
+                ui.vertical(|ui| {
+                    ui.add_space(25.0);
+                    ui.add_enabled_ui(app.client_loaded(), |ui| {
                         if ui
-                            .text_edit_singleline(&mut app.data.client.location)
-                            .lost_focus()
+                            .large_button("Select KSF")
+                            .on_disabled_hover_text(NO_CLIENT_MESSAGE)
+                            .clicked()
                         {
-                            if let Err(e) = app.overwrite_client_data_file() {
-                                windows_error_dialog(e)
-                            }
+                            app.pick_ksf.pick_file();
                         }
-                        ui.end_row();
 
-                        ui.monospace("Date of Admission");
-                        match app.data.client.days_since_admission() {
-                            Ok(n) => {
-                                if n.is_negative() {
-                                    ui.add(
-                                        egui::TextEdit::singleline(&mut format!("{n} days ago"))
-                                            .font(TextStyle::Monospace)
-                                            .text_color(Color32::RED)
-                                            .interactive(false),
-                                    )
-                                    .on_hover_text(&app.data.client.date_of_admission);
-                                    app.prep_session.can_start_session = false;
-                                } else {
-                                    ui.add(
-                                        egui::TextEdit::singleline(&mut format!("{n} days ago"))
-                                            .font(TextStyle::Monospace)
-                                            .interactive(false),
-                                    )
-                                    .on_hover_text(&app.data.client.date_of_admission);
-                                }
-                            }
-                            Err(_e) => {
-                                ui.add(
-                                    egui::TextEdit::singleline(&mut format!("ERROR"))
-                                        .font(TextStyle::Monospace)
-                                        .text_color(Color32::RED)
-                                        .interactive(false),
-                                )
-                                .on_hover_text(format!(
-                                    "{} is an invalid date\nformat date as YYYY-MM-DD",
-                                    app.data.client.date_of_admission
-                                ));
-                                app.prep_session.can_start_session = false;
-                            }
-                        }
-                        ui.end_row();
-
-                        ui.monospace("Session Number");
-                        if ui
-                            .add(egui::DragValue::new(&mut app.data.client.current_session))
-                            .lost_focus()
-                        {
-                            if let Err(e) = app.overwrite_client_data_file() {
-                                windows_error_dialog(e)
-                            }
-                        }
-                        ui.end_row();
-
-                        ui.monospace("Case Manager");
-                        ui.add(
-                            egui::TextEdit::singleline(&mut app.data.client.case_manager)
-                                .font(TextStyle::Monospace)
-                                .interactive(false),
-                        );
-                        ui.end_row();
-
-                        ui.monospace("Primary Therapist");
-                        ui.add(
-                            egui::TextEdit::singleline(&mut app.data.client.primary_therapist)
-                                .font(TextStyle::Monospace)
-                                .interactive(false),
-                        );
-                        ui.end_row();
-
-                        ui.monospace("Session Therapist");
-                        ui.text_edit_singleline(&mut app.data.session.therapist);
-                        ui.end_row();
-
-                        ui.monospace("Data Collector");
-                        ui.text_edit_singleline(&mut app.data.session.data_collector);
-                        ui.end_row();
-
-                        ui.monospace("Data Type");
-                        egui::ComboBox::from_id_salt("datatype")
-                            .selected_text(app.data.session.data_type.to_string())
-                            .show_ui(ui, |ui| {
-                                ui.selectable_value(
-                                    &mut app.data.session.data_type,
-                                    DataType::Primary,
-                                    "Primary",
-                                );
-                                ui.selectable_value(
-                                    &mut app.data.session.data_type,
-                                    DataType::Reliability,
-                                    "Reliability",
-                                );
-                            });
-                        ui.end_row();
-
-                        ui.monospace("Assessment");
-                        let assessment_text = match app.assessment_chosen() {
-                            true => egui::RichText::new(&app.data.session.assessment),
-                            false => egui::RichText::new("NONE").color(Color32::RED),
-                        };
-                        egui::ComboBox::from_id_salt("assessment")
-                            .selected_text(assessment_text)
-                            .show_ui(ui, |ui| {
-                                for (assessment, _conditions) in app.data.assessments.iter() {
-                                    if ui
-                                        .selectable_value(
-                                            &mut app.data.session.assessment,
-                                            assessment.clone(),
-                                            assessment.clone(),
-                                        )
-                                        .clicked()
-                                    {
-                                        app.data.session.condition.clear();
-                                    }
-                                }
-                            });
-
-                        ui.end_row();
-
-                        ui.monospace("Condition");
-                        let condition_text = match app.condition_chosen() {
-                            true => egui::RichText::new(&app.data.session.condition),
-                            false => egui::RichText::new("NONE").color(Color32::RED),
-                        };
-                        egui::ComboBox::from_id_salt("condition")
-                            .selected_text(condition_text)
-                            .show_ui(ui, |ui| {
-                                for (assessment, conditions) in app.data.assessments.iter() {
-                                    if assessment == &app.data.session.assessment {
-                                        for condition in conditions {
-                                            ui.selectable_value(
-                                                &mut app.data.session.condition,
-                                                condition.to_string(),
-                                                condition,
-                                            );
-                                        }
-                                    }
-                                }
-                            });
-                        ui.end_row();
+                        ui.add_space(5.0);
+                        PrepareSession::ksf_display(app, ui);
                     });
-                ui.add_space(10.0);
+                });
             });
 
             ui.horizontal(|ui| {
