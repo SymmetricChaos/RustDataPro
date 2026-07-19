@@ -40,18 +40,19 @@ impl IoaData {
         ioa
     }
 
-    pub fn normalize(&mut self, n: f32) {
+    /// Normalize the values and round them.
+    pub fn finalize(&mut self, n: f32) {
         for v in self.ten_sec_interval.values_mut() {
-            *v /= n
+            *v /= n;
         }
         for v in self.sixty_sec_interval.values_mut() {
-            *v /= n
+            *v /= n;
         }
         for v in self.total_duration.values_mut() {
-            *v /= n
+            *v /= n;
         }
         for v in self.total_count.values_mut() {
-            *v /= n
+            *v /= n;
         }
     }
 

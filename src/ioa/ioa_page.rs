@@ -134,7 +134,7 @@ impl IoaPage {
         self.frequency_ioa(&mut ioa_data)?;
         self.duration_ioa(&mut ioa_data)?;
 
-        ioa_data.normalize(self.prim_data.len() as f32);
+        ioa_data.finalize(self.prim_data.len() as f32);
         let path = Path::new(ioa_directory)
             .join(format!("reliability_{}", time_stamp()))
             .to_string_lossy()

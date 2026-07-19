@@ -31,7 +31,6 @@ impl PrepareSession {
             app.load_client_file(&path.clone());
             app.pick_ksf = FileDialog::new().initial_directory(path.clone());
             let ioa = Path::new(&path).join(SESSION_DATA_FOLDER_NAME);
-            println!("{:?}", ioa);
             app.ioa_page.file_dialog = FileDialog::new().initial_directory(ioa);
         }
 

@@ -12,11 +12,12 @@ fn write_excel_line<'a>(
     row: u32,
     name: &'static str,
     it: impl Iterator<Item = (&'a Key, &'a f32)>,
+    format: &Format,
 ) -> Result<()> {
     worksheet.write(row, 0, name)?;
     let mut col = 1;
     for (_, n) in it {
-        worksheet.write(row, col, &format!("{:.1}", n * 100.0))?;
+        worksheet.write_number_with_format(row, col, *n, format)?;
         col += 1;
     }
     Ok(())
@@ -34,6 +35,8 @@ pub fn save_excel_workbook(
     data_summary.set_column_width(0, 22)?;
     data_summary.set_column_range_width(1, 20, 10)?;
 
+    let num_format = Format::new().set_num_format("0%");
+
     let map = prim_data[0].0.ksf.create_map();
     let mut col = 1;
     for (k, _) in ioa_data.sixty_sec_interval.iter() {
@@ -45,19 +48,28 @@ pub fn save_excel_workbook(
         1,
         "60 Second Interval",
         ioa_data.sixty_sec_interval.iter(),
+        &num_format,
     )?;
     write_excel_line(
         data_summary,
         2,
         "10 Second Interval",
         ioa_data.ten_sec_interval.iter(),
+        &num_format,
     )?;
-    write_excel_line(data_summary, 3, "Total Count", ioa_data.total_count.iter())?;
+    write_excel_line(
+        data_summary,
+        3,
+        "Total Count",
+        ioa_data.total_count.iter(),
+        &num_format,
+    )?;
     write_excel_line(
         data_summary,
         4,
         "Total Duration",
         ioa_data.total_duration.iter(),
+        &num_format,
     )?;
 
     let data_sources = workbook.add_worksheet();

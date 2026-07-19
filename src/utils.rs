@@ -3,11 +3,12 @@ use egui::{Color32, InputState, Key, Response, RichText, Ui};
 use std::{borrow::Cow, collections::HashSet, ffi::OsStr, path::Path};
 use win_msgbox::Okay;
 
-/// Round an f32 to one decimal, the level of precision used in output data
+/// Round an f32 to one decimal. To be used for rounding times only.
 pub fn rounded_f32(n: f32) -> f32 {
     (n * 10.0).trunc() / 10.0
 }
 
+/// Weekday Month/Day/Year Hour:Minute
 pub fn date_time_string(dt: &DateTime<Local>) -> String {
     format!(
         "{} {}/{}/{} {:02}:{:02}",
