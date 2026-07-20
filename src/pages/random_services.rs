@@ -71,8 +71,8 @@ fn view_number_generation(page: &mut RandomServices, ui: &mut Ui) {
 }
 
 fn view_shuffler(page: &mut RandomServices, ui: &mut Ui) {
-    ui.heading("Shuffle a List");
     ui.label("Separate items with commas.");
+    ui.add_space(10.0);
     if ui.button("Shuffle").clicked() {
         let mut list: Vec<&str> = page.shuffle_list.split(',').collect();
         list.shuffle(&mut page.prng);
@@ -83,6 +83,7 @@ fn view_shuffler(page: &mut RandomServices, ui: &mut Ui) {
             .join(", ");
         page.shuffle_list = rep;
     }
+    ui.add_space(5.0);
     ui.add(
         TextEdit::multiline(&mut page.shuffle_list)
             .desired_width(300.0)
@@ -134,7 +135,7 @@ impl RandomServices {
                             );
                         });
                 });
-
+                ui.add_space(10.0);
                 match app.randomness_page.service {
                     Service::Numbers => view_number_generation(&mut app.randomness_page, ui),
                     Service::Shuffle => view_shuffler(&mut app.randomness_page, ui),

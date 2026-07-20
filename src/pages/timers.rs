@@ -141,10 +141,19 @@ impl Timers {
                                     ui.add_sized(counter_adjust_size,egui::Label::new("")
                                 );
                             }
-
+                        egui::ComboBox::from_id_salt(format!("timer_mode{n}"))
+                        .selected_text(timer.timer_type.to_string())
+                        .show_ui(ui, |ui| {
+                            if ui.selectable_value(&mut timer.timer_type, TimerType::Countdown, "Countdown").clicked() {
+                                timer.timer.reset();
+                            }
+                            if ui.selectable_value(&mut timer.timer_type, TimerType::Stopwatch, "Stopwatch").clicked() {
+                                                                timer.timer.reset();
+                            }
+                        });
                             ui.add_space(5.0);
-                            ui.radio_value(&mut timer.timer_type, TimerType::Countdown, "Countdown");
-                            ui.radio_value(&mut timer.timer_type, TimerType::Stopwatch, "Stopwatch");
+
+
 
                         });
 
