@@ -473,7 +473,11 @@ impl SessionPage {
                 ui.label("Session Time:");
                 view_simple_timer(ui, &mut app.session_page.session_timer);
                 if app.session_page.limit_session_length {
-                    ui.monospace(format!("[{:.2}]", app.session_page.maximum_session_length));
+                    ui.monospace(format!(
+                        "[{:.0}:{:05.2}]",
+                        app.session_page.maximum_session_length / 60.0,
+                        app.session_page.maximum_session_length % 60.0
+                    ));
                 }
             });
             ui.add_space(10.0);

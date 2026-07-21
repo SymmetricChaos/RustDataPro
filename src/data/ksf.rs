@@ -2,8 +2,13 @@ use anyhow::{Context, Result};
 use egui::Key;
 use indexmap::IndexMap;
 use itertools::Itertools;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::{fs::File, io::Read, path::Path};
+use std::{cell::LazyCell, fs::File, io::Read, path::Path};
+
+const REGEX_FIND: LazyCell<Regex> =
+    LazyCell::new(|| Regex::new(r"    \[\n      (.+),\n      (.+)\n    \]").unwrap());
+const REGEX_REPLACE: &'static str = "    [$1, $2]";
 
 /// Key Specification File. A list of keybinds divided into Duration and Frequency.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Default)]
@@ -57,7 +62,9 @@ impl KsfData {
     }
 
     pub fn to_json(&self) -> Result<String> {
-        serde_json::to_string_pretty(&self).context("unable to convert ksf to json")
+        let raw_json =
+            serde_json::to_string_pretty(&self).context("unable to convert ksf to json")?;
+        Ok(REGEX_FIND.replace_all(&raw_json, REGEX_REPLACE).to_string())
     }
 
     pub fn _test_ksf() -> KsfData {
