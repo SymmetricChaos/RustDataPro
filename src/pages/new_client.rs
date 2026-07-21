@@ -8,7 +8,7 @@ use crate::{
 };
 use anyhow::Result;
 use chrono::Local;
-use sha2::{Digest, Sha256};
+use rand::{RngExt, make_rng, rngs::StdRng};
 use std::{
     fs::File,
     io::{BufWriter, Write},
@@ -16,6 +16,7 @@ use std::{
 };
 
 pub struct NewClient {
+    prng: StdRng,
     client: ClientData,
     error: String,
 }
@@ -23,6 +24,7 @@ pub struct NewClient {
 impl Default for NewClient {
     fn default() -> Self {
         Self {
+            prng: make_rng(),
             client: ClientData::default(),
             error: String::new(),
         }
@@ -72,23 +74,12 @@ impl NewClient {
                 .show(ui, |ui| {
                     ui.monospace("Client ID");
                     ui.text_edit_singleline(&mut app.new_client_page.client.id);
-                    if ui
-                        .button("suggest")
-                        .on_hover_text(
-                            "derived from Client Name, Case Manager, Primary Therapist, and Date of Admission",
-                        )
-                        .clicked()
-                    {
-                        app.new_client_page.client.trim_all_fields();
-                        let hash = Sha256::new()
-                            .chain_update(&app.new_client_page.client.name)
-                            .chain_update(&app.new_client_page.client.case_manager)
-                            .chain_update(&app.new_client_page.client.primary_therapist)
-                            .chain_update(&app.new_client_page.client.date_of_admission)
-                            .finalize();
+                    if ui.button("random").clicked() {
                         app.new_client_page.client.id = format!(
                             "{:0<10}",
-                            u64::from_be_bytes(hash[0..8].try_into().unwrap())%10000000000
+                            app.new_client_page
+                                .prng
+                                .random_range(1000000000_i64..=9999999999)
                         )
                     }
                     ui.end_row();
@@ -108,7 +99,8 @@ impl NewClient {
                     ui.monospace("Date of Admission\n(YYYY-MM-DD)");
                     ui.text_edit_singleline(&mut app.new_client_page.client.date_of_admission);
                     if ui.button("today").clicked() {
-                        app.new_client_page.client.date_of_admission = Local::now().date_naive().format("%Y-%m-%d").to_string();
+                        app.new_client_page.client.date_of_admission =
+                            Local::now().date_naive().format("%Y-%m-%d").to_string();
                     }
                     ui.end_row();
 

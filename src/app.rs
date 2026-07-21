@@ -14,13 +14,16 @@ use egui::Visuals;
 use egui_file_dialog::FileDialog;
 use std::path::{Path, PathBuf};
 
+pub const DEFAULT_ROOT_DIRECTORY: Option<&'static str> = None;
+pub const DEFAULT_ROOT_DIRECTORY_FALLBACK: &'static str = "C:\\";
 pub const DEFAULT_ROOT_DIRECTORY_NAME: &'static str = "DataProClients";
+pub const DEFAULT_ZOOM: f32 = 1.5;
+
 pub const CLIENT_DATA_FILE_NAME: &'static str = "client_data.txt";
 pub const ASSESSMENTS_FILE_NAME: &'static str = "assessments.txt";
 pub const SESSION_DATA_FOLDER_NAME: &'static str = "Session Records";
 pub const IOA_DATA_FOLDER_NAME: &'static str = "IOA Data";
 pub const NO_CLIENT_MESSAGE: &'static str = "no client loaded";
-const STARTING_ZOOM: f32 = 1.5;
 
 pub struct DataPro {
     pub pick_root_directory: FileDialog,
@@ -46,8 +49,15 @@ pub struct DataPro {
 
 impl Default for DataPro {
     fn default() -> Self {
-        let mut root_directory = std::env::current_dir().unwrap();
-        root_directory.push(DEFAULT_ROOT_DIRECTORY_NAME);
+        let root_directory = if let Some(path) = DEFAULT_ROOT_DIRECTORY {
+            Path::new(path).join(DEFAULT_ROOT_DIRECTORY_NAME)
+        } else {
+            Path::new(
+                &std::env::current_dir().unwrap_or(PathBuf::from(DEFAULT_ROOT_DIRECTORY_FALLBACK)),
+            )
+            .join(DEFAULT_ROOT_DIRECTORY_NAME)
+        };
+
         Self {
             data: Data {
                 client: ClientData::default(),
@@ -61,16 +71,14 @@ impl Default for DataPro {
                 timers_open: false,
                 random_open: false,
                 sidebar_open: true,
-                zoom: STARTING_ZOOM,
+                zoom: DEFAULT_ZOOM,
             },
 
-            pick_root_directory: FileDialog::default()
-                .initial_directory(DEFAULT_ROOT_DIRECTORY_NAME.into()),
-            root_directory,
+            pick_root_directory: FileDialog::new().initial_directory(root_directory.clone()),
+            pick_client_folder: FileDialog::new().initial_directory(root_directory.clone()),
+            pick_ksf: FileDialog::default().initial_directory(root_directory.clone()),
 
-            pick_client_folder: FileDialog::default()
-                .initial_directory(DEFAULT_ROOT_DIRECTORY_NAME.into()),
-            pick_ksf: FileDialog::default().initial_directory(DEFAULT_ROOT_DIRECTORY_NAME.into()),
+            root_directory,
 
             randomness_page: RandomServices::default(),
             timers: Timers::default(),
@@ -88,7 +96,7 @@ impl Default for DataPro {
 
 impl DataPro {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        cc.egui_ctx.set_pixels_per_point(STARTING_ZOOM);
+        cc.egui_ctx.set_pixels_per_point(DEFAULT_ZOOM);
         cc.egui_ctx.set_visuals(Visuals::dark());
         Default::default()
     }
@@ -187,7 +195,7 @@ impl DataPro {
 
     pub fn load_client_file(&mut self, path: &PathBuf) {
         match ClientData::from_file(&Path::new(path).join(CLIENT_DATA_FILE_NAME))
-            .context("error reading client data.txt")
+            .context("error reading client_data.txt")
         {
             Ok(client) => {
                 self.data.client = client;
