@@ -8,7 +8,7 @@ use std::{
 };
 
 /// A list of assessments names paired with a list of their conditions.
-#[derive(Serialize, Deserialize, Clone, Default)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct AssessmentsData(Vec<(String, Vec<String>)>);
 
 impl Deref for AssessmentsData {

@@ -18,7 +18,7 @@ impl Display for DataType {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default, Debug)]
 pub struct SessionData {
     pub assessment: String,
     pub condition: String,

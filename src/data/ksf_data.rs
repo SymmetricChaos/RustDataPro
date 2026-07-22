@@ -11,7 +11,7 @@ const REGEX_FIND: LazyCell<Regex> =
 const REGEX_REPLACE: &'static str = "    [$1, $2]";
 
 /// Key Specification File. A list of keybinds divided into Duration and Frequency.
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Default)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Default, Debug)]
 pub struct KsfData {
     pub duration: Vec<(Key, String)>,
     pub frequency: Vec<(Key, String)>,

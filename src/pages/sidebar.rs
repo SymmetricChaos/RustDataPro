@@ -1,6 +1,5 @@
 use crate::{
     app::{DataPro, NO_CLIENT_MESSAGE},
-    data::{ClientData, KsfData, SessionData},
     utils::DataProUiElements,
 };
 use egui::{Ui, warn_if_debug_build};
@@ -12,16 +11,12 @@ impl Sidebar {
     pub fn view(app: &mut DataPro, ui: &mut Ui) {
         app.pick_root_directory.update(ui.ctx());
         if let Some(pathbuf) = app.pick_root_directory.take_picked() {
+            // If we change root directory immedately reset data files
+            app.data.clear();
             // If we change root directory then we set the client picker to look there and reset the ksf picker entirely
             app.root_directory = pathbuf.clone();
-            app.pick_client_folder = FileDialog::new().initial_directory(pathbuf);
-            app.pick_ksf = FileDialog::new();
-            // Also reset data to avoid confusion from any retained information
-            app.data.client = ClientData::default();
-            app.data.ksf = KsfData::default();
-            app.data.ksf_name.clear();
-            app.data.assessments.clear();
-            app.data.session = SessionData::default();
+            app.pick_client_folder = FileDialog::new().initial_directory(pathbuf.clone());
+            app.pick_ksf = FileDialog::new().initial_directory(pathbuf.clone());
         }
         egui::Panel::left("welcome_panel")
             .default_size(200.0)

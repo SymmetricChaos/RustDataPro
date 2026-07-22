@@ -7,7 +7,7 @@ use std::{fmt::Display, fs::File, io::Read, path::PathBuf};
 pub const DATE_OF_ADMISSION_FORMAT_ERROR: &'static str =
     "check client_data.txt\nDate of Admission must be formated as YYYY-MM-DD";
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ClientData {
     pub name: String,
     pub id: String,
