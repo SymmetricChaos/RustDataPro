@@ -4,7 +4,6 @@ use crate::utils::DataProUiElements;
 use crate::{app::DataPro, data::AssessmentsData};
 use anyhow::Result;
 use itertools::Itertools;
-
 use std::path::Path;
 use std::{
     fs::File,
@@ -12,11 +11,20 @@ use std::{
     path::PathBuf,
 };
 
-#[derive(Default)]
 pub struct NewAssessments {
     pub assessments: AssessmentsData,
     pub user_inputs: Vec<(String, String)>,
     pub error: String,
+}
+
+impl Default for NewAssessments {
+    fn default() -> Self {
+        Self {
+            assessments: Default::default(),
+            user_inputs: vec![(String::new(), String::new())],
+            error: Default::default(),
+        }
+    }
 }
 
 impl NewAssessments {

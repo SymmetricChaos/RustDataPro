@@ -4,6 +4,6 @@
   "case_manager": "Alfred Pennyworth",
   "primary_therapist": "Richard Grayson",
   "current_session": 1,
-  "date_of_admission": "1939-2-19",
+  "date_of_admission": "1939-02-19",
   "location": "Wayne Manor"
 }

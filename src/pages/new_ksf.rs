@@ -5,7 +5,6 @@ use crate::{
 };
 use anyhow::{Context, Result};
 use egui::Key;
-use itertools::Itertools;
 use std::{
     fs::File,
     io::{BufWriter, Write},
@@ -13,18 +12,16 @@ use std::{
 };
 
 fn parse_line(s: &str) -> Result<(Key, String)> {
-    let (k, d) = s.split_once(",").context("no comma in key specification")?;
+    let (k, d) = s.split_once(",").context("no comma")?;
     let key = match Key::from_name(k.trim()) {
         Some(key) => key,
         None => {
-            return Err(anyhow::anyhow!("{} is not a valid key name", k));
+            return Err(anyhow::anyhow!("invalid key name"));
         }
     };
     let desc = match d.contains(",") {
         true => {
-            return Err(anyhow::anyhow!(
-                "descriptions cannot contain a comma, start new specifications on new lines"
-            ));
+            return Err(anyhow::anyhow!("too many commas"));
         }
         false => d.trim().to_string(),
     };
@@ -35,36 +32,39 @@ fn entry_row(
     ui: &mut egui::Ui,
     string: &mut String,
     vector: &mut Vec<(Key, String)>,
-    error: &mut String,
+    preview: &mut String,
 ) {
     if ui.text_edit_multiline(string).changed() {
-        let mut found_err = None;
+        preview.clear();
         vector.clear();
         for line in string.split("\n") {
             if !line.is_empty() {
                 match parse_line(line) {
-                    Ok(entry) => vector.push(entry),
+                    Ok(entry) => {
+                        vector.push(entry.clone());
+                        preview.push_str(&format!(
+                            "[\"{}\", \"{}\"]\n",
+                            entry.0.symbol_or_name(),
+                            entry.1
+                        ));
+                    }
                     Err(e) => {
-                        if found_err.is_none() {
-                            found_err = Some(e.to_string())
-                        }
+                        preview.push_str(&format!("{}\n", e));
                     }
                 }
+            } else {
+                preview.push('\n');
             }
         }
-        match found_err {
-            Some(e) => *error = e,
-            None => error.clear(),
-        };
+        // remove trailing newline
+        preview.pop();
     }
 
-    ui.monospace(format!(
-        "Preview:\n{}",
-        vector
-            .iter()
-            .map(|(k, d)| format!("({},{})", k.symbol_or_name(), d))
-            .join("  ")
-    ));
+    ui.add(
+        egui::TextEdit::multiline(preview)
+            .background_color(ui.visuals().window_fill)
+            .interactive(false),
+    );
 }
 
 #[derive(Default)]
@@ -73,8 +73,8 @@ pub struct NewKsf {
     file_name: String,
     freq_string: String,
     dura_string: String,
-    freq_error: String,
-    dura_error: String,
+    freq_preview: String,
+    dura_preview: String,
     save_error: String,
 }
 
@@ -118,7 +118,7 @@ impl NewKsf {
                         ui,
                         &mut app.new_ksf_page.freq_string,
                         &mut app.new_ksf_page.ksf.frequency,
-                        &mut app.new_ksf_page.freq_error,
+                        &mut app.new_ksf_page.freq_preview,
                     );
                     ui.end_row();
 
@@ -127,40 +127,30 @@ impl NewKsf {
                         ui,
                         &mut app.new_ksf_page.dura_string,
                         &mut app.new_ksf_page.ksf.duration,
-                        &mut app.new_ksf_page.dura_error,
+                        &mut app.new_ksf_page.dura_preview,
                     );
                     ui.end_row();
                 });
 
-            ui.add_enabled_ui(
-                app.new_ksf_page.dura_error.is_empty()
-                    && app.new_ksf_page.freq_error.is_empty()
-                    && !app.new_ksf_page.file_name.is_empty(),
-                |ui| {
-                    if ui
-                        .large_green_button("Save")
-                        .on_disabled_hover_text(
-                            "cannot save until a name is chosen and there are no errors",
-                        )
-                        .clicked()
+            ui.add_enabled_ui(!app.new_ksf_page.file_name.is_empty(), |ui| {
+                if ui
+                    .large_green_button("Save")
+                    .on_disabled_hover_text("no file name provided")
+                    .clicked()
+                {
+                    match app
+                        .new_ksf_page
+                        .save_file_to_path(&app.data, &app.root_directory)
                     {
-                        match app
-                            .new_ksf_page
-                            .save_file_to_path(&app.data, &app.root_directory)
-                        {
-                            Ok(_) => app.new_ksf_page.save_error.clear(),
-                            Err(e) => windows_error_dialog(e),
-                        }
+                        Ok(_) => app.new_ksf_page.save_error.clear(),
+                        Err(e) => windows_error_dialog(e),
                     }
-                },
-            );
+                }
+            });
 
             if ui.large_red_button("Return").clicked() {
                 app.display_info.go_to_prep_session();
             }
-
-            ui.strong(app.new_ksf_page.freq_error.to_string());
-            ui.strong(app.new_ksf_page.dura_error.to_string());
         });
     }
 }

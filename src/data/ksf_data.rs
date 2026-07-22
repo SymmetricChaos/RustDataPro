@@ -1,3 +1,4 @@
+use crate::utils::quick_file_name;
 use anyhow::{Context, Result};
 use egui::Key;
 use indexmap::IndexMap;
@@ -5,8 +6,6 @@ use itertools::Itertools;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{cell::LazyCell, fs::File, io::Read, path::Path};
-
-use crate::utils::{quick_file_name, windows_error_dialog};
 
 const LEAF_PAIR_FIND: LazyCell<Regex> =
     LazyCell::new(|| Regex::new(r"    \[\r?\n      (.+),\r?\n      (.+)\n    \]").unwrap());
@@ -47,7 +46,8 @@ fn prepare_json_for_reading(text: String) -> String {
 /// Key Specification File. A list of keybinds divided into Duration and Frequency.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Default, Debug)]
 pub struct KsfData {
-    #[serde(skip_deserializing)]
+    #[serde(skip_serializing)] // ignore when saving
+    #[serde(skip_deserializing)] // ignore when loading (the ::from_file() method will extract a name)
     #[serde(default)]
     pub name: String,
     pub duration: Vec<(Key, String)>,
@@ -91,10 +91,9 @@ impl KsfData {
         let mut ksf: KsfData = serde_json::from_str(&prepare_json_for_reading(s))?;
         ksf.name = quick_file_name(file_path).to_string();
         if !ksf.all_unique() {
-            windows_error_dialog(anyhow::anyhow!(
-                "Warning! KSF contains duplicate keys or duplicate descriptions"
-            ));
-            Ok(ksf)
+            Err(anyhow::anyhow!(
+                "KSF contains duplicate keys or duplicate descriptions"
+            ))
         } else {
             Ok(ksf)
         }
