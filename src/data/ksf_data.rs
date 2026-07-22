@@ -9,7 +9,7 @@ use std::{cell::LazyCell, fs::File, io::Read, path::Path};
 use crate::utils::{quick_file_name, windows_error_dialog};
 
 const LEAF_PAIR_FIND: LazyCell<Regex> =
-    LazyCell::new(|| Regex::new(r"    \[\n      (.+),\n      (.+)\n    \]").unwrap());
+    LazyCell::new(|| Regex::new(r"    \[\r?\n      (.+),\r?\n      (.+)\n    \]").unwrap());
 const LEAF_PAIR_REPLACE: &'static str = "    [$1, $2]";
 
 const NUM_NAME_FIND: LazyCell<Regex> = LazyCell::new(|| Regex::new(r"Num([0123456789])").unwrap());
@@ -25,7 +25,7 @@ fn prepare_json_for_writing(text: String) -> String {
 
 // Must run before trailing comma as this will add trailing commas
 const MISSING_COMMA_FIND: LazyCell<Regex> =
-    LazyCell::new(|| Regex::new(r#"(\[\".+\", \".+\"\])\n"#).unwrap());
+    LazyCell::new(|| Regex::new(r#"(\[\".+\", \".+\"\])\r?\n"#).unwrap());
 const MISSING_COMMA_REPLACE: &'static str = "$1,\n";
 
 const NUM_FIND: LazyCell<Regex> = LazyCell::new(|| Regex::new(r#""([0123456789])""#).unwrap());
@@ -36,7 +36,7 @@ const TRAILING_COMMA_FIND: LazyCell<Regex> =
 const TRAILING_COMMA_REPLACE: &'static str = "$1";
 
 /// Rename numbers to number key names that Egui will recognize
-/// Find and remove training commas (this is ability is specific to KSF files layout)
+/// Add in missing commas for leaf pairs then remove trailing commas from those lists
 fn prepare_json_for_reading(text: String) -> String {
     let pass1 = MISSING_COMMA_FIND.replace_all(&text, MISSING_COMMA_REPLACE);
     let pass2 = NUM_FIND.replace_all(&pass1, NUM_REPLACE);
