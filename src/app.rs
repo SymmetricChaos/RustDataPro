@@ -74,7 +74,6 @@ impl Default for DataPro {
                 session: SessionData::default(),
                 assessments: AssessmentsData::default(),
                 ksf: KsfData::default(),
-                ksf_name: String::new(),
             },
             display_info: DisplayInfo {
                 active_page: Default::default(),
@@ -123,7 +122,7 @@ impl DataPro {
     }
 
     pub fn ksf_loaded(&self) -> bool {
-        !self.data.ksf_name.is_empty()
+        !self.data.ksf.name.is_empty()
     }
 
     pub fn assessment_chosen(&self) -> bool {
@@ -193,11 +192,10 @@ impl DataPro {
         match KsfData::from_file(&path) {
             Ok(ksf) => {
                 self.data.ksf = ksf;
-                self.data.ksf_name = quick_file_name(&path).to_string();
+                self.data.ksf.name = quick_file_name(&path).to_string();
             }
             Err(e) => {
                 self.data.ksf = KsfData::default();
-                self.data.ksf_name.clear();
                 windows_error_dialog(e);
             }
         };
@@ -220,7 +218,6 @@ impl DataPro {
                     }
                 };
                 self.data.ksf = KsfData::default();
-                self.data.ksf_name.clear();
                 self.data.session.assessment.clear();
                 self.data.session.condition.clear();
             }

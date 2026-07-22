@@ -80,7 +80,7 @@ pub struct NewKsf {
 
 impl NewKsf {
     fn save_file_to_path(&mut self, data: &Data, root_directory: &PathBuf) -> Result<()> {
-        if !self.ksf.is_valid() {
+        if !self.ksf.all_unique() {
             return Err(anyhow::anyhow!(
                 "ksf contains duplicate keys or duplicate descriptions"
             ));

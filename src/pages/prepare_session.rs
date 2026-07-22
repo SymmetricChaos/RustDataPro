@@ -192,16 +192,16 @@ impl PrepareSession {
     fn ksf_display(app: &mut DataPro, ui: &mut egui::Ui) {
         if app.ksf_loaded() {
             ui.group(|ui| {
-                ui.label(&app.data.ksf_name);
+                ui.label(&app.data.ksf.name);
                 ui.add_space(10.0);
                 ui.strong("Frequency Keys");
                 for (key, desc) in app.data.ksf.frequency.iter() {
-                    ui.monospace(format!("{:<2} {}", key.symbol_or_name(), desc));
+                    ui.monospace(format!("{:>2} {}", key.symbol_or_name(), desc));
                 }
                 ui.add_space(10.0);
                 ui.strong("Duration Keys");
                 for (key, desc) in app.data.ksf.duration.iter() {
-                    ui.monospace(format!("{:<2} {}", key.symbol_or_name(), desc));
+                    ui.monospace(format!("{:>2} {}", key.symbol_or_name(), desc));
                 }
             });
         }

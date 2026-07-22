@@ -4,9 +4,9 @@
     [
       "Ignore",
       "Tangible",
-      "Demand",
+      "Demand"
       "Attention",
-      "ToyPlay"
+      "ToyPlay",
     ]
   ]
 ]

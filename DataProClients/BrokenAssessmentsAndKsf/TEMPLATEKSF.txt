@@ -1,8 +1,8 @@
 {
   "duration": [
-    ["Num4", "ToyEngage"],
-    ["Num1", "Sr+"],
-    ["Num2", "Sdelta"]
+    ["4", "ToyEngage"],
+    ["1", "Sr+"],
+    ["2", "Sdelta"]
   ],
   "frequency": [
     ["V", "NegVoc"],
@@ -10,6 +10,6 @@
     ["M", "Mand"],
     ["S", "SIB"],
     ["I", "Instruction"],
-    ["C", "Compliance"]
+    ["2", "Compliance"]
   ]
 }

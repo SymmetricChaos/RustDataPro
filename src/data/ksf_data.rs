@@ -6,13 +6,50 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{cell::LazyCell, fs::File, io::Read, path::Path};
 
-const REGEX_FIND: LazyCell<Regex> =
+use crate::utils::{quick_file_name, windows_error_dialog};
+
+const LEAF_PAIR_FIND: LazyCell<Regex> =
     LazyCell::new(|| Regex::new(r"    \[\n      (.+),\n      (.+)\n    \]").unwrap());
-const REGEX_REPLACE: &'static str = "    [$1, $2]";
+const LEAF_PAIR_REPLACE: &'static str = "    [$1, $2]";
+
+const NUM_NAME_FIND: LazyCell<Regex> = LazyCell::new(|| Regex::new(r"Num([0123456789])").unwrap());
+const NUM_NAME_REPLACE: &'static str = "$1";
+
+/// Renames Egui number key names to just the number.
+/// Turns the leaf pairs with KSF key and description into a more compact form
+fn prepare_json_for_writing(text: String) -> String {
+    let pass1 = LEAF_PAIR_FIND.replace_all(&text, LEAF_PAIR_REPLACE);
+    let pass2 = NUM_NAME_FIND.replace_all(&pass1, NUM_NAME_REPLACE);
+    pass2.to_string()
+}
+
+// Must run before trailing comma as this will add trailing commas
+const MISSING_COMMA_FIND: LazyCell<Regex> =
+    LazyCell::new(|| Regex::new(r#"(\[\".+\", \".+\"\])\n"#).unwrap());
+const MISSING_COMMA_REPLACE: &'static str = "$1,\n";
+
+const NUM_FIND: LazyCell<Regex> = LazyCell::new(|| Regex::new(r#""([0123456789])""#).unwrap());
+const NUM_REPLACE: &'static str = "\"Num$1\"";
+
+const TRAILING_COMMA_FIND: LazyCell<Regex> =
+    LazyCell::new(|| Regex::new(r",(\r?\n *[\]\}])").unwrap());
+const TRAILING_COMMA_REPLACE: &'static str = "$1";
+
+/// Rename numbers to number key names that Egui will recognize
+/// Find and remove training commas (this is ability is specific to KSF files layout)
+fn prepare_json_for_reading(text: String) -> String {
+    let pass1 = MISSING_COMMA_FIND.replace_all(&text, MISSING_COMMA_REPLACE);
+    let pass2 = NUM_FIND.replace_all(&pass1, NUM_REPLACE);
+    let pass3 = TRAILING_COMMA_FIND.replace_all(&pass2, TRAILING_COMMA_REPLACE);
+    pass3.to_string()
+}
 
 /// Key Specification File. A list of keybinds divided into Duration and Frequency.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Default, Debug)]
 pub struct KsfData {
+    #[serde(skip_deserializing)]
+    #[serde(default)]
+    pub name: String,
     pub duration: Vec<(Key, String)>,
     pub frequency: Vec<(Key, String)>,
 }
@@ -43,7 +80,7 @@ impl KsfData {
     }
 
     /// Are all keys unique AND all descriptions unique?
-    pub fn is_valid(&self) -> bool {
+    pub fn all_unique(&self) -> bool {
         self.keys().all_unique() && self.descriptions().all_unique()
     }
 
@@ -51,20 +88,22 @@ impl KsfData {
         let mut file = File::open(&file_path)?;
         let mut s = String::new();
         file.read_to_string(&mut s)?;
-        let out: KsfData = serde_json::from_str(&s)?;
-        if !out.is_valid() {
-            Err(anyhow::anyhow!(
-                "ksf contains duplicate keys or duplicate descriptions"
-            ))
+        let mut ksf: KsfData = serde_json::from_str(&prepare_json_for_reading(s))?;
+        ksf.name = quick_file_name(file_path).to_string();
+        if !ksf.all_unique() {
+            windows_error_dialog(anyhow::anyhow!(
+                "Warning! KSF contains duplicate keys or duplicate descriptions"
+            ));
+            Ok(ksf)
         } else {
-            Ok(out)
+            Ok(ksf)
         }
     }
 
     pub fn to_json(&self) -> Result<String> {
         let raw_json =
             serde_json::to_string_pretty(&self).context("unable to convert ksf to json")?;
-        Ok(REGEX_FIND.replace_all(&raw_json, REGEX_REPLACE).to_string())
+        Ok(prepare_json_for_writing(raw_json))
     }
 
     pub fn _test_ksf() -> KsfData {

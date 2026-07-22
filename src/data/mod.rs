@@ -22,7 +22,6 @@ pub struct Data {
     pub session: SessionData,
     pub assessments: AssessmentsData,
     pub ksf: KsfData,
-    pub ksf_name: String,
 }
 
 impl Data {

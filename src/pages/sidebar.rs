@@ -11,12 +11,12 @@ impl Sidebar {
     pub fn view(app: &mut DataPro, ui: &mut Ui) {
         app.pick_root_directory.update(ui.ctx());
         if let Some(pathbuf) = app.pick_root_directory.take_picked() {
-            // If we change root directory immedately reset data files
+            // If we change root directory immedately reset all data files, otherwise we have dirty data selections that refer to things not in the root
             app.data.clear();
-            // If we change root directory then we set the client picker to look there and reset the ksf picker entirely
+            // Then we set the client picker to look there and reset the ksf picker entirely
             app.root_directory = pathbuf.clone();
             app.pick_client_folder = FileDialog::new().initial_directory(pathbuf.clone());
-            app.pick_ksf = FileDialog::new().initial_directory(pathbuf.clone());
+            app.pick_ksf = FileDialog::new()
         }
         egui::Panel::left("welcome_panel")
             .default_size(200.0)

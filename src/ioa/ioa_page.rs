@@ -166,6 +166,15 @@ impl IoaPage {
         }
 
         egui::CentralPanel::default().show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = 0.0;
+                ui.heading("Calculate IOA for Client ");
+                ui.add(egui::Label::new(
+                    egui::RichText::new(&app.data.client.id).heading().strong(),
+                ));
+            });
+            ui.add_space(10.0);
+
             if ui.large_button("Select Data").clicked() {
                 app.ioa_page.file_dialog.pick_multiple();
             }

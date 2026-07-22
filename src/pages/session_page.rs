@@ -436,7 +436,7 @@ impl SessionPage {
                     ui.vertical(|ui| {
                         ui.label(format!("Assessment: {}", app.data.session.assessment));
                         ui.label(format!("Condition: {}", app.data.session.condition));
-                        ui.label(format!("KSF: {}", app.data.ksf_name));
+                        ui.label(format!("KSF: {}", app.data.ksf.name));
                     });
                 });
                 ui.group(|ui| {
