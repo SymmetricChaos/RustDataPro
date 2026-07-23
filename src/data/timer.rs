@@ -130,12 +130,20 @@ impl Timer {
         }
     }
 
-    /// If status is Active, set status to Stopped and clear the stashed time.
-    /// Specific to use on the session page for undoing a key press on a timer.
+    /// For undoing a key press on a stopped timer.
     pub fn unstart(&mut self) {
-        if self.status.is_active() {
+        if self.is_active() {
             self.status = TimerStatus::Stopped;
             self.stashed_time = Duration::ZERO;
+        }
+    }
+
+    /// For undoing a key press on an active timer.
+    pub fn unstop(&mut self) {
+        if self.is_stopped() {
+            self.status = TimerStatus::Active;
+            self.stashed_time += self.start_time.elapsed();
+            self.start_time = Instant::now();
         }
     }
 
