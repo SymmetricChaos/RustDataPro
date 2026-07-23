@@ -75,6 +75,7 @@ impl Default for DataPro {
                 assessments: AssessmentsData::default(),
                 ksf: KsfData::default(),
             },
+
             display_info: DisplayInfo {
                 active_page: Default::default(),
                 timers_open: false,
@@ -86,7 +87,6 @@ impl Default for DataPro {
             pick_root_directory: FileDialog::new().initial_directory(root_directory.clone()),
             pick_client_folder: FileDialog::new().initial_directory(root_directory.clone()),
             pick_ksf: FileDialog::default().initial_directory(root_directory.clone()),
-
             root_directory,
 
             randomness_page: RandomServices::default(),
@@ -110,11 +110,26 @@ impl DataPro {
         Default::default()
     }
 
-    pub fn ready_to_start_session(&self) -> bool {
-        self.client_loaded()
-            && self.ksf_loaded()
-            && self.assessment_chosen()
-            && self.condition_chosen()
+    pub fn ready_to_start_session(&mut self) -> bool {
+        if !self.client_loaded() {
+            self.prep_session.session_start_error = "no client loaded";
+            false
+        } else if !self.ksf_loaded() {
+            self.prep_session.session_start_error = "no KSF loaded";
+            false
+        } else if !self.assessment_chosen() {
+            self.prep_session.session_start_error = "no assessment chosen";
+            false
+        } else if !self.condition_chosen() {
+            self.prep_session.session_start_error = "no condition chosen";
+            false
+        } else if !self.time_limit_set() {
+            self.prep_session.session_start_error = "time limit cannot be 0.0 seconds";
+            false
+        } else {
+            self.prep_session.session_start_error = "";
+            true
+        }
     }
 
     pub fn client_loaded(&self) -> bool {
@@ -131,6 +146,10 @@ impl DataPro {
 
     pub fn condition_chosen(&self) -> bool {
         !self.data.session.condition.is_empty()
+    }
+
+    pub fn time_limit_set(&self) -> bool {
+        !(self.session_page.limit_session_length && self.session_page.maximum_session_length == 0.0)
     }
 
     /// Path to the client data file, if one is available.

@@ -9,12 +9,14 @@ use std::path::Path;
 
 pub struct PrepareSession {
     pub can_start_session: bool,
+    pub session_start_error: &'static str,
 }
 
 impl Default for PrepareSession {
     fn default() -> Self {
         Self {
             can_start_session: true,
+            session_start_error: NO_CLIENT_MESSAGE,
         }
     }
 }
@@ -221,10 +223,7 @@ impl PrepareSession {
                 .initial_directory(Path::new(&path).join(SESSION_DATA_FOLDER_NAME));
         }
 
-        app.prep_session.can_start_session = app.client_loaded()
-            && app.ksf_loaded()
-            && app.assessment_chosen()
-            && app.condition_chosen();
+        app.prep_session.can_start_session = app.ready_to_start_session();
 
         egui::CentralPanel::default().show(ui, |ui| {
             ui.horizontal(|ui| {
@@ -270,9 +269,7 @@ impl PrepareSession {
             ui.add_enabled_ui(app.prep_session.can_start_session, |ui| {
                 if ui
                     .large_green_button("BEGIN SESSION")
-                    .on_disabled_hover_text(
-                        "there files that need to be loaded or errors that must be resolved",
-                    )
+                    .on_disabled_hover_text(app.prep_session.session_start_error)
                     .clicked()
                 {
                     // Update the client file with any changes
