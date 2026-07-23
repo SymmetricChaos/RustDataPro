@@ -5,7 +5,7 @@ use crate::{
         timeline::Timeline, view_simple_timer,
     },
     display_controller::DisplayInfo,
-    utils::{ClickedKeys, DataProUiElements, date_time_string, rounded_f32},
+    utils::{ClickedKeys, DataProUiElements, date_time_string, rounded_f32, windows_error_dialog},
 };
 use anyhow::{Context, Result};
 use chrono::{DateTime, Local};
@@ -437,6 +437,7 @@ impl SessionPage {
                         ui.label(format!("Assessment: {}", app.data.session.assessment));
                         ui.label(format!("Condition: {}", app.data.session.condition));
                         ui.label(format!("KSF: {}", app.data.ksf.name));
+                        ui.label("");
                     });
                 });
                 ui.group(|ui| {
@@ -447,6 +448,7 @@ impl SessionPage {
                             app.data.session.data_collector
                         ));
                         ui.label(format!("Data Type: {}", app.data.session.data_type));
+                        ui.label("");
                     });
                 });
             });
@@ -615,9 +617,13 @@ impl SessionPage {
                                 .on_disabled_hover_text("no data to save")
                                 .clicked()
                             {
-                                app.session_page
+                                match app
+                                    .session_page
                                     .save_session(&mut app.data, &app.root_directory)
-                                    .expect("failure to save session data");
+                                {
+                                    Ok(_) => (),
+                                    Err(e) => windows_error_dialog(e),
+                                }
                                 app.session_page.end_session(&mut app.display_info);
                             }
                         });

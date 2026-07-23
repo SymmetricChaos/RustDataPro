@@ -4,17 +4,62 @@ use crate::{
     utils::{DataProUiElements, windows_error_dialog},
 };
 use anyhow::{Context, Result};
-use egui::Key;
+use egui::{Color32, Key, RichText};
 use std::{
     fs::File,
     io::{BufWriter, Write},
     path::{Path, PathBuf},
 };
 
+const ALLOWED_KEYS: [Key; 36] = [
+    Key::Num0,
+    Key::Num1,
+    Key::Num2,
+    Key::Num3,
+    Key::Num4,
+    Key::Num5,
+    Key::Num6,
+    Key::Num7,
+    Key::Num8,
+    Key::Num9,
+    Key::A,
+    Key::B,
+    Key::C,
+    Key::D,
+    Key::E,
+    Key::F,
+    Key::G,
+    Key::H,
+    Key::I,
+    Key::J,
+    Key::K,
+    Key::L,
+    Key::M,
+    Key::N,
+    Key::O,
+    Key::P,
+    Key::Q,
+    Key::R,
+    Key::S,
+    Key::T,
+    Key::U,
+    Key::V,
+    Key::W,
+    Key::X,
+    Key::Y,
+    Key::Z,
+];
+
 fn parse_line(s: &str) -> Result<(Key, String)> {
     let (k, d) = s.split_once(",").context("no comma")?;
     let key = match Key::from_name(k.trim()) {
-        Some(key) => key,
+        Some(key) => {
+            if !ALLOWED_KEYS.contains(&key) {
+                return Err(anyhow::anyhow!("invalid key name"));
+            } else {
+                key
+            }
+        }
         None => {
             return Err(anyhow::anyhow!("invalid key name"));
         }
@@ -33,8 +78,13 @@ fn entry_row(
     string: &mut String,
     vector: &mut Vec<(Key, String)>,
     preview: &mut String,
+    save_finished: &mut bool,
 ) {
-    if ui.text_edit_multiline(string).changed() {
+    if ui
+        .add(egui::TextEdit::multiline(string).hint_text("M, Mand"))
+        .changed()
+    {
+        *save_finished = false;
         preview.clear();
         vector.clear();
         for line in string.split("\n") {
@@ -63,6 +113,7 @@ fn entry_row(
     ui.add(
         egui::TextEdit::multiline(preview)
             .background_color(ui.visuals().window_fill)
+            .hint_text("[\"M\", \"Mand\"]")
             .interactive(false),
     );
 }
@@ -75,7 +126,7 @@ pub struct NewKsf {
     dura_string: String,
     freq_preview: String,
     dura_preview: String,
-    save_error: String,
+    save_finished: bool,
 }
 
 impl NewKsf {
@@ -119,6 +170,7 @@ impl NewKsf {
                         &mut app.new_ksf_page.freq_string,
                         &mut app.new_ksf_page.ksf.frequency,
                         &mut app.new_ksf_page.freq_preview,
+                        &mut app.new_ksf_page.save_finished,
                     );
                     ui.end_row();
 
@@ -128,6 +180,7 @@ impl NewKsf {
                         &mut app.new_ksf_page.dura_string,
                         &mut app.new_ksf_page.ksf.duration,
                         &mut app.new_ksf_page.dura_preview,
+                        &mut app.new_ksf_page.save_finished,
                     );
                     ui.end_row();
                 });
@@ -142,14 +195,22 @@ impl NewKsf {
                         .new_ksf_page
                         .save_file_to_path(&app.data, &app.root_directory)
                     {
-                        Ok(_) => app.new_ksf_page.save_error.clear(),
-                        Err(e) => windows_error_dialog(e),
+                        Ok(_) => app.new_ksf_page.save_finished = true,
+                        Err(e) => {
+                            windows_error_dialog(e);
+                            app.new_ksf_page.save_finished = false;
+                        }
                     }
                 }
             });
 
             if ui.large_red_button("Return").clicked() {
+                app.new_ksf_page.save_finished = false;
                 app.display_info.go_to_prep_session();
+            }
+
+            if app.new_ksf_page.save_finished {
+                ui.monospace(RichText::new("KSF Saved!").heading().color(Color32::GREEN));
             }
         });
     }

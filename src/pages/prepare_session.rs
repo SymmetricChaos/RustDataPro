@@ -124,7 +124,7 @@ impl PrepareSession {
                     ui.text_edit_singleline(&mut app.data.session.data_collector);
                     ui.end_row();
 
-                    ui.monospace("Data Type");
+                    ui.monospace("Primary/Reli Data");
                     egui::ComboBox::from_id_salt("datatype")
                         .selected_text(app.data.session.data_type.to_string())
                         .show_ui(ui, |ui| {
@@ -257,6 +257,7 @@ impl PrepareSession {
                 ui.add_enabled(
                     app.session_page.limit_session_length,
                     egui::DragValue::new(&mut app.session_page.maximum_session_length)
+                        .suffix("  secs")
                         .range(0.0..=100_000.0),
                 );
                 ui.checkbox(
