@@ -14,11 +14,7 @@ use egui::{TextBuffer, Visuals};
 use egui_file_dialog::FileDialog;
 use std::path::{Path, PathBuf};
 
-#[cfg(debug_assertions)]
-pub const DEFAULT_ROOT_DIRECTORY: Option<&'static str> = None;
-#[cfg(not(debug_assertions))]
-pub const DEFAULT_ROOT_DIRECTORY: Option<&'static str> = Some("C:\\");
-pub const DEFAULT_ROOT_DIRECTORY_FALLBACK: &'static str = "C:\\";
+pub const DEFAULT_ROOT_DIRECTORY: &'static str = "C:\\";
 pub const DEFAULT_ROOT_DIRECTORY_NAME: &'static str = "DataProClients";
 pub const DEFAULT_ZOOM: f32 = 1.5;
 
@@ -56,17 +52,16 @@ pub struct DataPro {
 
 impl Default for DataPro {
     fn default() -> Self {
-        // If we have configured a default directory go there.
-        let root_directory = if let Some(path) = DEFAULT_ROOT_DIRECTORY {
-            Path::new(path).join(DEFAULT_ROOT_DIRECTORY_NAME)
-        } else {
-            // If we haven't configured that then use the current directory and fallback to the C: drive
-            // Assumes we only use this software on Windows
-            Path::new(
-                &std::env::current_dir().unwrap_or(PathBuf::from(DEFAULT_ROOT_DIRECTORY_FALLBACK)),
-            )
-            .join(DEFAULT_ROOT_DIRECTORY_NAME)
-        };
+        // In debug mode use the current directory
+        #[cfg(debug_assertions)]
+        let root_directory =
+            Path::new(&std::env::current_dir().unwrap_or(PathBuf::from(DEFAULT_ROOT_DIRECTORY)))
+                .join(DEFAULT_ROOT_DIRECTORY_NAME);
+
+        // In release mode use the C: drive
+        #[cfg(not(debug_assertions))]
+        let root_directory = Path::new(DEFAULT_ROOT_DIRECTORY).join(DEFAULT_ROOT_DIRECTORY_NAME);
+
         // If the directory chosen doesn't exist crate it.
         if !root_directory.exists() {
             match std::fs::create_dir(&root_directory) {
