@@ -14,7 +14,10 @@ use egui::{TextBuffer, Visuals};
 use egui_file_dialog::FileDialog;
 use std::path::{Path, PathBuf};
 
+#[cfg(debug_assertions)]
 pub const DEFAULT_ROOT_DIRECTORY: Option<&'static str> = None;
+#[cfg(not(debug_assertions))]
+pub const DEFAULT_ROOT_DIRECTORY: Option<&'static str> = Some("C:\\");
 pub const DEFAULT_ROOT_DIRECTORY_FALLBACK: &'static str = "C:\\";
 pub const DEFAULT_ROOT_DIRECTORY_NAME: &'static str = "DataProClients";
 pub const DEFAULT_ZOOM: f32 = 1.5;
@@ -145,11 +148,11 @@ impl DataPro {
     }
 
     pub fn assessment_chosen(&self) -> bool {
-        !self.data.session.assessment.is_empty()
+        !self.data.session.chosen_assessment.is_empty()
     }
 
     pub fn condition_chosen(&self) -> bool {
-        !self.data.session.condition.is_empty()
+        !self.data.session.chosen_condition.is_empty()
     }
 
     pub fn time_limit_set(&self) -> bool {
@@ -242,8 +245,17 @@ impl DataPro {
                     }
                 };
                 self.data.ksf = KsfData::default();
-                self.data.session.assessment.clear();
-                self.data.session.condition.clear();
+                // Attempt to load the first assessment and its first condition
+                match self.data.assessments.get(0) {
+                    Some((assessment, conds)) => {
+                        self.data.session.chosen_assessment = assessment.clone();
+                        match conds.get(0) {
+                            Some(cond) => self.data.session.chosen_condition = cond.clone(),
+                            None => self.data.session.chosen_condition.clear(),
+                        }
+                    }
+                    None => self.data.session.chosen_assessment.clear(),
+                }
             }
             Err(e) => {
                 self.data.client = ClientData::default();

@@ -143,7 +143,7 @@ impl PrepareSession {
 
                     ui.monospace("Assessment");
                     let assessment_text = match app.assessment_chosen() {
-                        true => egui::RichText::new(&app.data.session.assessment),
+                        true => egui::RichText::new(&app.data.session.chosen_assessment),
                         false => egui::RichText::new("NONE").color(Color32::RED),
                     };
                     egui::ComboBox::from_id_salt("assessment")
@@ -152,13 +152,13 @@ impl PrepareSession {
                             for (assessment, _conditions) in app.data.assessments.iter() {
                                 if ui
                                     .selectable_value(
-                                        &mut app.data.session.assessment,
+                                        &mut app.data.session.chosen_assessment,
                                         assessment.clone(),
                                         assessment.clone(),
                                     )
                                     .clicked()
                                 {
-                                    app.data.session.condition.clear();
+                                    app.data.session.chosen_condition.clear();
                                 }
                             }
                         });
@@ -167,17 +167,17 @@ impl PrepareSession {
 
                     ui.monospace("Condition");
                     let condition_text = match app.condition_chosen() {
-                        true => egui::RichText::new(&app.data.session.condition),
+                        true => egui::RichText::new(&app.data.session.chosen_condition),
                         false => egui::RichText::new("NONE").color(Color32::RED),
                     };
                     egui::ComboBox::from_id_salt("condition")
                         .selected_text(condition_text)
                         .show_ui(ui, |ui| {
                             for (assessment, conditions) in app.data.assessments.iter() {
-                                if assessment == &app.data.session.assessment {
+                                if assessment == &app.data.session.chosen_assessment {
                                     for condition in conditions {
                                         ui.selectable_value(
-                                            &mut app.data.session.condition,
+                                            &mut app.data.session.chosen_condition,
                                             condition.to_string(),
                                             condition,
                                         );

@@ -20,8 +20,8 @@ impl Display for DataType {
 
 #[derive(Clone, Serialize, Deserialize, Default, Debug)]
 pub struct SessionData {
-    pub assessment: String,
-    pub condition: String,
+    pub chosen_assessment: String,
+    pub chosen_condition: String,
     pub therapist: String,
     pub data_collector: String,
     pub data_type: DataType,
@@ -32,7 +32,11 @@ impl Display for SessionData {
         write!(
             f,
             "Assessment: {}\nCondition: {}\nTherapist: {}\nData Collector: {}\nData Type: {}",
-            self.assessment, self.condition, self.therapist, self.data_collector, self.data_type,
+            self.chosen_assessment,
+            self.chosen_condition,
+            self.therapist,
+            self.data_collector,
+            self.data_type,
         )
     }
 }

@@ -179,7 +179,7 @@ impl SessionPage {
                             timer.unstart();
                             *bouts = bouts.saturating_sub(1);
                         } else {
-                            timer.stop();
+                            timer.unstop();
                         }
                     }
                 }
@@ -434,8 +434,11 @@ impl SessionPage {
                 });
                 ui.group(|ui| {
                     ui.vertical(|ui| {
-                        ui.label(format!("Assessment: {}", app.data.session.assessment));
-                        ui.label(format!("Condition: {}", app.data.session.condition));
+                        ui.label(format!(
+                            "Assessment: {}",
+                            app.data.session.chosen_assessment
+                        ));
+                        ui.label(format!("Condition: {}", app.data.session.chosen_condition));
                         ui.label(format!("KSF: {}", app.data.ksf.name));
                         ui.label("");
                     });
