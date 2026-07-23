@@ -1,5 +1,5 @@
 use crate::{
-    app::{DataPro, NO_CLIENT_MESSAGE},
+    app::{DataPro, NO_CLIENT},
     utils::DataProUiElements,
 };
 use egui::{Ui, warn_if_debug_build};
@@ -88,7 +88,7 @@ impl Sidebar {
                 ui.add_enabled_ui(app.client_loaded(), |ui| {
                     if ui
                         .large_button("Calculate IOA")
-                        .on_disabled_hover_text(NO_CLIENT_MESSAGE)
+                        .on_disabled_hover_text(NO_CLIENT)
                         .clicked()
                     {
                         app.display_info.go_to_ioa();
@@ -97,7 +97,7 @@ impl Sidebar {
 
                     if ui
                         .large_button("New KSF")
-                        .on_disabled_hover_text(NO_CLIENT_MESSAGE)
+                        .on_disabled_hover_text(NO_CLIENT)
                         .clicked()
                     {
                         app.display_info.go_to_new_ksf();
@@ -106,7 +106,7 @@ impl Sidebar {
 
                     if ui
                         .large_button("New Assessments")
-                        .on_disabled_hover_text(NO_CLIENT_MESSAGE)
+                        .on_disabled_hover_text(NO_CLIENT)
                         .clicked()
                     {
                         app.display_info.go_to_new_assessments();

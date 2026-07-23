@@ -10,7 +10,7 @@ use crate::{
 };
 use anyhow::{Context, Result};
 use chrono::Local;
-use egui::Visuals;
+use egui::{TextBuffer, Visuals};
 use egui_file_dialog::FileDialog;
 use std::path::{Path, PathBuf};
 
@@ -23,7 +23,11 @@ pub const CLIENT_DATA_FILE_NAME: &'static str = "client_data.txt";
 pub const ASSESSMENTS_FILE_NAME: &'static str = "assessments.txt";
 pub const SESSION_DATA_FOLDER_NAME: &'static str = "Session Records";
 pub const IOA_DATA_FOLDER_NAME: &'static str = "IOA Data";
-pub const NO_CLIENT_MESSAGE: &'static str = "no client loaded";
+
+pub const NO_CLIENT: &'static str = "no client loaded";
+pub const NO_KSF: &'static str = "no KSF loaded";
+pub const NO_ASSESSMENT: &'static str = "no assessment chosen";
+pub const NO_CONDITION: &'static str = "no condition chosen";
 
 pub struct DataPro {
     pub pick_root_directory: FileDialog,
@@ -112,22 +116,22 @@ impl DataPro {
 
     pub fn ready_to_start_session(&mut self) -> bool {
         if !self.client_loaded() {
-            self.prep_session.session_start_error = "no client loaded";
+            self.prep_session.session_start_error = NO_CLIENT;
             false
         } else if !self.ksf_loaded() {
-            self.prep_session.session_start_error = "no KSF loaded";
+            self.prep_session.session_start_error = NO_KSF;
             false
         } else if !self.assessment_chosen() {
-            self.prep_session.session_start_error = "no assessment chosen";
+            self.prep_session.session_start_error = NO_ASSESSMENT;
             false
         } else if !self.condition_chosen() {
-            self.prep_session.session_start_error = "no condition chosen";
+            self.prep_session.session_start_error = NO_CONDITION;
             false
         } else if !self.time_limit_set() {
             self.prep_session.session_start_error = "time limit cannot be 0.0 seconds";
             false
         } else {
-            self.prep_session.session_start_error = "";
+            self.prep_session.session_start_error.clear();
             true
         }
     }
@@ -149,6 +153,7 @@ impl DataPro {
     }
 
     pub fn time_limit_set(&self) -> bool {
+        // It is false that: session length is limited and the maximum session length is zero
         !(self.session_page.limit_session_length && self.session_page.maximum_session_length == 0.0)
     }
 
@@ -184,7 +189,7 @@ impl DataPro {
             return Err(anyhow::anyhow!(
                 "cannot find {} folder because {}",
                 SESSION_DATA_FOLDER_NAME,
-                NO_CLIENT_MESSAGE
+                NO_CLIENT
             ));
         }
         let path = Path::new(&self.root_directory)
@@ -198,7 +203,7 @@ impl DataPro {
             return Err(anyhow::anyhow!(
                 "cannot find {} folder because {}",
                 IOA_DATA_FOLDER_NAME,
-                NO_CLIENT_MESSAGE
+                NO_CLIENT
             ));
         }
         let path = Path::new(&self.root_directory)

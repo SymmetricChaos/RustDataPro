@@ -1,5 +1,5 @@
 use crate::{
-    app::{DataPro, NO_CLIENT_MESSAGE, SESSION_DATA_FOLDER_NAME},
+    app::{DataPro, NO_CLIENT, SESSION_DATA_FOLDER_NAME},
     data::DataType,
     utils::{DataProUiElements, windows_error_dialog},
 };
@@ -16,7 +16,7 @@ impl Default for PrepareSession {
     fn default() -> Self {
         Self {
             can_start_session: true,
-            session_start_error: NO_CLIENT_MESSAGE,
+            session_start_error: NO_CLIENT,
         }
     }
 }
@@ -241,7 +241,7 @@ impl PrepareSession {
                     ui.add_enabled_ui(app.client_loaded(), |ui| {
                         if ui
                             .large_blue_button("Select KSF")
-                            .on_disabled_hover_text(NO_CLIENT_MESSAGE)
+                            .on_disabled_hover_text(NO_CLIENT)
                             .clicked()
                         {
                             app.pick_ksf.pick_file();
